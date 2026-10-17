@@ -1,0 +1,15 @@
+# Godot
+.godot/
+.import/
+*.translation
+export_credentials.cfg
+
+# Сборки
+build/
+*.dmg
+
+# macOS
+.DS_Store
+
+# Исходники книг не храним в репозитории
+*.fb2
