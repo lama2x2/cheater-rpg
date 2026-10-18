@@ -33,9 +33,12 @@ func _physics_process(delta: float) -> void:
 	var direction := Vector3.ZERO
 	if camera:
 		direction = Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera.global_rotation.y)
-	var sprinting := Input.is_action_pressed("sprint") and direction.length() > 0.1
+	var vitals := PlayerState.vitals
+	var sprinting := Input.is_action_pressed("sprint") and direction.length() > 0.1 and vitals.can_sprint()
+	vitals.tick(delta, GameClock.game_minutes_for(delta), sprinting)
 	var speed: float = float(_tuning["sprint_speed"]) if sprinting else float(_tuning["walk_speed"])
 	speed *= 1.0 + float(_tuning["speed_bonus_per_level"]) * (PlayerState.stats.get_level("speed") - 1)
+	speed *= vitals.speed_multiplier()
 
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed

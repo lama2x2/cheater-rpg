@@ -6,6 +6,7 @@ const StatBlockScript := preload("res://src/core/stat_block.gd")
 const JsonDataScript := preload("res://src/core/json_data.gd")
 const PlayerStateScript := preload("res://src/services/player_state.gd")
 const GameClockScript := preload("res://src/services/game_clock.gd")
+const VitalsScript := preload("res://src/core/vitals.gd")
 
 const TEST_DIR := "user://test_saves"
 
@@ -13,6 +14,7 @@ const TEST_DIR := "user://test_saves"
 func _player() -> Node:
 	var player: Node = PlayerStateScript.new()
 	player.stats = StatBlockScript.new(JsonDataScript.load_dict("res://data/stats.json"))
+	player.vitals = VitalsScript.new(JsonDataScript.load_dict("res://data/vitals.json"))
 	return player
 
 
@@ -40,6 +42,13 @@ func test_migration_refuses_gaps_and_future() -> void:
 	assert_eq(SaveFormatScript.migrate({"sections": {}}), {}, "без save_version")
 
 
+func test_v1_save_gets_default_vitals() -> void:
+	var v1 := {"save_version": 1, "sections": {"player": {"stats": {}, "lives": 9, "deaths": 0}}}
+	var result := SaveFormatScript.migrate(v1)
+	assert_eq(int(result["save_version"]), SaveFormatScript.VERSION, "доведено до текущей")
+	assert_eq(result["sections"]["player"]["vitals"], {}, "пустые шкалы → значения по умолчанию")
+
+
 func test_file_roundtrip_and_missing_file() -> void:
 	var path := TEST_DIR.path_join("roundtrip.json")
 	var data := SaveFormatScript.wrap({"clock": {"minutes": 487.123456789}}, 1.0)
@@ -56,6 +65,8 @@ func test_player_and_clock_survive_save_load() -> void:
 	var player := _player()
 	player.stats.add_progress("speed", 27.0)
 	player.stats.set_coefficient("luck", 1.3)
+	player.vitals.damage(33.0)
+	player.vitals.drain("spore_balance", 41.0)
 	player.lives = 6
 	player.deaths = 3
 	var clock: Node = GameClockScript.new()

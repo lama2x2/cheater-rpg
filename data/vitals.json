@@ -1,0 +1,41 @@
+{
+  "_doc": "Шкалы героя (docs/spec/03_character.md, 3.3). Время: stamina — в реальных секундах, остальное — в игровых минутах/часах.",
+  "health": {
+    "max_base": 100,
+    "max_per_endurance_level": 10,
+    "regen_per_game_hour": 6
+  },
+  "stamina": {
+    "max_base": 100,
+    "max_per_endurance_level": 5,
+    "sprint_cost_per_second": 14,
+    "regen_per_second": 18,
+    "regen_delay_seconds": 1.0,
+    "sprint_restart_at": 25
+  },
+  "spore_balance": {
+    "max": 100,
+    "start": 80,
+    "decay_per_game_hour": 4,
+    "decay_per_stamina_spent": 0.01,
+    "penalty_below": 0.5,
+    "critical_below": 0.15,
+    "penalty_at_zero": {
+      "stamina_regen": 0.4,
+      "health_regen": 0.0,
+      "speed": 0.85
+    }
+  },
+  "mana": {
+    "max_base": 20,
+    "max_per_mental_level": 5,
+    "regen_per_game_hour": 4,
+    "regen_per_mental_level": 0.5
+  },
+  "respawn": {
+    "health": 1.0,
+    "stamina": 1.0,
+    "spore_balance_min": 0.6,
+    "mana": 0.0
+  }
+}

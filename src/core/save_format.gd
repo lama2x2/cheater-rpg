@@ -5,11 +5,24 @@ extends RefCounted
 ##
 ## Файл: {"save_version": N, "saved_at": unix, "sections": {"clock": {...}, "player": {...}, ...}}
 ## Миграция — функция (data: Dictionary) -> Dictionary, переводит версию K в K+1.
+##
+## История версий:
+##   1 — clock, player (stats, lives, deaths), log, hero.
+##   2 — player.vitals (шкалы). Старые сейвы получают шкалы по умолчанию.
 
-const VERSION := 1
+const VERSION := 2
 
-## Миграции по исходной версии: {K: Callable}. Пока пусто — формат v1 первый.
-const MIGRATIONS := {}
+
+## Миграции по исходной версии: {K: Callable}.
+static func migrations() -> Dictionary:
+	return {1: _v1_to_v2}
+
+
+static func _v1_to_v2(data: Dictionary) -> Dictionary:
+	var player: Dictionary = data["sections"].get("player", {})
+	if not player.is_empty() and not player.has("vitals"):
+		player["vitals"] = {}
+	return data
 
 
 static func wrap(sections: Dictionary, saved_at: float) -> Dictionary:
@@ -17,7 +30,9 @@ static func wrap(sections: Dictionary, saved_at: float) -> Dictionary:
 
 
 ## Доводит данные до текущей версии. Возвращает {} и пишет ошибку, если это невозможно.
-static func migrate(data: Dictionary, migrations: Dictionary = MIGRATIONS, target: int = VERSION) -> Dictionary:
+## migration_table: null — встроенные migrations(); тесты передают свою таблицу.
+static func migrate(data: Dictionary, migration_table: Variant = null, target: int = VERSION) -> Dictionary:
+	var table: Dictionary = migrations() if migration_table == null else migration_table
 	if not data.has("save_version"):
 		push_error("Сохранение без save_version")
 		return {}
@@ -27,10 +42,10 @@ static func migrate(data: Dictionary, migrations: Dictionary = MIGRATIONS, targe
 		return {}
 	var result := data.duplicate(true)
 	while version < target:
-		if not migrations.has(version):
+		if not table.has(version):
 			push_error("Нет миграции сохранения с версии %d" % version)
 			return {}
-		var migration: Callable = migrations[version]
+		var migration: Callable = table[version]
 		result = migration.call(result)
 		version += 1
 		result["save_version"] = version
@@ -52,7 +67,7 @@ static func write_file(path: String, data: Dictionary) -> Error:
 
 
 ## Читает и мигрирует. Пустой словарь — файла нет или он испорчен.
-static func read_file(path: String, migrations: Dictionary = MIGRATIONS, target: int = VERSION) -> Dictionary:
+static func read_file(path: String, migration_table: Variant = null, target: int = VERSION) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
 	var json := JSON.new()
@@ -62,4 +77,4 @@ static func read_file(path: String, migrations: Dictionary = MIGRATIONS, target:
 	if not json.data is Dictionary:
 		push_error("Сохранение не является объектом JSON: %s" % path)
 		return {}
-	return migrate(json.data, migrations, target)
+	return migrate(json.data, migration_table, target)

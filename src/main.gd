@@ -5,6 +5,7 @@ extends Node3D
 const PlayerScript := preload("res://src/actors/player.gd")
 const IsoCameraScript := preload("res://src/world/iso_camera.gd")
 const DebugHudScript := preload("res://src/ui/debug_hud.gd")
+const VitalsBarsScript := preload("res://src/ui/vitals_bars.gd")
 
 const GROUND_SIZE := 200.0
 const OBSTACLE_COUNT := 40
@@ -28,6 +29,7 @@ func _ready() -> void:
 	player.camera = camera
 
 	add_child(DebugHudScript.new())
+	add_child(VitalsBarsScript.new())
 	SystemLog.post("welcome")
 	_handle_debug_args()
 

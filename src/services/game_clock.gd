@@ -31,6 +31,11 @@ func load_dict(data: Dictionary) -> void:
 	minutes = float(data["minutes"])
 
 
+## Сколько игровых минут проходит за real_seconds реального времени.
+func game_minutes_for(real_seconds: float) -> float:
+	return real_seconds * _minutes_per_second
+
+
 func day() -> int:
 	return floori(minutes / MINUTES_PER_DAY) + 1
 

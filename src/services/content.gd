@@ -5,6 +5,7 @@ const STATS_PATH := "res://data/stats.json"
 const RULES_PATH := "res://data/rules.json"
 const PLAYER_PATH := "res://data/player.json"
 const TEXTS_PATH := "res://data/text/ru.json"
+const VITALS_PATH := "res://data/vitals.json"
 
 var _cache: Dictionary = {}
 
@@ -19,6 +20,10 @@ func rules() -> Dictionary:
 
 func player_tuning() -> Dictionary:
 	return _cached(PLAYER_PATH, ["walk_speed", "sprint_speed", "speed_bonus_per_level", "sprint_progress_per_meter", "gravity"])
+
+
+func vitals_config() -> Dictionary:
+	return _cached(VITALS_PATH, Vitals.REQUIRED_KEYS)
 
 
 func texts() -> Dictionary:
