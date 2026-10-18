@@ -4,14 +4,20 @@ extends Node3D
 ## (задача 11).
 
 const InfectedScript := preload("res://src/actors/infected.gd")
+const InfectedCorpseScript := preload("res://src/actors/infected_corpse.gd")
 
 var area: Node  # test_area.gd
 
 var _loaded_from_save := false
+var _corpses: Node3D
 
 
 func _ready() -> void:
+	_corpses = Node3D.new()
+	_corpses.name = "Corpses"
+	add_child(_corpses)
 	SaveService.register("infected", self)
+	EventBus.infected_killed.connect(_on_killed)
 	if area.is_navigation_ready:
 		_spawn_initial()
 	else:
@@ -33,6 +39,19 @@ func spawn(id: String, level: int, at: Vector3) -> Node3D:
 	return infected
 
 
+func _on_killed(id: String, level: int, at: Vector3) -> void:
+	var corpse: Node3D = InfectedCorpseScript.new()
+	corpse.enemy_id = id
+	corpse.level = level
+	corpse.position = Vector3(at.x, 0.0, at.z)
+	corpse.rotation.y = randf() * TAU
+	_corpses.add_child(corpse)
+
+
+func _living() -> Array:
+	return get_children().filter(func(n: Node) -> bool: return n != _corpses and not n.is_queued_for_deletion())
+
+
 func _spawn_initial() -> void:
 	if _loaded_from_save:
 		return
@@ -50,18 +69,27 @@ func _spawn_initial() -> void:
 
 func to_dict() -> Dictionary:
 	var list: Array = []
-	for infected in get_children():
-		if not infected.is_queued_for_deletion():
-			list.append(infected.to_dict())
-	return {"infected": list}
+	for infected in _living():
+		list.append(infected.to_dict())
+	var corpses: Array = []
+	for corpse in _corpses.get_children():
+		corpses.append(corpse.to_dict())
+	return {"infected": list, "corpses": corpses}
 
 
 func load_dict(data: Dictionary) -> void:
 	_loaded_from_save = true
-	for infected in get_children():
+	for infected in _living():
 		remove_child(infected)
 		infected.queue_free()
+	for corpse in _corpses.get_children():
+		_corpses.remove_child(corpse)
+		corpse.queue_free()
 	for entry: Dictionary in data["infected"]:
 		var infected: CharacterBody3D = InfectedScript.new()
 		infected.load_dict(entry)
 		add_child(infected)
+	for entry: Dictionary in data.get("corpses", []):
+		var corpse: Node3D = InfectedCorpseScript.new()
+		corpse.load_dict(entry)
+		_corpses.add_child(corpse)

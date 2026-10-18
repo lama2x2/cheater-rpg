@@ -56,6 +56,7 @@ func missing_requirements(id: String, inventory: Inventory) -> Dictionary:
 ##   {"type": "vital_max_add", "vital", "value": int}
 ##   {"type": "vital_restore", "vital", "value": float}
 ##   {"type": "free_points", "value": int}
+##   {"type": "stop_bleeding"}
 ##   {"type": "skill_chance", "chance": float, "success": bool}
 func resolve(id: String, now: float, rng: RandomNumberGenerator, context: Dictionary) -> Dictionary:
 	var s := spec(id)
@@ -102,6 +103,8 @@ func _roll_effect(effect: Dictionary, mult: float, rng: RandomNumberGenerator, c
 				out.append({"type": "vital_max_add", "vital": vital, "value": _scaled_int(effect["value"], mult, rng)})
 		"vital_restore":
 			out.append({"type": "vital_restore", "vital": effect["vital"], "value": float(effect["value"]) * mult})
+		"stop_bleeding":
+			out.append({"type": "stop_bleeding"})
 		"free_points":
 			out.append({"type": "free_points", "value": _scaled_int(effect["value"], mult, rng)})
 		"skill_chance":

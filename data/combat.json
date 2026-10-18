@@ -1,0 +1,30 @@
+{
+  "_doc": "Бой (docs/spec/08_combat.md, 8.3–8.4). Урон = урон оружия × множитель зоны × сила − броня зоны × (1 − пробой). Броня тварей — в data/enemies (armor).",
+  "zones": { "head": 2.0, "torso": 1.0, "limbs": 0.6, "spore_sack": 3.0 },
+  "behind_arc_deg": 120,
+  "ranged_zones": {
+    "_doc": "В изометрии высоту не прицелить: зона выстрела — бросок. Шанс головы и мешка (сзади) растёт с Меткостью.",
+    "head": 0.12, "limbs": 0.2, "spore_sack_behind": 0.08,
+    "head_per_accuracy": 0.005, "sack_per_accuracy": 0.003, "max_head": 0.4, "max_sack": 0.25
+  },
+  "melee_zones": {
+    "light": { "head": 0.15, "torso": 0.6, "limbs": 0.25 },
+    "heavy": { "head": 0.3, "torso": 0.55, "limbs": 0.15 },
+    "light_behind": { "spore_sack": 0.2, "head": 0.15, "torso": 0.45, "limbs": 0.2 },
+    "heavy_behind": { "spore_sack": 0.45, "head": 0.15, "torso": 0.3, "limbs": 0.1 }
+  },
+  "strength_bonus_per_level": 0.04,
+  "winded_melee_mult": 0.6,
+  "spread": {
+    "accuracy_reduction_per_level": 0.02,
+    "min_mult": 0.4,
+    "moving_mult": 1.6,
+    "sprinting_mult": 2.5,
+    "sneaking_mult": 0.8
+  },
+  "bleeding": {
+    "hp_per_second_per_stack": 0.5,
+    "max_stacks": 3,
+    "clot_seconds": 90
+  }
+}

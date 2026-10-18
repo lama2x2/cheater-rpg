@@ -10,6 +10,9 @@ var inventory: Inventory
 var run := RunStats.new()
 var trophies: TrophyRules
 var buffs := Buffs.new()
+var weapons: WeaponState
+var wounds: Wounds
+var combat: DamageModel
 ## Свободные очки характеристик (золотая звезда). Распределение — в окне героя (позже).
 var free_points: int = 0
 ## Сколько раз Система дала умение (жемчуг). Сами умения — задача 13.
@@ -45,6 +48,9 @@ func setup() -> void:
 	vitals.spore_state_changed.connect(_on_spore_state_changed)
 	inventory = Inventory.new(Content.item_db(), Content.inventory_config(), stats.get_level("strength"))
 	trophies = TrophyRules.new(Content.item_db())
+	weapons = WeaponState.new(Content.weapon_db())
+	combat = DamageModel.new(Content.combat_config())
+	wounds = Wounds.new(Content.combat_config()["bleeding"])
 	start_minutes = GameClock.minutes
 
 
@@ -63,6 +69,7 @@ func die(cause: String) -> void:
 	deaths_since_region_shift += 1
 	stats.apply_death_penalty(_rng)
 	dropped_on_death = {"backpack": inventory.take_backpack()}
+	wounds.stop_bleeding()
 	_after_inventory_change()
 	run.record_death(life_number, cause, GameClock.minutes, stats.general_level())
 	SystemLog.post("death", {"life": life_number, "lives": lives, "cause": Content.death_cause(cause)}, "death")
@@ -76,9 +83,15 @@ func die(cause: String) -> void:
 	EventBus.player_died.emit(cause, lives)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	for buff in buffs.expire(GameClock.minutes):
 		SystemLog.post("buff_ended", {"stat": Content.stat_name(buff["stat"])})
+	if wounds and wounds.is_bleeding() and not awaiting_respawn:
+		var loss := wounds.tick(delta)
+		_last_damage_source = "bleeding"
+		vitals.damage(loss)
+		if not wounds.is_bleeding():
+			SystemLog.post("bleeding_stopped")
 
 
 ## Итоговое значение характеристики с учётом баффов.
@@ -148,6 +161,10 @@ func _apply_consume(result: Dictionary) -> void:
 				SystemLog.post("vital_max_up", {"vital": Content.ui("vital_" + String(effect["vital"])), "value": effect["value"]}, "progress")
 			"vital_restore":
 				vitals.restore(effect["vital"], effect["value"])
+			"stop_bleeding":
+				if wounds.is_bleeding():
+					wounds.stop_bleeding()
+					SystemLog.post("bleeding_stopped")
 			"free_points":
 				free_points += int(effect["value"])
 				SystemLog.post("free_points", {"value": effect["value"], "total": free_points}, "progress")
@@ -162,12 +179,42 @@ func _apply_consume(result: Dictionary) -> void:
 
 
 ## Урон герою от твари и т. п. source — id твари или причины (для экрана смерти).
-func hurt(amount: float, source: String) -> void:
+## bleed_chance — шанс открыть кровотечение (у тварей — attack.bleed_chance).
+func hurt(amount: float, source: String, bleed_chance: float = 0.0) -> void:
 	if awaiting_respawn:
 		return
 	_last_damage_source = source
 	EventBus.player_hurt.emit(amount, source)
+	if bleed_chance > 0.0 and _rng.randf() < bleed_chance:
+		var was_bleeding := wounds.is_bleeding()
+		wounds.add_bleeding()
+		if not was_bleeding:
+			SystemLog.post("bleeding_started", {}, "warning")
 	vitals.damage(amount)
+
+
+## Перезарядить оружие в руках из инвентаря. Возвращает, сколько патронов вошло.
+func reload_weapon() -> int:
+	var loaded := weapons.reload(weapons.equipped, inventory)
+	if loaded > 0:
+		_after_inventory_change()
+	return loaded
+
+
+func cycle_weapon() -> String:
+	return equip_weapon(weapons.cycle(inventory))
+
+
+func equip_weapon(id: String) -> String:
+	if id != WeaponDB.FISTS and inventory.count_of(id) < 1:
+		return weapons.equipped
+	weapons.equipped = id
+	SystemLog.post("weapon_equipped", {"weapon": Content.item_name(id)})
+	# Лук и подобное без времени перезарядки — сразу наложить стрелу.
+	var weapon := Content.weapon_db().weapon(id)
+	if weapon["kind"] == "ranged" and float(weapon["reload"]) <= 0.0:
+		reload_weapon()
+	return id
 
 
 ## Подбор предмета: в ячейки, если можно, иначе в рюкзак. Возвращает, сколько не влезло.
@@ -186,6 +233,7 @@ func pick_up(id: String, count: int) -> int:
 
 ## Сообщить интерфейсу и проверить перегруз (лог — при переходе в перегруз).
 func _after_inventory_change() -> void:
+	weapons.drop_if_missing(inventory)
 	var overloaded := inventory.is_overloaded()
 	if overloaded and not _was_overloaded:
 		SystemLog.post("overloaded", {}, "warning")
@@ -218,6 +266,7 @@ func to_dict() -> Dictionary:
 		"stats": stats.to_dict(), "vitals": vitals.to_dict(), "run": run.to_dict(),
 		"inventory": inventory.to_dict(), "trophies": trophies.to_dict(), "buffs": buffs.to_dict(),
 		"free_points": free_points, "skills_awakened": skills_awakened,
+		"weapons": weapons.to_dict(), "wounds": wounds.to_dict(),
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
@@ -235,6 +284,8 @@ func load_dict(data: Dictionary) -> void:
 	buffs.load_dict(data["buffs"])
 	free_points = int(data["free_points"])
 	skills_awakened = int(data["skills_awakened"])
+	weapons.load_dict(data["weapons"])
+	wounds.load_dict(data["wounds"])
 	_was_overloaded = inventory.is_overloaded()
 	inventory_changed.emit()
 	lives = int(data["lives"])

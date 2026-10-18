@@ -10,6 +10,8 @@ const BARS := [
 	["mana", "Мана", Color(0.3, 0.5, 0.9)],
 ]
 
+var _weapon: Label
+var _bleeding: Label
 var _bars: Dictionary = {}
 var _labels: Dictionary = {}
 var _time := 0.0
@@ -29,6 +31,10 @@ func _ready() -> void:
 	box.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	box.add_theme_constant_override("separation", 3)
 	add_child(box)
+	_bleeding = UiKit.label(14, Color(0.95, 0.3, 0.25))
+	box.add_child(_bleeding)
+	_weapon = UiKit.label(15, Color(0.95, 0.9, 0.75))
+	box.add_child(_weapon)
 	for spec: Array in BARS:
 		var label := Label.new()
 		label.add_theme_font_override("font", font)
@@ -55,11 +61,30 @@ func _process(delta: float) -> void:
 		bar.max_value = vitals.max_value(vital)
 		bar.value = vitals.value(vital)
 		_labels[vital].text = "%s  %d / %d" % [spec[1], roundi(vitals.value(vital)), roundi(vitals.max_value(vital))]
+	_update_weapon_line()
+	var stacks := PlayerState.wounds.bleeding.size()
+	_bleeding.text = Content.ui("bleeding_line", {"n": stacks}) if stacks > 0 else ""
 	var spore_bar: ProgressBar = _bars["spore_balance"]
 	var state := vitals.spore_state()
 	var blink := state == "critical" or (state == "low" and fmod(_time, 1.0) < 0.5)
 	spore_bar.modulate = Color(1.6, 0.6, 0.6) if blink else Color.WHITE
 	_bars["stamina"].modulate = Color(1, 1, 1, 0.5) if not vitals.can_sprint() else Color.WHITE
+
+
+func _update_weapon_line() -> void:
+	var hero := get_tree().get_first_node_in_group("hero")
+	if hero == null or hero.combat == null:
+		return
+	var s: Dictionary = hero.combat.status()
+	var ammo := ""
+	if s.has("magazine"):
+		ammo = Content.ui("weapon_ammo", {"loaded": s["loaded"], "magazine": s["magazine"], "reserve": s["reserve"]})
+	if s["reloading"]:
+		ammo = Content.ui("weapon_reloading")
+	elif float(s["charge"]) > 0.0:
+		var filled := roundi(float(s["charge"]) * 10.0)
+		ammo = Content.ui("weapon_charge", {"bar": "█".repeat(filled) + "░".repeat(10 - filled)})
+	_weapon.text = Content.ui("weapon_line", {"weapon": Content.item_name(s["id"]), "ammo": ammo})
 
 
 func _style(color: Color) -> StyleBoxFlat:

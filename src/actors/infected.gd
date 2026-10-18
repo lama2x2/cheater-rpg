@@ -252,7 +252,7 @@ func _attack() -> void:
 		return
 	var attack: Dictionary = _data["attack"]
 	_attack_timer = float(attack["cooldown"])
-	PlayerState.hurt(float(attack["damage"]), enemy_id)
+	PlayerState.hurt(float(attack["damage"]), enemy_id, float(attack.get("bleed_chance", 0.0)))
 
 
 ## Открыть закрытую дверь, если цель — по другую сторону, а дверь рядом.

@@ -11,11 +11,17 @@ const ACTIONS := {
 	"sprint": [KEY_SHIFT],
 	"sneak": [KEY_C],
 	"interact": [KEY_E],
+	"reload": [KEY_R],
+	"weapon_next": [KEY_Q],
 	"inventory": [KEY_TAB, KEY_I],
 	"debug_die": [KEY_K],
 	"debug_save": [KEY_F5],
 	"debug_load": [KEY_F9],
 	"debug_skip_respawn": [KEY_F8],
+}
+
+const MOUSE_ACTIONS := {
+	"attack": MOUSE_BUTTON_LEFT,
 }
 
 
@@ -28,3 +34,10 @@ static func ensure_actions() -> void:
 			var event := InputEventKey.new()
 			event.physical_keycode = keycode
 			InputMap.action_add_event(action, event)
+	for action: String in MOUSE_ACTIONS:
+		if InputMap.has_action(action):
+			continue
+		InputMap.add_action(action)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_ACTIONS[action]
+		InputMap.action_add_event(action, click)

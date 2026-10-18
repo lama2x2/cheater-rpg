@@ -13,6 +13,8 @@ const RECIPES_PATH := "res://data/recipes.json"
 const ENEMIES_DIR := "res://data/enemies"
 const TEST_AREA_PATH := "res://data/world/test_area.json"
 const NOISE_PATH := "res://data/noise.json"
+const WEAPONS_PATH := "res://data/weapons.json"
+const COMBAT_PATH := "res://data/combat.json"
 
 var _cache: Dictionary = {}
 
@@ -70,6 +72,16 @@ func enemy_db() -> EnemyDB:
 
 func enemy_name(id: String) -> String:
 	return String(texts()["enemy_names"].get(id, id))
+
+
+func weapon_db() -> WeaponDB:
+	if not _cache.has(WEAPONS_PATH):
+		_cache[WEAPONS_PATH] = WeaponDB.new(JsonData.load_dict(WEAPONS_PATH, WeaponDB.REQUIRED_KEYS))
+	return _cache[WEAPONS_PATH]
+
+
+func combat_config() -> Dictionary:
+	return _cached(COMBAT_PATH, DamageModel.REQUIRED_KEYS)
 
 
 func noise_config() -> Dictionary:

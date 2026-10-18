@@ -1,0 +1,41 @@
+{
+  "_doc": "Оружие (docs/spec/08_combat.md; 06, 6.4). Предметы — в data/items/weapons.json (вес, цена). melee: light / heavy (charge — удержание для тяжёлого). ranged: hitscan с разбросом spread_deg, pellets — дробь. noise — ключ из data/noise.json. Время — реальные секунды.",
+  "weapons": [
+    {
+      "id": "fists", "kind": "melee", "penetration": 0.0,
+      "light": { "damage": 5, "cooldown": 0.5, "stamina": 4, "range": 1.2, "arc_deg": 70 },
+      "heavy": { "damage": 10, "charge": 0.5, "cooldown": 0.8, "stamina": 8, "range": 1.2, "arc_deg": 60 },
+      "noise": "melee_hit", "sack_open_mult": 0.0
+    },
+    {
+      "id": "knife", "kind": "melee", "penetration": 0.1,
+      "light": { "damage": 14, "cooldown": 0.45, "stamina": 6, "range": 1.4, "arc_deg": 70 },
+      "heavy": { "damage": 30, "charge": 0.6, "cooldown": 0.9, "stamina": 15, "range": 1.4, "arc_deg": 60 },
+      "noise": "melee_hit", "sack_open_mult": 2.0
+    },
+    {
+      "id": "axe", "kind": "melee", "penetration": 0.3,
+      "light": { "damage": 22, "cooldown": 0.7, "stamina": 10, "range": 1.6, "arc_deg": 80 },
+      "heavy": { "damage": 50, "charge": 0.9, "cooldown": 1.2, "stamina": 22, "range": 1.7, "arc_deg": 70 },
+      "noise": "melee_hit", "sack_open_mult": 1.5
+    },
+    {
+      "id": "bow", "kind": "ranged", "penetration": 0.2,
+      "damage": 40, "pellets": 1, "spread_deg": 2.0, "range": 45, "cooldown": 0.3, "charge": 0.8,
+      "ammo": "arrow", "magazine": 1, "reload": 0.0, "recover_chance": 0.7,
+      "noise": "bow_shot", "sack_open_mult": 0.0
+    },
+    {
+      "id": "pistol", "kind": "ranged", "penetration": 0.25,
+      "damage": 30, "pellets": 1, "spread_deg": 3.0, "range": 50, "cooldown": 0.25, "charge": 0.0,
+      "ammo": "ammo_9mm", "magazine": 8, "reload": 1.6,
+      "noise": "pistol", "sack_open_mult": 0.0
+    },
+    {
+      "id": "shotgun", "kind": "ranged", "penetration": 0.15,
+      "damage": 12, "pellets": 8, "spread_deg": 9.0, "range": 30, "cooldown": 0.8, "charge": 0.0,
+      "ammo": "ammo_12g", "magazine": 5, "reload": 2.5,
+      "noise": "shotgun", "sack_open_mult": 0.0
+    }
+  ]
+}

@@ -109,9 +109,12 @@ func _handle_debug_args() -> void:
 
 
 func _debug_kit() -> void:
-	for entry: Array in [["sporan", 47], ["pearl_black", 1], ["pea_yellow", 2], ["vinegar", 1], ["vodka", 2], ["brick", 4], ["canned_food", 3]]:
+	for entry: Array in [["sporan", 47], ["pearl_black", 1], ["pea_yellow", 2], ["vinegar", 1], ["vodka", 2],
+			["canned_food", 3], ["knife", 1], ["pistol", 1], ["ammo_9mm", 20], ["bandage", 2]]:
 		PlayerState.pick_up(entry[0], entry[1])
 	PlayerState.consume("pea_yellow")
+	PlayerState.weapons.equipped = "pistol"
+	PlayerState.reload_weapon()
 	var open := InputEventAction.new()
 	open.action = "inventory"
 	open.pressed = true

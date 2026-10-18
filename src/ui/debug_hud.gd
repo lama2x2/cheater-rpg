@@ -34,7 +34,7 @@ func _process(_delta: float) -> void:
 	var stats := PlayerState.stats
 	var hero := get_tree().get_first_node_in_group("hero")
 	var mode := "   КРАДЁТСЯ" if hero and hero.sneaking else ""
-	_status.text = "Жизни: %d    Уровень: %d    %s%s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [C] красться  [E] взять  [Tab] инвентарь  [колесо] зум  [K] умереть  [F5/F9] сохранить/загрузить  [F8] пропустить отсчёт (отладка)" % [
+	_status.text = "Жизни: %d    Уровень: %d    %s%s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [C] красться  [ЛКМ] удар/выстрел (держать — сильнее)  [R] перезарядка  [Q] оружие\n[E] взять  [Tab] инвентарь  [колесо] зум  [K] умереть  [F5/F9] сохранить/загрузить  [F8] пропустить отсчёт (отладка)" % [
 		PlayerState.lives, stats.general_level(), GameClock.clock_text(), mode,
 		stats.get_level("speed"), stats.get_progress("speed"), stats.threshold("speed"),
 	]

@@ -2,7 +2,10 @@ extends CharacterBody3D
 ## Герой: движение относительно камеры, спринт качает Скорость, поворот к курсору.
 ## Шаги шумят (EventBus.noise_made); C — красться: медленнее, тише, заметнее хуже.
 
+const HeroCombatScript := preload("res://src/actors/hero_combat.gd")
+
 var camera: Camera3D
+var combat: Node3D
 ## Ближайший объект для E (группа "interactable"), или null.
 var current_interactable: Node3D
 var sneaking := false
@@ -19,6 +22,9 @@ func _ready() -> void:
 	add_to_group("hero")
 	collision_layer = 2
 	collision_mask = 1 | 4
+	combat = HeroCombatScript.new()
+	combat.hero = self
+	add_child(combat)
 	SaveService.register("hero", self)
 
 

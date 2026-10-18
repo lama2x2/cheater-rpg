@@ -9,6 +9,7 @@ func _ready() -> void:
 	add_to_group("world_items")
 	SaveService.register("world_items", self)
 	EventBus.items_dropped.connect(_on_items_dropped)
+	EventBus.arrow_landed.connect(func(id: String, at: Vector3) -> void: spawn(id, 1, Vector3(at.x, 0.0, at.z)))
 
 
 func _on_items_dropped(id: String, count: int) -> void:

@@ -140,13 +140,38 @@
     ],
     "crafted": [
       "Изготовлено: {item} ×{count}."
+    ],
+    "bleeding_started": [
+      "Кровотечение. Рекомендация: бинт. Рекомендация номер два: не стоять на месте.",
+      "Открылось кровотечение. Твари чуют кровь, если вам интересно."
+    ],
+    "bleeding_stopped": [
+      "Кровотечение остановлено."
+    ],
+    "weapon_equipped": [
+      "В руках: {weapon}."
+    ],
+    "weapon_empty": [
+      "Пусто. Патронов нет — есть только вы."
+    ],
+    "reloaded": [
+      "{weapon}: перезаряжено ({count})."
+    ],
+    "infected_killed": [
+      "{enemy} (ур. {level}) — готов.",
+      "{enemy} (ур. {level}) больше не встанет."
+    ],
+    "infected_killed_crit": [
+      "{enemy} (ур. {level}): удар в споровый мешок. Чисто.",
+      "Споровый мешок — точно в цель. {enemy} (ур. {level}) повержен."
     ]
   },
   "death_causes": {
     "health": "несовместимые с жизнью повреждения",
     "spore_balance": "споровое истощение",
     "debug": "вмешательство разработчика",
-    "unknown": "причина не установлена"
+    "unknown": "причина не установлена",
+    "bleeding": "кровопотеря"
   },
   "death_advice": [
     "Не стойте рядом с тем, что вас ест.",
@@ -212,7 +237,15 @@
     "inv_free_points": "Свободные очки: {n}",
     "killed_by": "растерзан: {enemy}",
     "interact_door_open": "[E] Открыть дверь",
-    "interact_door_close": "[E] Закрыть дверь"
+    "interact_door_close": "[E] Закрыть дверь",
+    "weapon_line": "{weapon}  {ammo}",
+    "weapon_ammo": "{loaded}/{magazine} (+{reserve})",
+    "weapon_reloading": "перезарядка…",
+    "weapon_charge": "натяжение {bar}",
+    "bleeding_line": "Кровотечение ×{n}",
+    "armor_hit": "броня",
+    "summary_kills": "Убито тварей: {kills}",
+    "inv_equip": "в руки"
   },
   "item_names": {
     "sporan": "Споран",
@@ -232,7 +265,16 @@
     "water_bottle": "Бутылка воды",
     "bandage": "Бинт",
     "gold_ring": "Золотое кольцо",
-    "brick": "Кирпич"
+    "brick": "Кирпич",
+    "knife": "Нож",
+    "axe": "Топор",
+    "bow": "Лук",
+    "pistol": "Пистолет",
+    "shotgun": "Дробовик",
+    "arrow": "Стрела",
+    "ammo_9mm": "Патрон 9 мм",
+    "ammo_12g": "Патрон 12 калибра",
+    "fists": "Кулаки"
   },
   "enemy_names": {
     "crawler": "ползун",

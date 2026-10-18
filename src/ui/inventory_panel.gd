@@ -117,6 +117,8 @@ func _refresh() -> void:
 		var id: String = stack["id"]
 		var grams := Content.item_db().weight_g(id) * int(stack["count"])
 		var buttons := _use_buttons(id)
+		if Content.weapon_db().has_weapon(id) and PlayerState.weapons.equipped != id:
+			buttons.append([Content.ui("inv_equip"), _equip.bind(id)])
 		if inv.primary_room(id) > 0:
 			buttons.append([Content.ui("inv_to_primary"), _to_primary.bind(id)])
 		buttons.append([Content.ui("inv_drop_one"), _drop_backpack.bind(id, 1)])
@@ -149,6 +151,11 @@ func _use_buttons(id: String) -> Array:
 	if left > 0.0:
 		label += " (" + Content.ui("inv_cooldown", {"time": _hours(left)}) + ")"
 	return [[label, _use.bind(id)]]
+
+
+func _equip(id: String) -> void:
+	PlayerState.equip_weapon(id)
+	_refresh()
 
 
 func _use(id: String) -> void:
