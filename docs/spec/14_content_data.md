@@ -34,6 +34,22 @@
 }
 ```
 
+Как сделано в M1 (задача 6) — поля, которые реально читает код:
+```json
+{
+  "id": "runner", "stage": 3, "level": [10, 20], "threat": "medium",
+  "body": { "radius": 0.38, "height": 1.85, "color": [0.72, 0.5, 0.35] },
+  "hp": 150, "hp_per_level": 5,
+  "move": { "walk": 1.8, "run": 6.5, "lunge": { "range": [5, 15], "speed": 14, "duration": 0.6, "cooldown": 4.0 } },
+  "attack": { "damage": 18, "cooldown": 1.0, "range": 1.4 },
+  "senses": { "sight": 26, "fov_deg": 160, "hearing": 1.2, "notice_close": 3.0 },
+  "can_open_doors": true, "spore_sack": true,
+  "ai": { "wander_radius": 20, "lose_sight_s": 12, "search_s": 14, "hunger_per_s": 0.002,
+          "eat_per_s": 0.08, "hungry_at": 0.6, "smell_food": 35 }
+}
+```
+Имена — `enemy_names` в `data/text/ru.json`. Броня по зонам и слабые места — задача 8.
+
 ## 14.3 Таблицы лута — `data/loot/*.json`
 ```json
 {

@@ -10,6 +10,8 @@ const DEATH_PATH := "res://data/death.json"
 const INVENTORY_PATH := "res://data/inventory.json"
 const ITEMS_DIR := "res://data/items"
 const RECIPES_PATH := "res://data/recipes.json"
+const ENEMIES_DIR := "res://data/enemies"
+const TEST_AREA_PATH := "res://data/world/test_area.json"
 
 var _cache: Dictionary = {}
 
@@ -52,6 +54,27 @@ func item_db() -> ItemDB:
 	return _cache[ITEMS_DIR]
 
 
+func enemy_db() -> EnemyDB:
+	if not _cache.has(ENEMIES_DIR):
+		var files: Array = []
+		for file in DirAccess.get_files_at(ENEMIES_DIR):
+			if file.ends_with(".json"):
+				files.append(JsonData.load_dict(ENEMIES_DIR.path_join(file)))
+		var db := EnemyDB.new(files)
+		for error in db.errors():
+			push_error("data/enemies: " + error)
+		_cache[ENEMIES_DIR] = db
+	return _cache[ENEMIES_DIR]
+
+
+func enemy_name(id: String) -> String:
+	return String(texts()["enemy_names"].get(id, id))
+
+
+func test_area() -> Dictionary:
+	return _cached(TEST_AREA_PATH, ["items", "house", "infected_seed", "infected"])
+
+
 func recipes() -> Array:
 	return _cached(RECIPES_PATH, Crafting.REQUIRED_KEYS)["recipes"]
 
@@ -61,7 +84,7 @@ func item_name(id: String) -> String:
 
 
 func texts() -> Dictionary:
-	return _cached(TEXTS_PATH, ["stat_names", "item_names", "log", "ui", "death_causes", "death_advice", "epitaphs"])
+	return _cached(TEXTS_PATH, ["stat_names", "item_names", "enemy_names", "log", "ui", "death_causes", "death_advice", "epitaphs"])
 
 
 ## Строка интерфейса по ключу (texts.ui), с подстановкой параметров.
@@ -69,8 +92,14 @@ func ui(key: String, params: Dictionary = {}) -> String:
 	return String(texts()["ui"].get(key, key)).format(params)
 
 
+## Причина смерти для экрана и лога: особые причины — из death_causes, твари — «растерзан: медляк».
 func death_cause(cause: String) -> String:
-	return String(texts()["death_causes"].get(cause, cause))
+	var causes: Dictionary = texts()["death_causes"]
+	if causes.has(cause):
+		return String(causes[cause])
+	if texts()["enemy_names"].has(cause):
+		return ui("killed_by", {"enemy": enemy_name(cause)})
+	return cause
 
 
 func stat_name(stat: String) -> String:

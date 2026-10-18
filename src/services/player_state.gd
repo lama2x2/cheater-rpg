@@ -27,6 +27,8 @@ var respawn_position := Vector3(0, 0.1, 0)
 var start_minutes: float = 0.0
 var _rng := RandomNumberGenerator.new()
 var _was_overloaded := false
+## Кто последним ранил героя — причина смерти, если здоровье кончится.
+var _last_damage_source := "health"
 
 
 func _ready() -> void:
@@ -159,6 +161,15 @@ func _apply_consume(result: Dictionary) -> void:
 		SystemLog.post("risk_" + risk, {}, "special")
 
 
+## Урон герою от твари и т. п. source — id твари или причины (для экрана смерти).
+func hurt(amount: float, source: String) -> void:
+	if awaiting_respawn:
+		return
+	_last_damage_source = source
+	EventBus.player_hurt.emit(amount, source)
+	vitals.damage(amount)
+
+
 ## Подбор предмета: в ячейки, если можно, иначе в рюкзак. Возвращает, сколько не влезло.
 func pick_up(id: String, count: int) -> int:
 	var result := inventory.add(id, count)
@@ -241,7 +252,7 @@ func _on_vital_depleted(vital: String) -> void:
 	elif vital == Vitals.SPORE:
 		die("spore_balance")
 	elif vital == Vitals.HEALTH:
-		die("health")
+		die(_last_damage_source)
 
 
 func _on_spore_state_changed(state: String) -> void:

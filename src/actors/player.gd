@@ -13,6 +13,8 @@ func _ready() -> void:
 	_tuning = Content.player_tuning()
 	_build_body()
 	add_to_group("hero")
+	collision_layer = 2
+	collision_mask = 1 | 4
 	SaveService.register("hero", self)
 
 

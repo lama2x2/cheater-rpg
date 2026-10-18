@@ -1,0 +1,16 @@
+{
+  "_doc": "Тестовая площадка M1 до появления кластеров (задача 11): стартовые предметы и заражённые. Позиции [x, z] в метрах от респа.",
+  "items": [
+    ["sporan", 12, 3.0, 2.0], ["pea_yellow", 1, -2.5, 3.0], ["vodka", 1, 4.0, -2.0],
+    ["canned_food", 2, -3.5, -2.0], ["bandage", 2, 1.5, -4.0], ["vinegar", 1, -1.0, 5.0],
+    ["gold_ring", 1, 5.5, 4.0], ["brick", 5, 7.0, 0.0]
+  ],
+  "house": { "center": [-14.0, 10.0], "size": [7.0, 6.0], "wall_height": 3.0, "door_width": 1.4 },
+  "infected_seed": 5150,
+  "infected": [
+    { "id": "crawler", "count": 2, "ring": [14, 30] },
+    { "id": "slowpoke", "count": 6, "ring": [18, 45] },
+    { "id": "jumper", "count": 2, "ring": [25, 50] },
+    { "id": "runner", "count": 1, "ring": [40, 60] }
+  ]
+}

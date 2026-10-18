@@ -6,11 +6,14 @@ extends Node3D
 var life: int = 0
 ## Что осталось на трупе: {"backpack": [...]} — формат задаёт инвентарь.
 var contents: Dictionary = {}
+## Сколько «еды» осталось для тварей (07, «Голод»). Съеденный труп остаётся с рюкзаком.
+var food: float = 100.0
 
 
 func _ready() -> void:
 	add_to_group("corpses")
 	add_to_group("interactable")
+	add_to_group("edible")
 	var body := CapsuleMesh.new()
 	body.radius = 0.35
 	body.height = 1.8
@@ -62,12 +65,18 @@ func interact(_hero: Node3D) -> void:
 	PlayerState.notify_inventory_changed()
 
 
+func eat(amount: float) -> void:
+	food = maxf(0.0, food - amount)
+	if food <= 0.0:
+		remove_from_group("edible")
+
+
 func _backpack() -> Array:
 	return contents.get("backpack", [])
 
 
 func to_dict() -> Dictionary:
-	return {"life": life, "position": [position.x, position.y, position.z], "yaw": rotation.y, "contents": contents}
+	return {"life": life, "position": [position.x, position.y, position.z], "yaw": rotation.y, "contents": contents, "food": food}
 
 
 func load_dict(data: Dictionary) -> void:
@@ -76,6 +85,7 @@ func load_dict(data: Dictionary) -> void:
 	position = Vector3(float(at[0]), float(at[1]), float(at[2]))
 	rotation.y = float(data["yaw"])
 	contents = data["contents"]
+	food = float(data.get("food", 100.0))
 
 
 func _mesh(mesh: Mesh, color: Color) -> MeshInstance3D:

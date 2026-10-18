@@ -1,5 +1,5 @@
 extends Node3D
-## Прототип M0: земля, препятствия, герой, изометрическая камера, отладочный HUD.
+## Вертикальный срез M1: тестовая площадка, герой, заражённые, интерфейс.
 ## Всё собирается кодом, чтобы сцена была читаемой в diff.
 
 const PlayerScript := preload("res://src/actors/player.gd")
@@ -10,17 +10,8 @@ const DeathFlowScript := preload("res://src/world/death_flow.gd")
 const WorldItemsScript := preload("res://src/world/world_items.gd")
 const InventoryPanelScript := preload("res://src/ui/inventory_panel.gd")
 const InteractPromptScript := preload("res://src/ui/interact_prompt.gd")
-
-## Стартовая россыпь предметов у респа (пока нет лута и кластеров): [id, count, x, z].
-const STARTER_ITEMS := [
-	["sporan", 12, 3.0, 2.0], ["pea_yellow", 1, -2.5, 3.0], ["vodka", 1, 4.0, -2.0],
-	["canned_food", 2, -3.5, -2.0], ["bandage", 2, 1.5, -4.0], ["vinegar", 1, -1.0, 5.0],
-	["gold_ring", 1, 5.5, 4.0], ["brick", 5, 7.0, 0.0],
-]
-
-const GROUND_SIZE := 200.0
-const OBSTACLE_COUNT := 40
-const OBSTACLE_SEED := 74920891
+const TestAreaScript := preload("res://src/world/test_area.gd")
+const InfectedPopulationScript := preload("res://src/world/infected_population.gd")
 
 var _death_flow: Node
 
@@ -28,8 +19,9 @@ var _death_flow: Node
 func _ready() -> void:
 	InputSetup.ensure_actions()
 	_build_environment()
-	_build_ground()
-	_build_obstacles()
+	var area: NavigationRegion3D = TestAreaScript.new()
+	area.name = "Area"
+	add_child(area)
 
 	var player: CharacterBody3D = PlayerScript.new()
 	player.name = "Player"
@@ -50,9 +42,14 @@ func _ready() -> void:
 
 	var world_items: Node3D = WorldItemsScript.new()
 	add_child(world_items)
-	for entry: Array in STARTER_ITEMS:
-		world_items.spawn(entry[0], entry[1], Vector3(entry[2], 0.0, entry[3]))
-	_build_respawn_marker(PlayerState.respawn_position)
+	for entry: Array in Content.test_area()["items"]:
+		world_items.spawn(entry[0], int(entry[1]), Vector3(float(entry[2]), 0.0, float(entry[3])))
+
+	var population: Node3D = InfectedPopulationScript.new()
+	population.name = "Infected"
+	population.area = area
+	if not "--no-enemies" in OS.get_cmdline_user_args():
+		add_child(population)
 
 	_death_flow = DeathFlowScript.new()
 	_death_flow.hero = player
@@ -77,6 +74,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --fast-respawn  возрождение через 5 с вместо 100–180
 ##   --die=N       через секунду умереть N раз подряд (N ≥ жизней — сразу экран итогов)
 ##   --kit         выдать отладочный набор предметов и открыть инвентарь
+##   --no-enemies  без заражённых
+##   --at=X,Z      поставить героя в точку (для снимков)
 func _handle_debug_args() -> void:
 	var shot_path := ""
 	var die_times := 0
@@ -91,6 +90,9 @@ func _handle_debug_args() -> void:
 			_death_flow.fast_respawn = true
 		elif arg.begins_with("--die="):
 			die_times = int(arg.trim_prefix("--die="))
+		elif arg.begins_with("--at="):
+			var xz := arg.trim_prefix("--at=").split(",")
+			get_tree().get_first_node_in_group("hero").position = Vector3(float(xz[0]), 0.1, float(xz[1]))
 		elif arg.begins_with("--shot-at="):
 			shot_at = float(arg.trim_prefix("--shot-at="))
 		elif arg.begins_with("--shot="):
@@ -122,24 +124,6 @@ func _debug_die(times: int) -> void:
 			_death_flow.finish_respawn()
 
 
-## Респ героя — тёмная плита с бледным свечением (позже — шаблоны «общежитие» / «стройка»).
-func _build_respawn_marker(at: Vector3) -> void:
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = 1.2
-	mesh.bottom_radius = 1.2
-	mesh.height = 0.05
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.2, 0.22, 0.25)
-	material.emission_enabled = true
-	material.emission = Color(0.3, 0.6, 0.5)
-	material.emission_energy_multiplier = 0.4
-	var marker := MeshInstance3D.new()
-	marker.mesh = mesh
-	marker.material_override = material
-	marker.position = Vector3(at.x, 0.03, at.z)
-	add_child(marker)
-
-
 func _build_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
@@ -156,48 +140,3 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-50, -30, 0)
 	sun.shadow_enabled = true
 	add_child(sun)
-
-
-func _build_ground() -> void:
-	var box := BoxShape3D.new()
-	box.size = Vector3(GROUND_SIZE, 1, GROUND_SIZE)
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(GROUND_SIZE, GROUND_SIZE)
-	add_child(_static_body(box, Vector3(0, -0.5, 0), plane, Vector3.ZERO, Color(0.36, 0.42, 0.3)))
-
-
-## Случайные «дома» и «ящики» — детерминированно по сиду, чтобы сцена не менялась между запусками.
-func _build_obstacles() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = OBSTACLE_SEED
-	var placed := 0
-	while placed < OBSTACLE_COUNT:
-		var at := Vector3(rng.randf_range(-60, 60), 0, rng.randf_range(-60, 60))
-		if at.length() < 6.0:
-			continue
-		var size := Vector3(rng.randf_range(1, 6), rng.randf_range(1, 4), rng.randf_range(1, 6))
-		var box := BoxShape3D.new()
-		box.size = size
-		var mesh := BoxMesh.new()
-		mesh.size = size
-		var shade := rng.randf_range(0.45, 0.7)
-		var center := at + Vector3(0, size.y / 2.0, 0)
-		add_child(_static_body(box, center, mesh, center, Color(shade, shade * 0.95, shade * 0.9)))
-		placed += 1
-
-
-func _static_body(shape: Shape3D, shape_at: Vector3, mesh: Mesh, mesh_at: Vector3, color: Color) -> StaticBody3D:
-	var body := StaticBody3D.new()
-	var collision := CollisionShape3D.new()
-	collision.shape = shape
-	collision.position = shape_at
-	body.add_child(collision)
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 1.0
-	var instance := MeshInstance3D.new()
-	instance.mesh = mesh
-	instance.material_override = material
-	instance.position = mesh_at
-	body.add_child(instance)
-	return body

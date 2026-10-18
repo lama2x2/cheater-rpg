@@ -209,7 +209,10 @@
     "confirm_text": "Интервал приёма «{item}» не соблюдён (осталось {time}).\nЭффект будет слабее, риск — высокий. Принять?",
     "confirm_ok": "Принять",
     "confirm_cancel": "Не сейчас",
-    "inv_free_points": "Свободные очки: {n}"
+    "inv_free_points": "Свободные очки: {n}",
+    "killed_by": "растерзан: {enemy}",
+    "interact_door_open": "[E] Открыть дверь",
+    "interact_door_close": "[E] Закрыть дверь"
   },
   "item_names": {
     "sporan": "Споран",
@@ -230,5 +233,13 @@
     "bandage": "Бинт",
     "gold_ring": "Золотое кольцо",
     "brick": "Кирпич"
+  },
+  "enemy_names": {
+    "crawler": "ползун",
+    "slowpoke": "медляк",
+    "jumper": "прыгун",
+    "runner": "бегун",
+    "lottery": "лотерейщик",
+    "stomper": "топтун"
   }
 }
