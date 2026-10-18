@@ -205,9 +205,7 @@ func test_slot_swap_and_cooldown() -> void:
 
 
 func test_gift_offer_and_pearl() -> void:
-	var defs := _defs()
-	defs.append({"id": "heat_vision", "slot": "active", "mana_cost": 1, "cooldown_s": 1, "effects": []})
-	var s := SkillRulesScript.new(_rules(), defs, MPS)
+	var s := _skills()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	assert_eq(s.gift_pool(10), "10", "дар 10")
@@ -224,8 +222,15 @@ func test_gift_offer_and_pearl() -> void:
 		if id != "ambusher":
 			s.learn(id, 1)
 	var rest := s.gift_offer("10", 3, rng)
-	assert_eq(rest, PackedStringArray(["ambusher", "heat_vision"]), "пул исчерпан — добор из других")
-	assert_eq(s.pearl_skill(rng), "ambusher", "жемчужина: пул 60 пуст → добор с младших")
+	assert_eq(rest.size(), 3, "три варианта")
+	assert_eq(rest[0], "ambusher", "сначала остаток пула 10")
+	for id in rest.slice(1):
+		assert_true(_rules()["gifts"]["30"]["skills"].has(id), "добор из пула 30: %s" % id)
+	var pearl := s.pearl_skill(rng)
+	assert_true(_rules()["gifts"]["60"]["skills"].has(pearl), "жемчужина при 7 умениях — из пула 60: %s" % pearl)
+	for id in s.all_ids():
+		s.learn(id, 1)
+	assert_eq(s.pearl_skill(rng), "", "всё изучено — жемчужине нечего дать")
 
 
 func test_save_roundtrip() -> void:
@@ -253,6 +258,9 @@ func test_jackpot_group_takes_larger() -> void:
 	assert_almost(buffs.multiplier("luck", 5.0), 20.3, "эхо ещё не началось")
 	assert_almost(buffs.multiplier("luck", 15.0), 2.0, "эхо после Улыбки")
 	assert_true(buffs.is_active("skill:fortune_smile", 15.0), "источник активен")
+	var debt := BuffsScript.new()
+	debt.add("luck", -0.5, 10.0, "skill:balance_loan", -INF, "fortune")
+	assert_almost(debt.multiplier("luck", 1.0), 0.5, "взыскание одно — Удача ×0,5")
 
 
 # --- Пачка 1 (13b): пул дара 10 -----------------------------------------------------------------
@@ -344,3 +352,92 @@ func test_scarecrow_and_brain_flee() -> void:
 	assert_eq(brain.update(0.5, {"sees_player": true, "player_position": Vector3.ZERO, "player_distance": 1.0}), InfectedBrain.FLEE, "напуганная не видит героя")
 	assert_true(not brain.is_alert(), "и не в тревоге (Из тени работает)")
 	assert_eq(brain.update(2.0, {}), InfectedBrain.WANDER, "страх прошёл")
+
+
+
+# --- Пачка 2 (13b): шортлист 9–15 ---------------------------------------------------------------
+
+func test_heat_vision_toggle_and_upkeep() -> void:
+	var s := _skills()
+	s.learn("heat_vision", 1)
+	var used := s.use("heat_vision", 0.0, 50.0, _levels())
+	assert_eq(String(used["result"]), "ok", "включено")
+	assert_true(s.toggled.has("heat_vision"), "переключатель включён")
+	assert_almost(s.upkeep(_levels()), 0.1, "0,1 маны в секунду")
+	assert_eq(s.toggled_effects("heat_sense", _levels(20)).size(), 1, "эффект тепла")
+	assert_almost(float(s.toggled_effects("heat_sense", _levels(20))[0]["radius_m"]), 50.0, "40 + 2×5 м")
+	assert_eq(String(s.use("heat_vision", 1.0, 0.0, _levels())["result"]), "off", "второе нажатие выключает — и без маны")
+	s.use("heat_vision", 2.0, 50.0, _levels())
+	s.set_blocker("jammer", true)
+	assert_eq(String(s.use("heat_vision", 3.0, 50.0, _levels())["result"]), "off", "выключить можно и под глушителем")
+	s.set_blocker("jammer", false)
+	s.use("heat_vision", 4.0, 50.0, _levels())
+	s.reset_cooldowns()
+	assert_true(s.toggled.is_empty(), "смерть выключает")
+	s.use("heat_vision", 5.0, 50.0, _levels())
+	var back := _skills()
+	back.load_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	assert_true(back.toggled.has("heat_vision"), "переключатель пережил сейв")
+
+
+func test_near_miss_chance() -> void:
+	var s := _skills()
+	assert_almost(s.luck_save_chance(22.0, 200.0, 50.0, 0, false, _levels()), 0.0, "без умения — ничего")
+	s.learn("near_miss", 1)
+	var smile := s.luck_save_chance(22.0, 200.0, 50.0, 0, false, _levels())
+	assert_almost(smile, 0.25 * 22.0 / 62.0, "смертельный удар под Улыбкой")
+	assert_almost(s.luck_save_chance(22.0, 10.0, 50.0, 0, false, _levels()), 0.0, "не смертельный — не спасает")
+	assert_almost(s.luck_save_chance(22.0, 200.0, 50.0, 2, false, _levels()), smile * 0.6, "две смерти в регионе −40%")
+	assert_almost(s.luck_save_chance(22.0, 200.0, 50.0, 0, true, _levels()), smile * 0.5, "элита ×0,5")
+	assert_almost(s.luck_save_chance(22.0, 200.0, 50.0, 9, false, _levels()), 0.0, "не ниже нуля")
+	s.choose_property("near_miss", "miss_heavy", _levels(30))
+	assert_true(s.luck_save_chance(22.0, 30.0, 50.0, 0, false, _levels(30)) > 0.0, "свойство 30: удар больше половины здоровья")
+	assert_eq(_effect(s.effects("near_miss", _levels(60)), "luck_save").get("immunity_s", 0), 1, "на 60 — секунда иммунитета")
+
+
+func test_quick_hands_channel() -> void:
+	var s := _skills()
+	var plain := s.channel_mods("spore_sack_open", _levels(), 0.6)
+	assert_almost(float(plain["speed"]), 1.0, "без умения")
+	s.learn("quick_hands", 1)
+	var mods := s.channel_mods("spore_sack_open", _levels(), 0.6)
+	assert_almost(float(mods["speed"]), 1.5, "×1,5")
+	assert_almost(float(mods["move_m"]), 1.5, "сдвиг 1,5 м")
+	assert_almost(float(s.channel_mods("spore_sack_open", _levels(60), 0.6)["speed"]), 2.0, "на 60 ×2")
+
+
+func test_spore_burst_and_loan() -> void:
+	var s := _skills()
+	s.learn("spore_burst", 1)
+	s.choose_property("spore_burst", "burst_strong", _levels(60))
+	var list := s.effects("spore_burst", _levels(60))
+	var mults := list.filter(func(e: Dictionary) -> bool: return e["type"] == "stat_mult")
+	assert_eq(mults.size(), 3, "Скорость, Сила и Реакция (60)")
+	for e: Dictionary in mults:
+		assert_almost(float(e["duration_s"]), 18.0, "%s: 12 + 6 с" % e["stat"])
+	assert_almost(float(mults[0]["value"]), 1.4, "Скорость ×1,4 со свойством")
+	assert_almost(float(mults[1]["value"]), 1.4, "и Сила")
+	assert_almost(float(mults[2]["value"]), 1.3, "Реакция ×1,3")
+	assert_eq(s.can_use("spore_burst", 0.0, 0.0, _levels()), "ok", "маны не нужно")
+	s.learn("balance_loan", 1)
+	var loan := s.effects("balance_loan", _levels(20, 30))
+	var main := _effect(loan, "stat_mult")
+	var debt := {}
+	for e in loan:
+		if e.get("key", "") == "debt":
+			debt = e
+	assert_almost(float(main["value"]), 5.0, "Удача ×5")
+	assert_almost(float(main["duration_s"]), 70.0, "60 + 2×5 с")
+	assert_almost(float(debt["value"]), 0.5, "взыскание ×0,5")
+	assert_almost(float(debt["delay_s"]), 70.0, "сразу после кредита")
+	assert_almost(float(debt["duration_s"]), 480.0, "10 мин − 2 мин (Грани 30)")
+
+
+func test_danger_sense_numbers() -> void:
+	var s := _skills()
+	s.learn("danger_sense", 1)
+	var warn := s.passive_effects("danger_warn", _levels(50))[0]
+	assert_almost(float(warn["duration_s"]), 0.45, "0,3 + 5×0,03 с")
+	assert_almost(float(warn["time_scale"]), 0.5, "мир ×0,5")
+	s.choose_property("danger_sense", "danger_deep_slow", _levels(30))
+	assert_almost(float(s.passive_effects("danger_warn", _levels(30))[0]["time_scale"]), 0.25, "глубже")

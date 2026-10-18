@@ -26,7 +26,7 @@ func multiplier(stat: String, now: float) -> float:
 		if buff["stat"] != stat or float(buff["until"]) <= now or float(buff.get("from", -INF)) > now:
 			continue
 		if buff.has("group"):
-			groups[buff["group"]] = maxf(float(groups.get(buff["group"], 0.0)), float(buff["mult"]))
+			groups[buff["group"]] = maxf(float(groups.get(buff["group"], -INF)), float(buff["mult"]))
 		else:
 			total += float(buff["mult"])
 	for group: String in groups:

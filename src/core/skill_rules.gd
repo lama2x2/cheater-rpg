@@ -19,7 +19,7 @@ const REQUIRED_KEYS: PackedStringArray = [
 ]
 const PASSIVE := "passive"
 ## Возможности движка, которых пока нет: свойства с requires из этого списка не предлагаются.
-const MISSING_ENGINE: PackedStringArray = ["party", "humans"]
+const MISSING_ENGINE: PackedStringArray = ["party", "humans", "quasi", "elites"]
 
 var _rules: Dictionary
 var _defs: Dictionary = {}
@@ -32,6 +32,8 @@ var slots: Array[String] = []
 var cooldowns: Dictionary = {}
 ## Статусы от умений до игровой минуты: {"immunity": minutes, "luck_double_roll": minutes}.
 var statuses: Dictionary = {}
+## Включённые умения-переключатели (Тепловое зрение): {id: true}. Держат ману в секунду.
+var toggled: Dictionary = {}
 ## Что сейчас глушит умения: {"cluster_disabled": true, "jammer": true}. Не сохраняется — сцена
 ## выставляет заново.
 var blockers: Dictionary = {}
@@ -127,10 +129,13 @@ func set_slot(index: int, id: String, now: float, general_level: int) -> bool:
 # --- Числа: рост от характеристик и свойства ----------------------------------------------------
 
 ## Значение параметра с ростом и свойствами. path: "mana_cost", "cooldown_s" или
-## "<тип эффекта>.<поле>" ("stat_mult.value").
-func param(id: String, path: String, levels: Dictionary) -> float:
+## "<эффект>.<поле>" ("stat_mult.value"), где эффект — его key, если задан, иначе type: эффекты
+## с одним именем меняются вместе (Форсаж — Скорость и Сила), key разводит их (Кредит баланса —
+## "stat_mult" и "debt"). base — своё базовое значение (по умолчанию — из первого эффекта с этим
+## именем).
+func param(id: String, path: String, levels: Dictionary, base: float = NAN) -> float:
 	var d: Dictionary = _defs[id]
-	var value := _base_param(d, path)
+	var value := base if not is_nan(base) else _base_param(d, path)
 	for s: Dictionary in d.get("scaling", []):
 		if String(s["path"]) != path:
 			continue
@@ -149,8 +154,8 @@ func param(id: String, path: String, levels: Dictionary) -> float:
 		value += float(e.get("add", 0.0))
 		value *= float(e.get("mult", 1.0))
 	if path == "mana_cost" or path == "cooldown_s":
-		value *= _facet_mult(path, levels)
-	return maxf(0.0, value)
+		value = maxf(0.0, value * _facet_mult(path, levels))
+	return value
 
 
 func mana_cost(id: String, levels: Dictionary) -> float:
@@ -175,16 +180,21 @@ func effects(id: String, levels: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for base: Dictionary in d.get("effects", []):
 		var e := base.duplicate(true)
-		var type := String(e["type"])
+		var name := _effect_name(base)
 		for key: String in base:
 			if base[key] is float or base[key] is int:
-				e[key] = param(id, type + "." + key, levels)
+				e[key] = param(id, name + "." + key, levels, float(base[key]))
+		# Свойство меняет поле, которого в базе нет или которое не число (флаг, строка).
 		for p: Dictionary in active_properties(id, levels):
 			var pe: Dictionary = p["effect"]
 			var path := String(pe.get("path", ""))
-			if String(pe["type"]) == "modify" and path.begins_with(type + ".") and pe.has("set") \
-					and not (pe["set"] is float or pe["set"] is int):
-				e[path.trim_prefix(type + ".")] = pe["set"]
+			var field := path.trim_prefix(name + ".")
+			if String(pe["type"]) != "modify" or not path.begins_with(name + ".") or base.has(field) and (base[field] is float or base[field] is int):
+				continue
+			if pe.has("set") and not (pe["set"] is float or pe["set"] is int):
+				e[field] = pe["set"]
+			else:
+				e[field] = param(id, path, levels, 0.0)
 		result.append(e)
 	for p: Dictionary in active_properties(id, levels):
 		var pe: Dictionary = p["effect"]
@@ -269,6 +279,8 @@ func set_blocker(reason: String, on: bool) -> void:
 func can_use(id: String, now: float, mana: float, levels: Dictionary) -> String:
 	if not learned.has(id):
 		return "unknown"
+	if toggled.has(id):
+		return "ok"
 	if not slotted(int(levels.get("general", 0))).has(id):
 		return "not_slotted"
 	if is_passive(id):
@@ -277,7 +289,8 @@ func can_use(id: String, now: float, mana: float, levels: Dictionary) -> String:
 		return "blocked"
 	if cooldown_left(id, now) > 0.0:
 		return "cooldown"
-	if mana < mana_cost(id, levels) or mana <= 0.0:
+	var cost := mana_cost(id, levels)
+	if mana < cost or (cost > 0.0 and mana <= 0.0):
 		return "mana"
 	return "ok"
 
@@ -288,6 +301,11 @@ func use(id: String, now: float, mana: float, levels: Dictionary) -> Dictionary:
 	var check := can_use(id, now, mana, levels)
 	if check != "ok":
 		return {"result": check, "mana": 0.0, "effects": []}
+	if toggled.has(id):
+		toggled.erase(id)
+		return {"result": "off", "mana": 0.0, "effects": []}
+	if is_toggle(id):
+		toggled[id] = true
 	var list := effects(id, levels)
 	cooldowns[id] = now + cooldown_s(id, levels) / 60.0
 	for e in list:
@@ -295,6 +313,64 @@ func use(id: String, now: float, mana: float, levels: Dictionary) -> Dictionary:
 			var status := String(e["status"])
 			statuses[status] = maxf(float(statuses.get(status, 0.0)), now + float(e["duration_min"]))
 	return {"result": "ok", "mana": mana_cost(id, levels), "effects": list}
+
+
+func is_toggle(id: String) -> bool:
+	return bool(_defs[id].get("toggle", false))
+
+
+## Мана в реальную секунду на включённые переключатели.
+func upkeep(levels: Dictionary) -> float:
+	var total := 0.0
+	for id: String in toggled:
+		for e in effects(id, levels):
+			total += float(e.get("upkeep_mana_per_s", 0.0))
+	return total
+
+
+## Выключить все переключатели (кончилась мана, глушитель, смерть, умение ушло из слота).
+## Возвращает выключенные.
+func toggle_off_all() -> PackedStringArray:
+	var off := PackedStringArray(toggled.keys())
+	toggled.clear()
+	return off
+
+
+## Эффекты типа type от включённых переключателей.
+func toggled_effects(type: String, levels: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for id: String in toggled:
+		for e in effects(id, levels):
+			if String(e["type"]) == type:
+				result.append(e)
+	return result
+
+
+## «Мимо!»: шанс, что удар прошёл мимо. Срабатывает на смертельный удар (свойство — и на удар
+## больше половины здоровья); каждая смерть в регионе −20% шанса, по элитам ×0,5.
+func luck_save_chance(luck: float, damage: float, health: float, deaths_in_region: int, elite: bool, levels: Dictionary) -> float:
+	var best := 0.0
+	for e in passive_effects("luck_save", levels):
+		var heavy := String(e.get("applies", "lethal")) == "heavy" and damage >= health * 0.5
+		if damage < health and not heavy:
+			continue
+		var l := maxf(0.0, luck)
+		var p := float(e["cap"]) * l / (l + float(e["k"])) if l > 0.0 else 0.0
+		p *= maxf(0.0, 1.0 + float(e["per_death_in_region"]) * deaths_in_region)
+		if elite:
+			p *= float(e["elite_mult"])
+		best = maxf(best, p)
+	return best
+
+
+## Длительное действие героя (вскрытие мешка): {"speed": множитель скорости, "move_m": допуск сдвига}.
+func channel_mods(channel: String, levels: Dictionary, default_move: float) -> Dictionary:
+	var result := {"speed": 1.0, "move_m": default_move}
+	for e in passive_effects("channel_speed", levels):
+		if String(e["channel"]) == channel:
+			result["speed"] = maxf(float(result["speed"]), float(e["mult"]))
+			result["move_m"] = maxf(float(result["move_m"]), float(e.get("interrupt_move_m", default_move)))
+	return result
 
 
 func has_status(status: String, now: float) -> bool:
@@ -362,10 +438,11 @@ func mana_reserve(levels: Dictionary) -> float:
 	return clampf(total, 0.0, 0.9)
 
 
-## Смерть обнуляет откаты всех умений (D-73). Статусы гаснут.
+## Смерть обнуляет откаты всех умений (D-73). Статусы гаснут, переключатели выключаются.
 func reset_cooldowns() -> void:
 	cooldowns.clear()
 	statuses.clear()
+	toggled.clear()
 
 
 # --- Дары ---------------------------------------------------------------------------------------
@@ -427,7 +504,8 @@ func always_for_origin(origin: String) -> PackedStringArray:
 # --- Сохранение ---------------------------------------------------------------------------------
 
 func to_dict() -> Dictionary:
-	return {"learned": learned.duplicate(true), "slots": Array(slots), "cooldowns": cooldowns.duplicate(), "statuses": statuses.duplicate()}
+	return {"learned": learned.duplicate(true), "slots": Array(slots), "cooldowns": cooldowns.duplicate(),
+		"statuses": statuses.duplicate(), "toggled": toggled.keys()}
 
 
 func load_dict(data: Dictionary) -> void:
@@ -451,6 +529,10 @@ func load_dict(data: Dictionary) -> void:
 	var st: Dictionary = data.get("statuses", {})
 	for status: String in st:
 		statuses[status] = float(st[status])
+	toggled.clear()
+	for id in data.get("toggled", []):
+		if learned.has(String(id)):
+			toggled[String(id)] = true
 
 
 # --- Внутреннее ---------------------------------------------------------------------------------
@@ -460,9 +542,13 @@ func _base_param(d: Dictionary, path: String) -> float:
 		return float(d.get(path, 0.0))
 	var parts := path.split(".")
 	for e: Dictionary in d.get("effects", []):
-		if String(e["type"]) == parts[0]:
+		if _effect_name(e) == parts[0]:
 			return float(e.get(parts[1], 0.0))
 	return 0.0
+
+
+static func _effect_name(e: Dictionary) -> String:
+	return String(e.get("key", e["type"]))
 
 
 func _facet_mult(path: String, levels: Dictionary) -> float:
@@ -490,8 +576,8 @@ func _offerable(id: String) -> bool:
 	return _defs.has(id) and not learned.has(id)
 
 
-static func _duration_of(list: Array[Dictionary], type: String) -> float:
+static func _duration_of(list: Array[Dictionary], name: String) -> float:
 	for e in list:
-		if String(e["type"]) == type and e.has("duration_s"):
+		if _effect_name(e) == name and e.has("duration_s"):
 			return float(e["duration_s"])
 	return 0.0
