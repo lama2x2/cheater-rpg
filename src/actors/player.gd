@@ -72,6 +72,7 @@ func _physics_process(delta: float) -> void:
 		speed = float(_tuning["sneak_speed"])
 	speed *= 1.0 + float(_tuning["speed_bonus_per_level"]) * (PlayerState.stats.get_level("speed") - 1)
 	speed *= vitals.speed_multiplier() * inventory.speed_multiplier()
+	speed *= PlayerState.buffs.multiplier("speed", GameClock.minutes)  # Споровый форсаж
 
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed

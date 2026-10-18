@@ -18,12 +18,17 @@ var _pending: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
 
+## Мешок, брошенный заранее (Нюх на мешок), для трупа, который сейчас появится: {"at", "loot"}.
+var _prerolled: Dictionary = {}
+
+
 func _ready() -> void:
 	_corpses = Node3D.new()
 	_corpses.name = "Corpses"
 	add_child(_corpses)
 	WorldSim.register("infected", self)
 	EventBus.infected_killed.connect(_on_killed)
+	EventBus.sack_prerolled.connect(func(at: Vector3, loot: Dictionary) -> void: _prerolled = {"at": at, "loot": loot})
 	if not area.is_navigation_ready:
 		area.navigation_ready.connect(_on_navigation_ready, CONNECT_ONE_SHOT)
 
@@ -97,6 +102,10 @@ func _on_killed(id: String, level: int, at: Vector3) -> void:
 	corpse.level = level
 	corpse.position = Vector3(at.x, 0.0, at.z)
 	corpse.rotation.y = randf() * TAU
+	if not _prerolled.is_empty() and Vector3(_prerolled["at"]).distance_to(at) < 0.01:
+		corpse.pre_loot = _prerolled["loot"]
+		corpse.has_pre_loot = true
+	_prerolled = {}
 	_corpses.add_child(corpse)
 
 

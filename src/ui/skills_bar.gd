@@ -72,6 +72,8 @@ func _cell_text(i: int, id: String, now: float) -> String:
 		return Content.ui("skill_slot_blocked", params)
 	if skills.is_passive(id):
 		return Content.ui("skill_slot_passive", params)
+	if skills.toggled.has(id):
+		return Content.ui("skill_slot_on", params)
 	var active := PlayerState.buffs.left("skill:" + id, now)
 	if active > 0.0:
 		params["left"] = "%d с" % ceili(active / _minutes_per_second())
@@ -91,7 +93,7 @@ func _cell_color(id: String, now: float) -> Color:
 		return Color(0.6, 0.4, 0.4)
 	if skills.is_passive(id):
 		return Color(0.65, 0.8, 0.95)
-	if PlayerState.buffs.left("skill:" + id, now) > 0.0:
+	if PlayerState.buffs.left("skill:" + id, now) > 0.0 or skills.toggled.has(id):
 		return Color(1.0, 0.8, 0.25)
 	if skills.cooldown_left(id, now) > 0.0:
 		return Color(0.6, 0.6, 0.6)

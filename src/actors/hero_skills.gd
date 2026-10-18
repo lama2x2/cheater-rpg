@@ -2,10 +2,13 @@ extends Node3D
 ## Умения героя в сцене: клавиши 1–4 — слоты, золотое сияние под Улыбкой Фортуны, всплывающие
 ## надписи удачи («мимо!», «удача!») и иммунитета. Правила — SkillRules (src/core), применение
 ## чисел — PlayerState; сценовые эффекты (EventBus.skill_used) — здесь: highlight (Вспышка),
-## noise_at (Чревовещатель), enemy_flee (Пугач), noise_zone (Гаситель).
+## noise_at (Чревовещатель), enemy_flee (Пугач), noise_zone (Гаситель); раз в SENSE_TICK — тепло
+## (Тепловое зрение) и нюх на мешок; Пуля — замедление мира по EventBus.danger_warned.
 ## Спецификация: docs/spec/05_skills.md.
 
 const SLOT_ACTIONS: PackedStringArray = ["skill_1", "skill_2", "skill_3", "skill_4"]
+const SENSE_TICK := 0.4
+const LAYER_WORLD := 1
 const FLOAT_TEXT := {
 	"enemy_miss": ["luck_float_miss", Color(1.0, 0.85, 0.3)],
 	"enemy_stumble": ["luck_float_stumble", Color(1.0, 0.85, 0.3)],
@@ -13,6 +16,7 @@ const FLOAT_TEXT := {
 	"unnoticed": ["luck_float_unnoticed", Color(1.0, 0.85, 0.3)],
 	"immunity": ["immunity_float", Color(0.7, 0.9, 1.0)],
 	"ambush": ["ambush_float", Color(0.75, 0.6, 1.0)],
+	"near_miss": ["luck_float_miss", Color(1.0, 0.95, 0.5)],
 }
 ## Подсветка Вспышки: знак и цвет по виду цели.
 const HIGHLIGHT := {
@@ -29,12 +33,18 @@ var aim_override := Vector3.INF
 var _aura: MeshInstance3D
 var _aura_material: StandardMaterial3D
 var _time := 0.0
+var _sense_timer := 0.0
+## Метки Теплового зрения: {тварь: Label3D}.
+var _heat_marks: Dictionary = {}
+var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
 	_build_aura()
 	EventBus.luck_event.connect(_on_luck_event)
 	EventBus.skill_used.connect(_on_skill_used)
+	EventBus.danger_warned.connect(_on_danger)
+	_rng.randomize()
 
 
 func _process(delta: float) -> void:
@@ -46,6 +56,11 @@ func _process(delta: float) -> void:
 		var pulse := 0.35 + 0.15 * sin(_time * 6.0)
 		_aura_material.albedo_color = Color(0.7, 0.9, 1.0, pulse) if immune else Color(1.0, 0.8, 0.25, pulse)
 		_aura.rotation.y += delta * 1.5
+	_sense_timer -= delta
+	if _sense_timer <= 0.0:
+		_sense_timer = SENSE_TICK
+		_heat_tick()
+		_nose_tick()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -156,6 +171,98 @@ func _wave(radius: float, color: Color) -> void:
 	tween.tween_property(ring, "scale", Vector3(radius, 0.05, radius), 0.6)
 	tween.tween_property(material, "albedo_color:a", 0.0, 0.6)
 	tween.chain().tween_callback(ring.queue_free)
+
+
+# --- Тепловое зрение ---------------------------------------------------------------------------
+
+## Пока переключатель включён — метки над живыми в радиусе, если стен между не больше walls.
+func _heat_tick() -> void:
+	var list := PlayerState.skills.toggled_effects("heat_sense", PlayerState.skill_levels())
+	var seen := {}
+	if not list.is_empty() and hero.visible:
+		var e: Dictionary = list[0]
+		for node: Node3D in get_tree().get_nodes_in_group("infected"):
+			if hero.global_position.distance_to(node.global_position) > float(e["radius_m"]):
+				continue
+			if _walls_to(node) > int(e["walls"]):
+				continue
+			seen[node] = true
+			if not _heat_marks.has(node):
+				var label := Label3D.new()
+				label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+				label.no_depth_test = true
+				label.pixel_size = 0.014
+				label.outline_size = 8
+				label.modulate = Color(1.0, 0.5, 0.15, 0.9)
+				label.position = Vector3.UP * 2.3
+				node.add_child(label)
+				_heat_marks[node] = label
+			_heat_marks[node].text = "◉ %d" % int(node.level) if bool(e["show_level"]) else "◉"
+	for node in _heat_marks.keys():
+		if not seen.has(node):
+			if is_instance_valid(node) and is_instance_valid(_heat_marks[node]):
+				_heat_marks[node].queue_free()
+			_heat_marks.erase(node)
+
+
+func _walls_to(node: Node3D) -> int:
+	var space := get_world_3d().direct_space_state
+	var walls := 0
+	var exclude: Array[RID] = [hero.get_rid()]
+	while walls < 3:
+		var query := PhysicsRayQueryParameters3D.create(hero.global_position + Vector3.UP, node.global_position + Vector3.UP, LAYER_WORLD, exclude)
+		var hit := space.intersect_ray(query)
+		if hit.is_empty():
+			break
+		walls += 1
+		exclude.append(hit["rid"])
+	return walls
+
+
+# --- Нюх на мешок ------------------------------------------------------------------------------
+
+## Твари в радиусе «обнюхиваются» один раз: мешок бросается заранее, ценный (горошина и дороже)
+## показывается с шансом; свечение видно, пока герой рядом.
+func _nose_tick() -> void:
+	var list := PlayerState.skills.passive_effects("trophy_hint", PlayerState.skill_levels())
+	var e: Dictionary = list[0] if not list.is_empty() else {}
+	for node: Node3D in get_tree().get_nodes_in_group("infected"):
+		var near := not e.is_empty() and hero.global_position.distance_to(node.global_position) <= float(e["radius_m"])
+		if near and not node.sniffed:
+			node.sniffed = true
+			var loot: Dictionary = node.preroll_sack()
+			var stage := int(Content.enemy_db().enemy(node.enemy_id)["stage"])
+			var chance := float(e["show_chance"]) + float(e["per_stage"]) * stage
+			node.set_meta("nose_show", _valuable(loot, float(e["min_price"])) and _rng.randf() < chance)
+			node.set_meta("nose_pearl", loot.keys().any(func(id: String) -> bool: return id.begins_with("pearl")))
+		var show: bool = near and bool(node.get_meta("nose_show", false))
+		node.set_trophy_glow(show, show and bool(e.get("pearl_bright", false)) and bool(node.get_meta("nose_pearl", false)))
+
+
+static func _valuable(loot: Dictionary, min_price: float) -> bool:
+	for id: String in loot:
+		if float(Content.item_db().item(id)["base_price"]) >= min_price:
+			return true
+	return false
+
+
+# --- Пуля --------------------------------------------------------------------------------------
+
+## Мир замедляется на duration_s реальных секунд (Engine.time_scale; герой — вместе с миром, пока
+## нет отдельного «времени героя»), над угрозой — «!».
+func _on_danger(from: Vector3, warn: Dictionary) -> void:
+	if not is_inside_tree():
+		return
+	float_text(get_tree().current_scene, hero.global_position + Vector3.UP * 2.4, Content.ui("danger_float"), Color(1.0, 0.35, 0.3))
+	if bool(warn.get("show_direction", false)):
+		float_text(get_tree().current_scene, from + Vector3.UP * 2.6, "!", Color(1.0, 0.25, 0.2))
+	Engine.time_scale = float(warn["time_scale"])
+	await get_tree().create_timer(float(warn["duration_s"]), true, false, true).timeout
+	Engine.time_scale = 1.0
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
 
 
 # --- Чревовещатель -----------------------------------------------------------------------------

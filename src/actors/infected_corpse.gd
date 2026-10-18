@@ -6,6 +6,9 @@ var enemy_id: String = "slowpoke"
 var level: int = 0
 var food: float = 60.0
 var sack_opened := false
+## Мешок брошен заранее (Нюх на мешок, src/actors/infected.gd) — выпадет именно он.
+var pre_loot: Dictionary = {}
+var has_pre_loot := false
 
 
 func _ready() -> void:
@@ -50,8 +53,9 @@ func interact(hero: Node3D) -> void:
 	if mult <= 0.0:
 		SystemLog.post("sack_no_blade", {}, "warning")
 		return
-	var seconds := float(Content.enemy_db().enemy(enemy_id)["sack_open_s"]) / mult
-	hero.channel.start(Content.ui("sack_opening"), seconds, _open_sack, "spore_sack_open")
+	var hands := PlayerState.skills.channel_mods("spore_sack_open", PlayerState.skill_levels(), hero.channel.MOVE_TOLERANCE)
+	var seconds := float(Content.enemy_db().enemy(enemy_id)["sack_open_s"]) / mult / float(hands["speed"])
+	hero.channel.start(Content.ui("sack_opening"), seconds, _open_sack, "spore_sack_open", float(hands["move_m"]))
 
 
 ## Чем быстрее режет лучший клинок в инвентаре (нож ×2, топор ×1,5); 0 — нечем.
@@ -69,7 +73,7 @@ func _open_sack() -> void:
 	remove_from_group("interactable")
 	var data := Content.enemy_db().enemy(enemy_id)
 	var frac := LootTable.level_fraction(level, data["level"])
-	var drop := Content.loot().roll(String(data["loot"]), frac, PlayerState.effective("luck"), _rng())
+	var drop := pre_loot if has_pre_loot else Content.loot().roll(String(data["loot"]), frac, PlayerState.effective("luck"), _rng())
 	PlayerState.run.add("sacks_opened")
 	if drop.is_empty():
 		SystemLog.post("sack_empty", {"enemy": Content.enemy_name(enemy_id)})
@@ -104,8 +108,11 @@ func eat(amount: float) -> void:
 
 
 func to_dict() -> Dictionary:
-	return {"id": enemy_id, "level": level, "food": food, "sack_opened": sack_opened,
+	var data := {"id": enemy_id, "level": level, "food": food, "sack_opened": sack_opened,
 		"position": [position.x, position.y, position.z], "yaw": rotation.y}
+	if has_pre_loot:
+		data["pre_loot"] = pre_loot
+	return data
 
 
 func load_dict(data: Dictionary) -> void:
@@ -113,6 +120,11 @@ func load_dict(data: Dictionary) -> void:
 	level = int(data["level"])
 	food = float(data["food"])
 	sack_opened = bool(data["sack_opened"])
+	has_pre_loot = data.has("pre_loot")
+	pre_loot = {}
+	if has_pre_loot:
+		for id: String in data["pre_loot"]:
+			pre_loot[id] = int(data["pre_loot"][id])
 	var at: Array = data["position"]
 	position = Vector3(float(at[0]), float(at[1]), float(at[2]))
 	rotation.y = float(data["yaw"])

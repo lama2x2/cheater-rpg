@@ -3,7 +3,8 @@ extends SceneTree
 ## Печатает: дар у знахарки (варианты и выбор), Улыбку Фортуны (мана, откат, Удача, иммунитет),
 ## боевую Удачу (промахи тварей за 400 атак без и под Улыбкой), смерть обнуляет откаты,
 ## сохранение и загрузку умений; пачка 1 (13b) — на кластере с тварями: Вспышка, Чревовещатель,
-## Пугач, Второе дыхание, Гаситель, Мягкий шаг, Из тени. Сверять глазами.
+## Пугач, Второе дыхание, Гаситель, Мягкий шаг, Из тени; пачка 2 — Тепловое зрение, Мимо!,
+## Ловкие руки, Нюх на мешок, Споровый форсаж, Кредит баланса, Пуля. Сверять глазами.
 
 
 func _initialize() -> void:
@@ -72,7 +73,9 @@ func _run() -> void:
 	await create_timer(1.0).timeout
 	print("after load: learned %s, slot1 %s, cooldown %.0f ≈ %.0f min" % [ps.skills.learned.keys(), ps.skills.slots[0], ps.skills.cooldown_left("fortune_smile", clock.minutes), cd])
 	await _batch_1(ps, clock)
-	var log_tail: Array = root.get_node("SystemLog").history.slice(-24).map(func(e: Dictionary) -> String: return e["text"])
+	await _batch_2(ps, clock)
+	var log_tail: Array = root.get_node("SystemLog").history.filter(func(e: Dictionary) -> bool: return not String(e["text"]).contains("зафиксировано")) \
+		.slice(-20).map(func(e: Dictionary) -> String: return e["text"])
 	for line in log_tail:
 		print("  › ", line)
 	quit()
@@ -127,3 +130,83 @@ func _batch_1(ps: Node, clock: Node) -> void:
 	ps.skills.slots[0] = "ambusher"
 	print("ambusher: unaware ×%.2f, alert ×%.2f, target unaware=%s" % [ps.skills.damage_mult(true, false, levels),
 		ps.skills.damage_mult(false, false, levels), target.is_unaware() if is_instance_valid(target) else "?"])
+
+
+## Пачка 2 (13b): шортлист 9–15.
+func _batch_2(ps: Node, clock: Node) -> void:
+	print("\n-- batch 2")
+	var hero := get_first_node_in_group("hero") as Node3D
+	var infected := get_nodes_in_group("infected")
+	ps.skills.reset_cooldowns()
+	ps.skills.slots[0] = "heat_vision"
+	ps.vitals.restore("mana", 999.0)
+	var mana0: float = ps.vitals.value("mana")
+	print("heat_vision on: ", ps.use_skill_slot(0))
+	await create_timer(2.0).timeout
+	var heat := 0
+	for node in infected:
+		if is_instance_valid(node):
+			heat += node.get_children().filter(func(c: Node) -> bool: return c is Label3D and String(c.text).begins_with("◉")).size()
+	print("heat marks %d, mana %.2f -> %.2f (10 + ~0.2 upkeep), off: %s" % [heat, mana0, ps.vitals.value("mana"), ps.use_skill_slot(0)])
+
+	ps.skills.slots[0] = "trophy_nose"
+	for node in infected:
+		if is_instance_valid(node):
+			node.sniffed = false
+			hero.global_position = node.global_position + Vector3(6, 0, 0)
+	await create_timer(0.6).timeout
+	var target: Node3D = null
+	for node in get_nodes_in_group("infected"):
+		if node.sniffed:
+			target = node
+	if target:
+		var loot: Dictionary = target.sack_loot
+		print("trophy_nose: sniffed %s, sack %s, glow %s" % [target.enemy_id, loot, target.get_meta("nose_show", false)])
+		ps.skills.slots[0] = "quick_hands"
+		ps.pick_up("knife", 1)
+		target.take_damage(9999.0)
+		await process_frame
+		var corpse: Node3D = null
+		for c in get_nodes_in_group("infected_corpses"):
+			if c.has_pre_loot:
+				corpse = c
+		if corpse:
+			print("corpse pre_loot %s (= sack above)" % [corpse.pre_loot])
+			hero.global_position = corpse.global_position + Vector3(0.5, 0, 0)
+			corpse.interact(hero)
+			print("quick_hands: opening takes %.1f s (knife ×2, hands ×1.5)" % (hero.channel._duration))
+			hero.channel.cancel()
+
+	ps.skills.slots[0] = "near_miss"
+	ps.stats.set_coefficient("luck", 200.0)
+	var saved := 0
+	for i in 200:
+		ps.lives = 100
+		var hp: float = ps.vitals.value("health")
+		ps.skills.statuses.erase("immunity")
+		ps.hurt(hp + 50.0, "runner")
+		if ps.awaiting_respawn:
+			ps.respawn()
+		else:
+			saved += 1
+	print("near_miss: luck %.0f, lethal hits survived %d / 200 (cap 25%%, minus deaths in region %d)" % [ps.effective("luck"), saved, ps.deaths_since_region_shift])
+	ps.stats.set_coefficient("luck", 1.0)
+	ps.vitals.restore("health", 999.0)
+
+	ps.skills.reset_cooldowns()
+	ps.skills.slots[0] = "spore_burst"
+	var spore: float = ps.vitals.value("spore_balance")
+	print("spore_burst: %s, spore %.0f -> %.0f, speed ×%.2f, strength ×%.2f" % [ps.use_skill_slot(0), spore, ps.vitals.value("spore_balance"),
+		ps.buffs.multiplier("speed", clock.minutes), ps.buffs.multiplier("strength", clock.minutes)])
+	ps.skills.slots[0] = "balance_loan"
+	ps.vitals.restore("mana", 999.0)
+	var loan: String = ps.use_skill_slot(0)
+	var ends: float = clock.minutes + ps.buffs.left("skill:balance_loan", clock.minutes)
+	print("balance_loan: %s, luck ×%.1f now (если Улыбка ещё идёт — берётся больший), ×%.1f at loan end, ×%.2f in debt" % [loan,
+		ps.buffs.multiplier("luck", clock.minutes), ps.buffs.multiplier("luck", ends - 1.0), ps.buffs.multiplier("luck", ends + 1.0)])
+	ps.skills.slots[0] = "danger_sense"
+	ps.danger_warn(hero.global_position + Vector3(5, 0, 0))
+	await process_frame
+	var scale := Engine.time_scale
+	await create_timer(0.6, true, false, true).timeout
+	print("danger_sense: time scale %.2f -> %.2f" % [scale, Engine.time_scale])

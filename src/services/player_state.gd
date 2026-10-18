@@ -53,6 +53,8 @@ var _farm_warned: Dictionary = {}
 var _luck_logged: Dictionary = {}
 ## Умения с долгим откатом, о готовности которых сообщить: {id: true}.
 var _waiting_ready: Dictionary = {}
+## Когда последний раз сработала Пуля (реальные мс).
+var _danger_last_ms := -1000000
 
 
 func _ready() -> void:
@@ -152,7 +154,7 @@ func _process(delta: float) -> void:
 	for buff in buffs.expire(GameClock.minutes):
 		if not String(buff["source"]).begins_with("skill:"):
 			SystemLog.post("buff_ended", {"stat": Content.stat_name(buff["stat"])})
-	_skills_tick()
+	_skills_tick(delta)
 	if wounds and wounds.is_bleeding() and not awaiting_respawn:
 		var loss := wounds.tick(delta)
 		_last_damage_source = "bleeding"
@@ -252,6 +254,8 @@ func hurt(amount: float, source: String, bleed_chance: float = 0.0) -> void:
 		return
 	if skills.has_status("immunity", GameClock.minutes):
 		EventBus.luck_event.emit("immunity", Vector3.INF)
+		return
+	if _near_miss(amount, source):
 		return
 	_last_damage_source = source
 	EventBus.player_hurt.emit(amount, source)
@@ -472,6 +476,9 @@ func use_skill_slot(index: int) -> String:
 func use_skill(id: String) -> String:
 	if awaiting_respawn:
 		return "dead"
+	if not skills.toggled.has(id) and _not_here(id):
+		SystemLog.post("skill_not_here", {"skill": Content.skill_name(id)}, "warning")
+		return "not_here"
 	var levels := skill_levels()
 	var used := skills.use(id, GameClock.minutes, vitals.value(Vitals.MANA), levels)
 	var name := Content.skill_name(id)
@@ -488,7 +495,17 @@ func use_skill(id: String) -> String:
 			SystemLog.post("skill_on_cooldown", {"skill": name, "left": cooldown_text(skills.cooldown_left(id, GameClock.minutes))}, "warning")
 		"blocked":
 			SystemLog.post("skill_blocked", {}, "warning")
+		"off":
+			SystemLog.post("skill_toggled_off", {"skill": name})
+			skills_changed.emit()
 	return used["result"]
+
+
+## Умение не работает на этом типе кластера (Тепловое зрение — на чёрном).
+func _not_here(id: String) -> bool:
+	if not skills.has_def(id) or not WorldSim.clusters.has(WorldSim.current):
+		return false
+	return Array(skills.def(id).get("not_on", [])).has(WorldSim.cluster_type_id())
 
 
 ## Откат для интерфейса в игровом времени, как таймеры кластеров: «45 с», «12 мин», «3 ч 20 мин».
@@ -501,7 +518,10 @@ static func cooldown_text(game_minutes: float) -> String:
 
 
 func set_skill_slot(index: int, id: String) -> void:
+	var old := skills.slots[index] if index >= 0 and index < skills.slots.size() else ""
 	if skills.set_slot(index, id, GameClock.minutes, stats.general_level()):
+		if not old.is_empty() and skills.slot_of(old) < 0:
+			skills.toggled.erase(old)
 		if not id.is_empty():
 			SystemLog.post("skill_slot_set", {"skill": Content.skill_name(id), "slot": index + 1})
 		_update_mana_reserve()
@@ -595,10 +615,20 @@ func _apply_skill_effects(id: String, list: Array[Dictionary]) -> void:
 	EventBus.skill_used.emit(id, list)
 
 
-## Каждый кадр: глушение на отключённом кластере, сообщения о готовности долгих откатов.
-func _skills_tick() -> void:
+## Каждый кадр: глушение на отключённом кластере, мана на переключатели, сообщения о
+## готовности долгих откатов.
+func _skills_tick(delta: float) -> void:
 	if skills == null:
 		return
+	if not skills.toggled.is_empty():
+		var upkeep := skills.upkeep(skill_levels()) * delta
+		var stop := skills.is_blocked() or awaiting_respawn or not vitals.spend_mana(upkeep)
+		for id: String in skills.toggled.keys():
+			stop = stop or _not_here(id)
+		if stop:
+			for id in skills.toggle_off_all():
+				SystemLog.post("skill_toggled_off", {"skill": Content.skill_name(id)}, "warning")
+			skills_changed.emit()
 	var off := false
 	if WorldSim.clusters.has(WorldSim.current):
 		off = bool(WorldSim.cluster_config().get("skills_off", false))
@@ -644,3 +674,32 @@ func _on_skill_levels_changed(stat: String, old_level: int, new_level: int) -> v
 		if not names.is_empty():
 			SystemLog.post("skill_property_available", {"skills": ", ".join(names)}, "progress")
 	skills_changed.emit()
+
+
+## «Мимо!» (пассив): смертельный удар с шансом проходит мимо (D-76). true — удар не прошёл.
+func _near_miss(amount: float, source: String) -> bool:
+	var levels := skill_levels()
+	var elite := Content.enemy_db().has_enemy(source) and bool(Content.enemy_db().enemy(source).get("elite", false))
+	var chance := skills.luck_save_chance(effective("luck"), amount, vitals.value(Vitals.HEALTH), deaths_since_region_shift, elite, levels)
+	if chance <= 0.0 or _rng.randf() >= chance:
+		return false
+	EventBus.luck_event.emit("near_miss", Vector3.INF)
+	SystemLog.post("luck_near_miss", {}, "special")
+	for e in skills.passive_effects("luck_save", levels):
+		if e.has("immunity_s"):
+			var until := GameClock.minutes + GameClock.game_minutes_for(float(e["immunity_s"]))
+			skills.statuses["immunity"] = maxf(float(skills.statuses.get("immunity", 0.0)), until)
+	return true
+
+
+## Пуля (пассив): тварь начала рывок на героя — мир замедляется (сцена — EventBus.danger_warned).
+func danger_warn(from: Vector3) -> void:
+	var list := skills.passive_effects("danger_warn", skill_levels())
+	if list.is_empty() or awaiting_respawn:
+		return
+	var e: Dictionary = list[0]
+	var now := Time.get_ticks_msec()
+	if now - _danger_last_ms < int(float(e["min_interval_s"]) * 1000.0):
+		return
+	_danger_last_ms = now
+	EventBus.danger_warned.emit(from, e)

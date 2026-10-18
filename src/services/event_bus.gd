@@ -33,3 +33,9 @@ signal skill_used(skill_id: String, effects: Array)
 ## at — где показать (Vector3.INF — над героем).
 @warning_ignore("unused_signal")
 signal luck_event(kind: String, at: Vector3)
+## Пуля (умение): угроза уже летит в героя — from, параметры замедления — warn (danger_warn).
+@warning_ignore("unused_signal")
+signal danger_warned(from: Vector3, warn: Dictionary)
+## Мешок твари брошен заранее (Нюх на мешок): ближайший труп в точке at получит этот лут.
+@warning_ignore("unused_signal")
+signal sack_prerolled(at: Vector3, loot: Dictionary)

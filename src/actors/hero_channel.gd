@@ -13,6 +13,7 @@ var _on_done: Callable
 var _noise := ""
 var _noise_timer := 0.0
 var _start_position := Vector3.ZERO
+var _move_tolerance := MOVE_TOLERANCE
 
 
 func _ready() -> void:
@@ -32,7 +33,8 @@ func label() -> String:
 	return _label
 
 
-func start(label_text: String, duration: float, on_done: Callable, noise_source: String = "") -> void:
+## move_tolerance — на сколько можно сдвинуться, не сорвав действие (Ловкие руки — 1,5 м).
+func start(label_text: String, duration: float, on_done: Callable, noise_source: String = "", move_tolerance: float = MOVE_TOLERANCE) -> void:
 	_label = label_text
 	_duration = maxf(0.05, duration)
 	_elapsed = 0.0
@@ -40,6 +42,7 @@ func start(label_text: String, duration: float, on_done: Callable, noise_source:
 	_noise = noise_source
 	_noise_timer = 0.0
 	_start_position = hero.global_position
+	_move_tolerance = move_tolerance
 
 
 func cancel() -> void:
@@ -51,7 +54,7 @@ func cancel() -> void:
 func _process(delta: float) -> void:
 	if not is_active():
 		return
-	if hero.global_position.distance_to(_start_position) > MOVE_TOLERANCE:
+	if hero.global_position.distance_to(_start_position) > _move_tolerance:
 		cancel()
 		return
 	_elapsed += delta

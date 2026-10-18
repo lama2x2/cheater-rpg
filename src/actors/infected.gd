@@ -37,6 +37,12 @@ var _pending_noise: Dictionary = {}
 var _stumble_left := 0.0
 var _unnoticed_left := 0.0
 var _unnoticed_retry := 0.0
+## Мешок, брошенный заранее (Нюх на мешок): выпадет при вскрытии трупа. sniffed — герой уже
+## «принюхивался» (бросок показа — один раз на тварь).
+var sack_loot: Dictionary = {}
+var sack_rolled := false
+var sniffed := false
+var _glow: Label3D
 
 
 func _ready() -> void:
@@ -97,6 +103,8 @@ func take_damage(amount: float, from: Vector3 = Vector3.INF) -> bool:
 	if from != Vector3.INF and not brain.is_alert():
 		_pending_noise = {"position": from, "loudness": 1.0}
 	if hp <= 0.0:
+		if sack_rolled:
+			EventBus.sack_prerolled.emit(global_position, sack_loot)
 		EventBus.infected_killed.emit(enemy_id, level, global_position)
 		queue_free()
 		return true
@@ -113,6 +121,33 @@ func scare(from: Vector3, seconds: float) -> void:
 	brain.flee(NavigationServer3D.map_get_closest_point(get_world_3d().navigation_map, point), seconds)
 	_lunge_left = 0.0
 	_on_state_changed()
+
+
+## Бросить содержимое мешка заранее (Нюх на мешок) — с Удачей героя на этот момент.
+func preroll_sack() -> Dictionary:
+	if not sack_rolled:
+		sack_rolled = true
+		if bool(_data.get("spore_sack", false)):
+			var frac := LootTable.level_fraction(level, _data["level"])
+			sack_loot = Content.loot().roll(String(_data["loot"]), frac, PlayerState.effective("luck"), _rng)
+	return sack_loot
+
+
+## Слабое свечение «ценный мешок» (Нюх на мешок); bright — жемчуг ярче.
+func set_trophy_glow(on: bool, bright: bool = false) -> void:
+	if _glow == null:
+		if not on:
+			return
+		_glow = Label3D.new()
+		_glow.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_glow.no_depth_test = true
+		_glow.pixel_size = 0.012
+		_glow.outline_size = 6
+		_glow.text = "✧"
+		_glow.position = Vector3.UP * (float(_data["body"]["height"]) + 0.3)
+		add_child(_glow)
+	_glow.visible = on
+	_glow.modulate = Color(1.0, 1.0, 1.0, 0.95) if bright else Color(1.0, 0.85, 0.35, 0.7)
 
 
 ## Тварь не гонится за героем и не атакует — для умения «Из тени».
@@ -287,6 +322,7 @@ func _try_lunge() -> void:
 		_lunge_cooldown = float(lunge["cooldown"])
 		_stumble_left = float(Content.luck_model().config()["stumble_s"])
 		return
+	PlayerState.danger_warn(global_position)
 	_lunge_direction = brain.target_position - global_position
 	_lunge_direction.y = 0.0
 	_lunge_direction = _lunge_direction.normalized()
