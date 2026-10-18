@@ -141,9 +141,14 @@ godot --path /Users/lama4/Documents/читер/cheater-rpg
 Редактор: `godot -e --path …`.
 
 ### Сборка `.app`
-1. Установить export templates (Editor → Manage Export Templates; ~1 ГБ).
-2. Пресет «macOS» в `export_presets.cfg` (в git, без секретов).
-3. `godot --headless --export-release "macOS" build/CheaterRPG.app`
+1. Export templates 4.7.2: из официального архива (~1,3 ГБ) достаточно `templates/macos.zip` и
+   `templates/version.txt` в `~/Library/Application Support/Godot/export_templates/4.7.2.stable/`
+   (так и установлено 2026-10-18).
+2. Пресет «macOS» в `export_presets.cfg` (в git, без секретов): universal, ad-hoc подпись,
+   в пакет попадают все `*.json` (данные из `data/`). Для arm64/universal в `project.godot`
+   включено `textures/vram_compression/import_etc2_astc`.
+3. `scripts/build_mac.sh` → `build/CheaterRPG.app` (~160 МБ). Аргументы отладки работают и у
+   собранной игры: `"build/CheaterRPG.app/Contents/MacOS/Cheater RPG" -- --kit`.
 - Подпись: ad-hoc (по умолчанию) — запускается на своём Маке. Если macOS блокирует —
   правый клик → «Открыть» или снять карантин `xattr -dr com.apple.quarantine build/CheaterRPG.app`.
 - Нотаризация (для раздачи другим) требует Apple Developer ($99/год) — не сейчас.
