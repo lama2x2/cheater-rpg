@@ -1,0 +1,16 @@
+{
+  "_doc": "Удача во всём (D-76, docs/spec/03_character.md «Удача»). Шанс случайности в пользу героя: p = cap × L / (L + k), L — итоговая Удача (PlayerState.effective). При Удаче ~1 (старт) шансы ~1%, под Улыбкой Фортуны (×20) — 10–18%, при Удаче 5 под Улыбкой — до трети. double_roll (свойство Улыбки) — p' = 1 − (1 − p)². log_throttle_s — не чаще одной строки лога на вид события.",
+  "events": {
+    "enemy_miss": { "cap": 0.5, "k": 40, "_doc": "удар твари прошёл мимо" },
+    "enemy_stumble": { "cap": 0.4, "k": 40, "_doc": "рывок твари сорвался — оступилась" },
+    "hero_crit": { "cap": 0.35, "k": 40, "_doc": "удар или выстрел ушёл в голову, сзади — в споровый мешок" },
+    "quiet_noise": { "cap": 0.5, "k": 40, "_doc": "шаг, дверь, упавшая вещь вышли тише" },
+    "unnoticed": { "cap": 0.4, "k": 40, "_doc": "тварь, заметив героя, отвернулась" }
+  },
+  "quiet_mult": 0.4,
+  "quiet_sources": ["sneak_step", "walk_step", "sprint_step", "door", "item_drop", "spore_sack_open"],
+  "stumble_s": 0.8,
+  "unnoticed_s": 2.0,
+  "unnoticed_retry_s": 4.0,
+  "log_throttle_s": 20
+}

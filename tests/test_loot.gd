@@ -64,11 +64,12 @@ func test_runner_distribution_matches_table() -> void:
 func test_luck_raises_chances_with_cap() -> void:
 	var loot := _loot()
 	assert_almost(loot.luck_multiplier(0.0), 1.0, "без Удачи")
-	assert_almost(loot.luck_multiplier(200.0), 1.5, "Удача 200 — ×1.5")
-	assert_almost(loot.luck_multiplier(2000.0), 2.0, "потолок ×2")
+	assert_almost(loot.luck_multiplier(40.0), 1.5, "Удача 40 — ×1.5 (половина насыщения)")
+	assert_true(loot.luck_multiplier(2000.0) < 2.0 and loot.luck_multiplier(2000.0) > 1.95, "потолок ×2")
+	assert_true(loot.luck_multiplier(22.0) > 1.3, "Улыбка Фортуны на старте (Удача ~1 × 20) — заметно: ×%f" % loot.luck_multiplier(22.0))
 	var plain := _average("loot_jumper", 0.0, 0.0, "grain")
 	var lucky := _average("loot_jumper", 0.0, 400.0, "grain")
-	assert_true(lucky > plain * 1.7, "Улыбка Фортуны (Удача ×20) почти удваивает зерно: %f → %f" % [plain, lucky])
+	assert_true(lucky > plain * 1.7, "большая Удача почти удваивает зерно: %f → %f" % [plain, lucky])
 
 
 func test_stomper_rare_variants() -> void:

@@ -1,7 +1,8 @@
 class_name LootTable
 extends RefCounted
 ## Бросок содержимого спорового мешка по таблице (data/loot/*.json, схема 14.3).
-## Шанс диапазоном — интерполяция по уровню твари внутри стадии; Удача умножает шансы.
+## Шанс диапазоном — интерполяция по уровню твари внутри стадии; Удача умножает шансы
+## (1 + (cap − 1) × L / (L + k), D-76).
 ## Чистый класс без Node. Спецификация: docs/spec/06_trophies_items.md, 6.1.
 
 const REQUIRED_KEYS: PackedStringArray = ["luck_scaling", "tables"]
@@ -28,9 +29,9 @@ static func level_fraction(level: int, level_range: Array) -> float:
 	return 0.0 if high <= low else clampf(float(level - low) / float(high - low), 0.0, 1.0)
 
 
-## Множитель шансов от Удачи (итоговое значение).
+## Множитель шансов от Удачи (итоговое значение) — с насыщением, как вся Удача (LuckModel, D-76).
 func luck_multiplier(luck: float) -> float:
-	return minf(float(_luck["cap"]), 1.0 + maxf(0.0, luck) / 100.0 * float(_luck["chance_mult_per_100_luck"]))
+	return LuckModel.saturating_mult(_luck, luck)
 
 
 ## Шанс строки таблицы с учётом уровня и Удачи.

@@ -64,6 +64,16 @@ func ranged_zone(from_behind: bool, accuracy_value: float, rng: RandomNumberGene
 	return "torso"
 
 
+## Зона, в которую удача (D-76) переводит удар: сзади при мешке — мешок, иначе голова; уже
+## критичное и голова остаются как есть.
+static func lucky_zone(zone: String, from_behind: bool, has_sack: bool) -> String:
+	if zone == SPORE_SACK:
+		return zone
+	if from_behind and has_sack:
+		return SPORE_SACK
+	return "head"
+
+
 ## Урон по зоне: base × множитель зоны × mult − броня зоны × (1 − пробой), не меньше 0.
 ## Результат: {"damage", "zone", "armor_stopped": bool — броня погасила всё, "crit": bool}.
 func hit(base_damage: float, zone: String, armor: Dictionary, penetration: float, mult: float = 1.0) -> Dictionary:

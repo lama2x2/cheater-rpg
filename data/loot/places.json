@@ -1,6 +1,6 @@
 {
   "_doc": "Лут мест на кластерах (docs/spec/06_trophies_items.md; 02 «Жизненный цикл»): точки в домах, магазинах, полиции и т. п. — таблицы для шаблонов data/world/templates. Формат как у мешков (14.3); chance — число. Удача героя умножает шансы так же, как у мешков. Нетронутость лута кластера (индекс loot из population.json) решает, уцелела ли точка.",
-  "luck_scaling": { "chance_mult_per_100_luck": 0.25, "cap": 2.0 },
+  "luck_scaling": { "cap": 2.0, "k": 40 },
   "tables": [
     { "id": "spot_house", "rolls": [
       { "item": "canned_food", "count": [1, 2], "chance": 0.5 },
