@@ -19,7 +19,7 @@ const REQUIRED_KEYS: PackedStringArray = [
 ]
 const PASSIVE := "passive"
 ## Возможности движка, которых пока нет: свойства с requires из этого списка не предлагаются.
-const MISSING_ENGINE: PackedStringArray = ["party"]
+const MISSING_ENGINE: PackedStringArray = ["party", "humans"]
 
 var _rules: Dictionary
 var _defs: Dictionary = {}
@@ -167,8 +167,9 @@ func cooldown_left(id: String, now: float) -> float:
 	return maxf(0.0, float(cooldowns.get(id, 0.0)) - now)
 
 
-## Эффекты умения с ростом и свойствами (on_use добавляются в конец). Длительности — в игровых
-## минутах (duration_min), исходные реальные секунды — в duration_s.
+## Эффекты умения с ростом и свойствами: modify меняет поле (число — с ростом, флаг или строка —
+## заменой), on_use и passive добавляют эффект в конец. Длительности — в игровых минутах
+## (duration_min), исходные реальные секунды — в duration_s.
 func effects(id: String, levels: Dictionary) -> Array[Dictionary]:
 	var d: Dictionary = _defs[id]
 	var result: Array[Dictionary] = []
@@ -178,10 +179,16 @@ func effects(id: String, levels: Dictionary) -> Array[Dictionary]:
 		for key: String in base:
 			if base[key] is float or base[key] is int:
 				e[key] = param(id, type + "." + key, levels)
+		for p: Dictionary in active_properties(id, levels):
+			var pe: Dictionary = p["effect"]
+			var path := String(pe.get("path", ""))
+			if String(pe["type"]) == "modify" and path.begins_with(type + ".") and pe.has("set") \
+					and not (pe["set"] is float or pe["set"] is int):
+				e[path.trim_prefix(type + ".")] = pe["set"]
 		result.append(e)
 	for p: Dictionary in active_properties(id, levels):
 		var pe: Dictionary = p["effect"]
-		if String(pe["type"]) == "on_use":
+		if String(pe["type"]) == "on_use" or String(pe["type"]) == "passive":
 			result.append(Dictionary(pe["effect"]).duplicate(true))
 	for e in result:
 		if e.has("duration_of"):
@@ -310,6 +317,39 @@ func passive_effects(type: String, levels: Dictionary) -> Array[Dictionary]:
 			if String(e["type"]) == type:
 				result.append(e)
 	return result
+
+
+## Шум героя с учётом умений: пассивы (noise_mult_self, noise_source_swap) и статусы
+## (quiet_sprint — бег ×0,7). Результат: {"source": источник после подмены, "mult": множитель радиуса}.
+func noise_adjust(source: String, now: float, levels: Dictionary) -> Dictionary:
+	var result := {"source": source, "mult": 1.0}
+	for e in passive_effects("noise_source_swap", levels):
+		if String(e["from"]) == source:
+			result["source"] = String(e["to"])
+	for e in passive_effects("noise_mult_self", levels):
+		if Array(e["sources"]).has(source):
+			result["mult"] = float(result["mult"]) * float(e["mult"])
+	if source == "sprint_step" and has_status("quiet_sprint", now):
+		result["mult"] = float(result["mult"]) * float(_rules.get("quiet_sprint_mult", 0.7))
+	return result
+
+
+## Множитель урона пассивов по цели: unaware — тварь не гонится и не атакует (Из тени).
+func damage_mult(unaware: bool, elite: bool, levels: Dictionary) -> float:
+	var mult := 1.0
+	for e in passive_effects("damage_mult_vs", levels):
+		if String(e["condition"]) == "target_unaware" and unaware:
+			mult *= float(e["elite_mult"]) if elite and e.has("elite_mult") else float(e["mult"])
+	return mult
+
+
+## Прибавка шанса крита (удар в голову или мешок) от пассивов.
+func crit_chance(unaware: bool, levels: Dictionary) -> float:
+	var total := 0.0
+	for e in passive_effects("crit_chance_add", levels):
+		if String(e["condition"]) != "target_unaware" or unaware:
+			total += float(e["value"])
+	return total
 
 
 ## Доля маны, которую держат пассивы в слотах (D-74; резерв держится и под глушителем).

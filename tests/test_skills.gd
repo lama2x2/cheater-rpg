@@ -206,8 +206,7 @@ func test_slot_swap_and_cooldown() -> void:
 
 func test_gift_offer_and_pearl() -> void:
 	var defs := _defs()
-	for id in ["sense_pulse", "voice_throw", "scarecrow", "second_wind", "heat_vision"]:
-		defs.append({"id": id, "slot": "active", "mana_cost": 1, "cooldown_s": 1, "effects": []})
+	defs.append({"id": "heat_vision", "slot": "active", "mana_cost": 1, "cooldown_s": 1, "effects": []})
 	var s := SkillRulesScript.new(_rules(), defs, MPS)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
@@ -221,11 +220,12 @@ func test_gift_offer_and_pearl() -> void:
 		assert_true(_rules()["gifts"]["10"]["skills"].has(id), "%s из пула 10" % id)
 	var forced := s.gift_offer("10", 3, rng, PackedStringArray(["fortune_smile"]))
 	assert_true(forced.has("fortune_smile"), "читеру Улыбка всегда в списке")
-	for id in ["fortune_smile", "sense_pulse", "voice_throw", "scarecrow"]:
-		s.learn(id, 1)
+	for id: String in _rules()["gifts"]["10"]["skills"]:
+		if id != "ambusher":
+			s.learn(id, 1)
 	var rest := s.gift_offer("10", 3, rng)
-	assert_eq(rest, PackedStringArray(["second_wind", "heat_vision"]), "пул исчерпан — добор из других")
-	assert_eq(s.pearl_skill(rng), "second_wind", "жемчужина: 4 умения → пул 60 пуст → добор с младших")
+	assert_eq(rest, PackedStringArray(["ambusher", "heat_vision"]), "пул исчерпан — добор из других")
+	assert_eq(s.pearl_skill(rng), "ambusher", "жемчужина: пул 60 пуст → добор с младших")
 
 
 func test_save_roundtrip() -> void:
@@ -253,3 +253,94 @@ func test_jackpot_group_takes_larger() -> void:
 	assert_almost(buffs.multiplier("luck", 5.0), 20.3, "эхо ещё не началось")
 	assert_almost(buffs.multiplier("luck", 15.0), 2.0, "эхо после Улыбки")
 	assert_true(buffs.is_active("skill:fortune_smile", 15.0), "источник активен")
+
+
+# --- Пачка 1 (13b): пул дара 10 -----------------------------------------------------------------
+
+func test_gift_10_pool_is_complete() -> void:
+	var s := _skills()
+	for id: String in _rules()["gifts"]["10"]["skills"]:
+		assert_true(s.has_def(id), "умение пула дара 10 есть в data/skills: %s" % id)
+
+
+func test_soft_step_and_quiet_sprint_noise() -> void:
+	var s := _skills()
+	var levels := _levels(1, 1, 30)
+	s.learn("soft_step", 30)
+	var walk := s.noise_adjust("walk_step", 0.0, levels)
+	assert_almost(float(walk["mult"]), 0.65, "шаги ×0,65")
+	assert_almost(float(s.noise_adjust("pistol", 0.0, levels)["mult"]), 1.0, "выстрел не глушится")
+	assert_almost(float(s.noise_adjust("walk_step", 0.0, _levels(100, 1, 30))["mult"]), 0.45, "Ментальная 100: −0,2")
+	assert_almost(float(s.noise_adjust("walk_step", 0.0, _levels(500, 1, 30))["mult"]), 0.4, "не тише ×0,4")
+	s.choose_property("soft_step", "step_doors", _levels(60, 1, 30))
+	var run := s.noise_adjust("sprint_step", 0.0, _levels(60, 1, 30))
+	assert_eq(String(run["source"]), "walk_step", "на 60 бег шумит как шаг")
+	assert_almost(float(s.noise_adjust("door", 0.0, _levels(60, 1, 30))["mult"]), 0.5, "тихие двери")
+	assert_almost(s.mana_reserve(levels), 0.05, "резерв 5%")
+	s.learn("second_wind", 30)
+	s.choose_property("second_wind", "wind_quiet", _levels(30, 1, 30))
+	s.use("second_wind", 0.0, 100.0, _levels(30, 1, 30))
+	assert_true(s.has_status("free_sprint", 6.0), "бег без усталости (10 + 3 с за Ментальную 30)")
+	assert_true(not s.has_status("free_sprint", 7.0), "13 с = 6,5 игровой минуты — и всё")
+	assert_almost(float(s.noise_adjust("sprint_step", 1.0, _levels(1, 1, 30))["mult"]), 0.65 * 0.7, "тихий бег и мягкий шаг")
+
+
+func test_second_wind_effects() -> void:
+	var s := _skills()
+	s.learn("second_wind", 1)
+	s.choose_property("second_wind", "wind_quiet", _levels(30))
+	var list := s.effects("second_wind", _levels(30))
+	var statuses := list.filter(func(e: Dictionary) -> bool: return e["type"] == "status")
+	assert_eq(statuses.size(), 2, "бег и тихий бег")
+	assert_almost(float(statuses[0]["duration_s"]), 13.0, "10 + 3 с за Ментальную 30")
+	assert_almost(float(statuses[1]["duration_s"]), 13.0, "тихий бег — столько же")
+	assert_almost(float(_effect(list, "vital_cost")["value"]), 3.0, "споровый баланс −3")
+	s.reset_cooldowns()
+	assert_true(_effect(s.effects("second_wind", _levels(60)), "cure").has("status"), "на 60 — останавливает кровь")
+
+
+func test_ambusher_damage() -> void:
+	var s := _skills()
+	s.learn("ambusher", 1)
+	assert_almost(s.damage_mult(true, false, _levels()), 1.6, "по ничего не подозревающей ×1,6")
+	assert_almost(s.damage_mult(false, false, _levels()), 1.0, "по гонящейся — без бонуса")
+	assert_almost(s.damage_mult(true, true, _levels()), 1.2, "элита ×1,2")
+	assert_almost(s.damage_mult(true, false, _levels(40)), 1.8, "Ментальная 40: +0,2")
+	assert_almost(s.crit_chance(true, _levels(59)), 0.0, "крит — с 60")
+	assert_almost(s.crit_chance(true, _levels(60)), 0.2, "на 60 +20%")
+	assert_almost(s.crit_chance(false, _levels(60)), 0.0, "только по ничего не подозревающей")
+	s.set_slot(0, "", 0.0, 1)
+	assert_almost(s.damage_mult(true, false, _levels()), 1.0, "не в слоте — не работает")
+
+
+func test_text_properties_and_flags() -> void:
+	var s := _skills()
+	s.learn("voice_throw", 1)
+	assert_eq(String(_effect(s.effects("voice_throw", _levels(59)), "noise_at")["source"]), "voice_throw", "голос")
+	assert_eq(String(_effect(s.effects("voice_throw", _levels(60)), "noise_at")["source"]), "pistol", "на 60 — как выстрел")
+	s.choose_property("voice_throw", "voice_two", _levels(30))
+	assert_eq(int(_effect(s.effects("voice_throw", _levels(30)), "noise_at")["count"]), 2, "два голоса")
+	s.learn("sense_pulse", 1)
+	s.choose_property("sense_pulse", "pulse_perception", _levels(30))
+	assert_true(bool(_effect(s.effects("sense_pulse", _levels(30)), "highlight")["show_level"]), "уровни над тварями")
+	assert_almost(s.cooldown_s("sense_pulse", _levels(150)), 0.0, "на 150 — без отката")
+	assert_almost(s.mana_cost("sense_pulse", _levels(100)), 5.0, "мана не меньше 5")
+	var m60 := s.property_choices("sense_pulse", _levels(60))
+	assert_eq(m60.size(), 1, "на 60 выбор из одного — «вещи скрытых» ждут людей (M2)")
+	s.learn("noise_eater", 1)
+	assert_eq(String(_effect(s.effects("noise_eater", _levels(60)), "noise_zone")["anchor"]), "hero", "на 60 сфера идёт за героем")
+
+
+func test_scarecrow_and_brain_flee() -> void:
+	var s := _skills()
+	s.learn("scarecrow", 1)
+	var flee := _effect(s.effects("scarecrow", _levels(20)), "enemy_flee")
+	assert_almost(float(flee["radius_m"]), 40.0, "30 + 2×5 м")
+	assert_almost(float(flee["duration_s"]), 70.0, "60 + 2×5 с")
+	assert_eq(int(flee["max_stage"]), 3, "до бегуна")
+	var enemies: Array = JsonDataScript.load_dict("res://data/enemies/infected.json")["enemies"]
+	var brain := InfectedBrain.new(enemies[1]["ai"], 1.5)
+	brain.flee(Vector3(20, 0, 0), 2.0)
+	assert_eq(brain.update(0.5, {"sees_player": true, "player_position": Vector3.ZERO, "player_distance": 1.0}), InfectedBrain.FLEE, "напуганная не видит героя")
+	assert_true(not brain.is_alert(), "и не в тревоге (Из тени работает)")
+	assert_eq(brain.update(2.0, {}), InfectedBrain.WANDER, "страх прошёл")

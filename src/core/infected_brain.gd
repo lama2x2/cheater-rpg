@@ -8,6 +8,7 @@ extends RefCounted
 ##   CHASE       видит героя и гонится
 ##   ATTACK      герой в досягаемости
 ##   EAT         голоден и нашёл еду (трупы)
+##   FLEE        напугана (умение Пугач): бежит прочь, не видит и не слышит, пока не кончится страх
 ##
 ## Чувства за тик (senses):
 ##   sees_player: bool, player_position: Vector3, player_distance: float,
@@ -20,6 +21,7 @@ const INVESTIGATE := "investigate"
 const CHASE := "chase"
 const ATTACK := "attack"
 const EAT := "eat"
+const FLEE := "flee"
 
 ## Насколько громкий шум отвлекает от еды (во время еды тварь «глохнет»).
 const EAT_NOISE_THRESHOLD := 0.6
@@ -34,6 +36,7 @@ var _ai: Dictionary
 var _attack_range: float
 var _since_seen := 0.0
 var _search_left := 0.0
+var _flee_left := 0.0
 
 
 func _init(ai: Dictionary, attack_range: float, start_hunger: float = 0.0) -> void:
@@ -47,6 +50,12 @@ func update(delta: float, senses: Dictionary) -> String:
 	var sees := bool(senses.get("sees_player", false))
 	var noise: Dictionary = senses.get("noise", {})
 	var food: Dictionary = senses.get("food", {})
+
+	if state == FLEE:
+		_flee_left -= delta
+		if _flee_left <= 0.0:
+			state = WANDER
+		return state
 
 	if sees:
 		_since_seen = 0.0
@@ -89,6 +98,13 @@ func update(delta: float, senses: Dictionary) -> String:
 	return state
 
 
+## Страх (Пугач): бежать к точке to на seconds секунд.
+func flee(to: Vector3, seconds: float) -> void:
+	state = FLEE
+	target_position = to
+	_flee_left = seconds
+
+
 ## Сколько съедено за этот тик (для трупа): тело уменьшает запас еды на это.
 func eating_now(senses: Dictionary) -> bool:
 	return state == EAT and bool(senses.get("at_target", false))
@@ -109,6 +125,8 @@ func load_dict(data: Dictionary) -> void:
 	target_position = Vector3(float(at[0]), float(at[1]), float(at[2]))
 	if state == CHASE or state == ATTACK:
 		_start_investigate(target_position)
+	elif state == FLEE:
+		state = WANDER
 
 
 func _start_investigate(at: Vector3) -> void:
