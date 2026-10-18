@@ -3,3 +3,5 @@ extends Node
 
 @warning_ignore("unused_signal")
 signal player_died(cause: String, lives_left: int)
+@warning_ignore("unused_signal")
+signal player_respawned

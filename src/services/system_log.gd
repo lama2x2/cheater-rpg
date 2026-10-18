@@ -8,26 +8,38 @@ signal history_replaced
 const SAVED_HISTORY := 200
 
 var history: Array[Dictionary] = []
+## «Лучшие моменты» для экрана итогов: сообщения видов из death.json/highlight_kinds, без лимита (D-37).
+var highlights: Array[Dictionary] = []
 var _last_variant: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
 
 func post(key: String, params: Dictionary = {}, kind: String = "info") -> String:
 	var text := _pick_variant(key).format(params)
-	history.append({"text": text, "kind": kind, "minutes": GameClock.minutes})
+	var entry := {"text": text, "kind": kind, "minutes": GameClock.minutes}
+	history.append(entry)
+	if Content.death_config()["highlight_kinds"].has(kind):
+		highlights.append(entry)
 	message_posted.emit(text, kind)
 	return text
 
 
 func to_dict() -> Dictionary:
-	return {"history": history.slice(maxi(0, history.size() - SAVED_HISTORY))}
+	return {"history": history.slice(maxi(0, history.size() - SAVED_HISTORY)), "highlights": highlights.duplicate()}
 
 
 func load_dict(data: Dictionary) -> void:
 	history.clear()
 	for entry: Dictionary in data["history"]:
-		history.append({"text": String(entry["text"]), "kind": String(entry["kind"]), "minutes": float(entry["minutes"])})
+		history.append(_entry(entry))
+	highlights.clear()
+	for entry: Dictionary in data["highlights"]:
+		highlights.append(_entry(entry))
 	history_replaced.emit()
+
+
+func _entry(data: Dictionary) -> Dictionary:
+	return {"text": String(data["text"]), "kind": String(data["kind"]), "minutes": float(data["minutes"])}
 
 
 func has_key(key: String) -> bool:

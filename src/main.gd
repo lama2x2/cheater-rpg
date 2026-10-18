@@ -6,10 +6,13 @@ const PlayerScript := preload("res://src/actors/player.gd")
 const IsoCameraScript := preload("res://src/world/iso_camera.gd")
 const DebugHudScript := preload("res://src/ui/debug_hud.gd")
 const VitalsBarsScript := preload("res://src/ui/vitals_bars.gd")
+const DeathFlowScript := preload("res://src/world/death_flow.gd")
 
 const GROUND_SIZE := 200.0
 const OBSTACLE_COUNT := 40
 const OBSTACLE_SEED := 74920891
+
+var _death_flow: Node
 
 
 func _ready() -> void:
@@ -30,6 +33,11 @@ func _ready() -> void:
 
 	add_child(DebugHudScript.new())
 	add_child(VitalsBarsScript.new())
+	_build_respawn_marker(PlayerState.respawn_position)
+
+	_death_flow = DeathFlowScript.new()
+	_death_flow.hero = player
+	add_child(_death_flow)
 	SystemLog.post("welcome")
 	_handle_debug_args()
 
@@ -46,19 +54,58 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Отладочные аргументы после «--»:
 ##   --demo        герой сам бежит вперёд (проверка прокачки Скорости)
 ##   --shot=PATH   через 4 секунды сохранить скриншот в PATH и выйти
+##   --shot-at=S   снимать не через 4, а через S секунд
+##   --fast-respawn  возрождение через 5 с вместо 100–180
+##   --die=N       через секунду умереть N раз подряд (N ≥ жизней — сразу экран итогов)
 func _handle_debug_args() -> void:
 	var shot_path := ""
+	var die_times := 0
+	var shot_at := 4.0
 	for arg in OS.get_cmdline_user_args():
 		if arg == "--demo":
 			Input.action_press("move_forward")
 			Input.action_press("sprint")
+		elif arg == "--fast-respawn":
+			_death_flow.fast_respawn = true
+		elif arg.begins_with("--die="):
+			die_times = int(arg.trim_prefix("--die="))
+		elif arg.begins_with("--shot-at="):
+			shot_at = float(arg.trim_prefix("--shot-at="))
 		elif arg.begins_with("--shot="):
 			shot_path = arg.trim_prefix("--shot=")
+	if die_times > 0:
+		_debug_die(die_times)
 	if shot_path.is_empty():
 		return
-	await get_tree().create_timer(4.0).timeout
+	await get_tree().create_timer(shot_at).timeout
 	get_viewport().get_texture().get_image().save_png(shot_path)
 	get_tree().quit()
+
+
+func _debug_die(times: int) -> void:
+	await get_tree().create_timer(1.0).timeout
+	for i in times:
+		PlayerState.die("debug")
+		if i < times - 1 and PlayerState.lives > 0:
+			_death_flow.finish_respawn()
+
+
+## Респ героя — тёмная плита с бледным свечением (позже — шаблоны «общежитие» / «стройка»).
+func _build_respawn_marker(at: Vector3) -> void:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 1.2
+	mesh.bottom_radius = 1.2
+	mesh.height = 0.05
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.2, 0.22, 0.25)
+	material.emission_enabled = true
+	material.emission = Color(0.3, 0.6, 0.5)
+	material.emission_energy_multiplier = 0.4
+	var marker := MeshInstance3D.new()
+	marker.mesh = mesh
+	marker.material_override = material
+	marker.position = Vector3(at.x, 0.03, at.z)
+	add_child(marker)
 
 
 func _build_environment() -> void:

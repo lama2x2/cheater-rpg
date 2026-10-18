@@ -1,0 +1,10 @@
+{
+  "_doc": "Смерть и возрождение (docs/spec/04_death_lives.md). Жизни и интервал смены региона — в rules.json.",
+  "respawn_seconds_min": 100,
+  "respawn_seconds_max": 180,
+  "debug_respawn_seconds": 5,
+  "respawn_game_hours_min": 2,
+  "respawn_game_hours_max": 5,
+  "highlight_kinds": ["special", "progress", "death"],
+  "summary_highlights": 6
+}

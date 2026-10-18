@@ -12,6 +12,7 @@ const ACTIONS := {
 	"debug_die": [KEY_K],
 	"debug_save": [KEY_F5],
 	"debug_load": [KEY_F9],
+	"debug_skip_respawn": [KEY_F8],
 }
 
 

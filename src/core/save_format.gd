@@ -9,13 +9,29 @@ extends RefCounted
 ## История версий:
 ##   1 — clock, player (stats, lives, deaths), log, hero.
 ##   2 — player.vitals (шкалы). Старые сейвы получают шкалы по умолчанию.
+##   3 — player: run, deaths_since_region_shift, awaiting_respawn, start_minutes, respawn_position;
+##       log.highlights; секция corpses.
 
-const VERSION := 2
+const VERSION := 3
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2}
+	return {1: _v1_to_v2, 2: _v2_to_v3}
+
+
+static func _v2_to_v3(data: Dictionary) -> Dictionary:
+	var sections: Dictionary = data["sections"]
+	if sections.has("player"):
+		var player: Dictionary = sections["player"]
+		var defaults := {
+			"run": {}, "deaths_since_region_shift": 0, "awaiting_respawn": false,
+			"start_minutes": 0.0, "respawn_position": [0.0, 0.1, 0.0],
+		}
+		player.merge(defaults)
+	if sections.has("log"):
+		sections["log"].merge({"highlights": []})
+	return data
 
 
 static func _v1_to_v2(data: Dictionary) -> Dictionary:

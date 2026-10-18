@@ -6,6 +6,7 @@ const RULES_PATH := "res://data/rules.json"
 const PLAYER_PATH := "res://data/player.json"
 const TEXTS_PATH := "res://data/text/ru.json"
 const VITALS_PATH := "res://data/vitals.json"
+const DEATH_PATH := "res://data/death.json"
 
 var _cache: Dictionary = {}
 
@@ -26,8 +27,21 @@ func vitals_config() -> Dictionary:
 	return _cached(VITALS_PATH, Vitals.REQUIRED_KEYS)
 
 
+func death_config() -> Dictionary:
+	return _cached(DEATH_PATH, DeathRules.REQUIRED_KEYS)
+
+
 func texts() -> Dictionary:
-	return _cached(TEXTS_PATH, ["stat_names", "log"])
+	return _cached(TEXTS_PATH, ["stat_names", "log", "ui", "death_causes", "death_advice", "epitaphs"])
+
+
+## Строка интерфейса по ключу (texts.ui), с подстановкой параметров.
+func ui(key: String, params: Dictionary = {}) -> String:
+	return String(texts()["ui"].get(key, key)).format(params)
+
+
+func death_cause(cause: String) -> String:
+	return String(texts()["death_causes"].get(cause, cause))
 
 
 func stat_name(stat: String) -> String:
