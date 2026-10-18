@@ -1,13 +1,13 @@
 extends Node3D
 ## Предметы, лежащие в мире: появляются, подбираются на E, выбрасываются из инвентаря.
-## Состояние сохраняется (секция world_items). Позже их будет сбрасывать перезагрузка кластера.
+## Состояние — секция world_items снимка кластера (WorldSim); перезагрузка кластера их убирает.
 
 const ItemPickupScript := preload("res://src/world/item_pickup.gd")
 
 
 func _ready() -> void:
 	add_to_group("world_items")
-	SaveService.register("world_items", self)
+	WorldSim.register("world_items", self)
 	EventBus.items_dropped.connect(_on_items_dropped)
 	EventBus.arrow_landed.connect(func(id: String, at: Vector3) -> void: spawn(id, 1, Vector3(at.x, 0.0, at.z)))
 
@@ -19,7 +19,7 @@ func _on_items_dropped(id: String, count: int) -> void:
 
 
 func _exit_tree() -> void:
-	SaveService.unregister("world_items")
+	WorldSim.unregister("world_items")
 
 
 func spawn(id: String, count: int, at: Vector3) -> Node3D:
@@ -36,6 +36,13 @@ func drop_near(id: String, count: int, at: Vector3) -> void:
 	var offset := Vector3(randf_range(-0.6, 0.6), 0.0, randf_range(-0.6, 0.6))
 	spawn(id, count, Vector3(at.x, 0.0, at.z) + offset)
 	EventBus.noise_made.emit("item_drop", at, {"from_hero": true})
+
+
+## Перезагрузка кластера: всё, что лежало на земле, исчезает.
+func clear_all() -> void:
+	for pickup in get_children():
+		remove_child(pickup)
+		pickup.queue_free()
 
 
 func to_dict() -> Dictionary:

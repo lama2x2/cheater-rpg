@@ -135,6 +135,16 @@
 }
 ```
 
+### Как сделано в M1 (задача 11)
+- Кластеры среза описаны прямо в `data/world/region.json` (`id`, `code`, `name`, `type`, `template`,
+  `map_pos`, `neighbors`); диапазоны перезагрузки и правила — по типу в
+  `data/world/cluster_types.json`, а не у каждого кластера.
+- Шаблон — не сцена, а параметры генерации `src/core/cluster_layout.gd`: `size`, `layout_seed`,
+  цвета, `buildings` [{kind, count, size [[x], [z]], loot, loot_spots, wall_height?, door?}],
+  `props`, `outdoor_loot`, `stashes`, `respawn`/`clear_radius`, `fixed_items`, `population`
+  {civilians, immune_chance, infected_on_arrival, food_per_civilian, agents_per_unit, max_agents}.
+  Сцены `.tscn` от руки — когда появятся ассеты (задача 19).
+
 ## 14.8 Регион — `data/world/regions/*.json`
 ```json
 {

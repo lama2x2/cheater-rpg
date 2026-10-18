@@ -1,6 +1,7 @@
 extends Node3D
-## Вертикальный срез M1: тестовая площадка, герой, заражённые, интерфейс.
-## Всё собирается кодом, чтобы сцена была читаемой в diff.
+## Вертикальный срез M1: текущий кластер региона (WorldSim), герой, заражённые, интерфейс.
+## Всё собирается кодом, чтобы сцена была читаемой в diff. Переход в другой кластер и загрузка
+## сохранения пересобирают сцену целиком (WorldSim.travel, SaveService.load_game).
 
 const PlayerScript := preload("res://src/actors/player.gd")
 const IsoCameraScript := preload("res://src/world/iso_camera.gd")
@@ -10,19 +11,23 @@ const DeathFlowScript := preload("res://src/world/death_flow.gd")
 const WorldItemsScript := preload("res://src/world/world_items.gd")
 const InventoryPanelScript := preload("res://src/ui/inventory_panel.gd")
 const InteractPromptScript := preload("res://src/ui/interact_prompt.gd")
-const TestAreaScript := preload("res://src/world/test_area.gd")
+const ClusterAreaScript := preload("res://src/world/cluster_area.gd")
+const ClusterDirectorScript := preload("res://src/world/cluster_director.gd")
 const InfectedPopulationScript := preload("res://src/world/infected_population.gd")
 const NoiseSystemScript := preload("res://src/world/noise_system.gd")
 const ProgressWatcherScript := preload("res://src/world/progress_watcher.gd")
 const GameMenuScript := preload("res://src/ui/game_menu.gd")
 
 var _death_flow: Node
+var _environment: Environment
+## Отладочные аргументы срабатывают один раз за запуск: переход и загрузка пересобирают сцену.
+static var _debug_args_done := false
 
 
 func _ready() -> void:
 	InputSetup.ensure_actions()
 	_build_environment()
-	var area: NavigationRegion3D = TestAreaScript.new()
+	var area: NavigationRegion3D = ClusterAreaScript.new()
 	area.name = "Area"
 	add_child(area)
 	add_child(NoiseSystemScript.new())
@@ -30,7 +35,8 @@ func _ready() -> void:
 
 	var player: CharacterBody3D = PlayerScript.new()
 	player.name = "Player"
-	player.position = Vector3(0, 0.1, 0)
+	var on_respawn_cluster := WorldSim.current == String(WorldSim.region.region["respawn"])
+	player.position = PlayerState.respawn_position if on_respawn_cluster else Vector3(0, 0.1, 0)
 	add_child(player)
 
 	var camera: Camera3D = IsoCameraScript.new()
@@ -48,19 +54,31 @@ func _ready() -> void:
 
 	var world_items: Node3D = WorldItemsScript.new()
 	add_child(world_items)
-	for entry: Array in Content.test_area()["items"]:
-		world_items.spawn(entry[0], int(entry[1]), Vector3(float(entry[2]), 0.0, float(entry[3])))
 
-	var population: Node3D = InfectedPopulationScript.new()
-	population.name = "Infected"
-	population.area = area
+	var population: Node3D = null
 	if not "--no-enemies" in OS.get_cmdline_user_args():
+		population = InfectedPopulationScript.new()
+		population.name = "Infected"
+		population.area = area
 		add_child(population)
 
 	_death_flow = DeathFlowScript.new()
 	_death_flow.hero = player
 	add_child(_death_flow)
-	SystemLog.post("welcome" if PlayerState.ng_plus == 0 else "welcome_ng_plus", {"cycle": PlayerState.ng_plus})
+
+	var director: Node = ClusterDirectorScript.new()
+	director.name = "ClusterDirector"
+	director.area = area
+	director.items = world_items
+	director.population = population
+	director.death_flow = _death_flow
+	director.hero = player
+	director.environment = _environment
+	add_child(director)
+
+	if SystemLog.history.is_empty():
+		SystemLog.post("welcome" if PlayerState.ng_plus == 0 else "welcome_ng_plus", {"cycle": PlayerState.ng_plus})
+	SaveService.finish_scene_load()
 	_handle_debug_args()
 
 
@@ -84,7 +102,21 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --at=X,Z      поставить героя в точку (для снимков)
 ##   --corpse=ID   труп твари ID в метре от героя и нож в рюкзак (проверка вскрытия мешка)
 ##   --menu        сохранить в ячейку 1 и открыть меню загрузки (проверка ячеек)
+##   --cluster=ID  начать в кластере ID (c_village, c_town, c_industrial, c_black, c_stab)
+##   --kislyak     на текущем кластере сейчас встанет кисляк (сброс через kislyak_min минут)
+##   --reload=S    через S секунд перезагрузить текущий кластер (проверка сброса при герое)
+##   --hours=N     прокрутить мир на N игровых часов (проверка симуляции)
+##   --world-seed=N  сид мира (читает WorldSim), для одинаковых снимков
 func _handle_debug_args() -> void:
+	if _debug_args_done:
+		return
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--cluster="):
+			var target := arg.trim_prefix("--cluster=")
+			if WorldSim.current != target and WorldSim.region.has_cluster(target):
+				WorldSim.travel(target, {"from": WorldSim.region.neighbors(target)[0]})
+				return
+	_debug_args_done = true
 	var shot_path := ""
 	var die_times := 0
 	var shot_at := 4.0
@@ -112,6 +144,14 @@ func _handle_debug_args() -> void:
 			PlayerState.pick_up("knife", 1)
 			var enemy := arg.trim_prefix("--corpse=")
 			EventBus.infected_killed.emit(enemy, int(Content.enemy_db().enemy(enemy)["level"][1]), Vector3(0.8, 0, -0.8))
+		elif arg == "--kislyak":
+			var timer: Dictionary = WorldSim.state()["timer"]
+			if ClusterLifecycle.reloads(timer):
+				timer["next"] = GameClock.minutes + float(timer["kislyak_min"]) * 0.5
+		elif arg.begins_with("--reload="):
+			_debug_reload(float(arg.trim_prefix("--reload=")))
+		elif arg.begins_with("--hours="):
+			GameClock.advance(float(arg.trim_prefix("--hours=")) * 60.0)
 		elif arg.begins_with("--shot-at="):
 			shot_at = float(arg.trim_prefix("--shot-at="))
 		elif arg.begins_with("--shot="):
@@ -123,6 +163,13 @@ func _handle_debug_args() -> void:
 	await get_tree().create_timer(shot_at).timeout
 	get_viewport().get_texture().get_image().save_png(shot_path)
 	get_tree().quit()
+
+
+func _debug_reload(after: float) -> void:
+	await get_tree().create_timer(after).timeout
+	var timer: Dictionary = WorldSim.state()["timer"]
+	if ClusterLifecycle.reloads(timer):
+		timer["next"] = GameClock.minutes
 
 
 func _open_load_page() -> void:
@@ -164,6 +211,7 @@ func _build_environment() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var world_env := WorldEnvironment.new()
 	world_env.environment = env
+	_environment = env
 	add_child(world_env)
 
 	var sun := DirectionalLight3D.new()

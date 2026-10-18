@@ -1,8 +1,10 @@
 extends Node
 ## Сохранение и загрузка игры. Секции — объекты с to_dict()/load_dict(data).
-## Сервисы-синглтоны подключены здесь; объекты сцены (герой) регистрируются сами через register().
-## Спецификация: docs/spec/13_tech.md, 13.5. Ячейки slot_1…slot_N (меню Esc), auto — автосейв
-## при смерти, debug — F5/F9. Новая игра и «Новая игра+» — start_new_game().
+## Сервисы-синглтоны подключены здесь (clock, player, log, world); объекты сцены (герой)
+## регистрируются сами через register(). Содержимое кластеров (вещи, твари, трупы, тайники) — внутри
+## секции world (снимки WorldSim). Загрузка: сервисы сразу, затем пересборка сцены, затем секции сцены
+## (finish_scene_load из main). Спецификация: docs/spec/13_tech.md, 13.5. Ячейки slot_1…slot_N
+## (меню Esc), auto — автосейв при смерти и входе в стаб, debug — F5/F9. Новая игра — start_new_game().
 
 signal saved(slot: String)
 signal loaded(slot: String)
@@ -12,12 +14,19 @@ const DEBUG_SLOT := "debug"
 const AUTO_SLOT := "auto"
 
 var _sections: Dictionary = {}
+## Секции сервисов (переживают пересборку сцены) — грузятся сразу.
+var _service_sections: PackedStringArray = []
+## Секции сцены из загруженного сохранения, ждут пересборки: {"hero": {...}}.
+var _pending: Dictionary = {}
+var _pending_slot := ""
 
 
 func _ready() -> void:
 	register("clock", GameClock)
 	register("player", PlayerState)
 	register("log", SystemLog)
+	register("world", WorldSim)
+	_service_sections = PackedStringArray(_sections.keys())
 	# Отложенно: сначала сцена кладёт труп с рюкзаком, потом пишем сейв.
 	EventBus.player_died.connect(func(_cause: String, _lives: int) -> void: save_game.call_deferred(AUTO_SLOT))
 
@@ -73,6 +82,8 @@ func start_new_game(carry: Dictionary = {}) -> void:
 	PlayerState.setup()
 	if not carry.is_empty():
 		PlayerState.apply_carry(carry)
+	WorldSim.new_world()
+	_pending = {}
 	get_tree().reload_current_scene()
 
 
@@ -100,11 +111,30 @@ func load_game(slot: String) -> bool:
 		SystemLog.post("load_failed", {}, "warning")
 		return false
 	var sections: Dictionary = data["sections"]
-	for section: String in _sections:
-		if sections.has(section):
+	_pending = {}
+	for section: String in sections:
+		if _service_sections.has(section):
 			_sections[section].load_dict(sections[section])
 		else:
+			_pending[section] = sections[section]
+	for section in _service_sections:
+		if not sections.has(section):
 			push_warning("В сохранении «%s» нет секции «%s»" % [slot, section])
+	_pending_slot = slot
+	get_tree().paused = false
+	get_tree().reload_current_scene.call_deferred()
+	return true
+
+
+## Сцена пересобрана (вызывает main в конце _ready): отдать секции сцены, сообщить о загрузке.
+func finish_scene_load() -> void:
+	if _pending_slot.is_empty():
+		return
+	for section: String in _pending:
+		if _sections.has(section):
+			_sections[section].load_dict(_pending[section])
+	var slot := _pending_slot
+	_pending = {}
+	_pending_slot = ""
 	SystemLog.post("game_loaded", {"slot": slot_label(slot)})
 	loaded.emit(slot)
-	return true

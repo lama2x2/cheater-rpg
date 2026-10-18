@@ -17,6 +17,7 @@ EventBus="*res://src/services/event_bus.gd"
 GameClock="*res://src/services/game_clock.gd"
 SystemLog="*res://src/services/system_log.gd"
 PlayerState="*res://src/services/player_state.gd"
+WorldSim="*res://src/services/world_sim.gd"
 SaveService="*res://src/services/save_service.gd"
 
 [display]

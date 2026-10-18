@@ -114,3 +114,41 @@ func test_player_and_clock_survive_save_load() -> void:
 	player2.free()
 	clock.free()
 	clock2.free()
+
+
+func test_v8_save_drops_test_area_and_gets_new_world() -> void:
+	var v8 := {"save_version": 8, "meta": {}, "sections": {
+		"player": {"lives": 5}, "area": {"stashes": []}, "world_items": {"items": []},
+		"infected": {"infected": [], "corpses": []}, "corpses": {"corpses": []}, "hero": {"position": [1, 0, 1], "yaw": 0},
+	}}
+	var result := SaveFormatScript.migrate(v8)
+	var sections: Dictionary = result["sections"]
+	for old in ["area", "world_items", "infected", "corpses", "hero"]:
+		assert_true(not sections.has(old), "секция площадки %s убрана" % old)
+	assert_eq(sections["world"], {}, "пустой world — мир создаётся заново")
+	assert_eq(int(sections["player"]["lives"]), 5, "герой цел")
+
+
+## Мир кластеров: сохранить → загрузить → таймеры, популяции и снимки совпадают.
+func test_world_survives_save_load() -> void:
+	var world := WorldSim
+	world.new_world(777)
+	world.clusters["c_town"]["reloads"] = 3
+	world.snapshots["c_village"] = {"world_items": {"items": [{"id": "vodka", "count": 1, "position": [1.0, 0.0, 2.0]}]}}
+	var before_current := world.current
+	var data: Dictionary = world.to_dict()
+	var path := TEST_DIR.path_join("world.json")
+	SaveFormatScript.write_file(path, SaveFormatScript.wrap({"world": data}, 1.0))
+	var back: Dictionary = SaveFormatScript.read_file(path)["sections"]["world"]
+	world.new_world(12345)
+	world.load_dict(back)
+	assert_eq(world.current, before_current, "текущий кластер")
+	assert_eq(_canonical(world.to_dict()), _canonical(back), "состояние мира")
+	assert_eq(world.snapshots["c_village"]["world_items"]["items"][0]["id"], "vodka", "снимок кластера")
+	assert_eq(typeof(world.clusters[world.current]["reloads"]), TYPE_INT, "счётчик перезагрузок — целое")
+	DirAccess.remove_absolute(path)
+
+
+## JSON без порядка ключей и различия int/float — для сравнения состояний после сохранения.
+func _canonical(value: Variant) -> String:
+	return JSON.stringify(JSON.parse_string(JSON.stringify(value)), "", true)

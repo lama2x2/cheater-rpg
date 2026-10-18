@@ -28,12 +28,12 @@ func _ready() -> void:
 	_summary.continue_pressed.connect(_on_continue)
 	add_child(_summary)
 	EventBus.player_died.connect(_on_player_died)
-	SaveService.register("corpses", self)
+	WorldSim.register("corpses", self)
 	SaveService.loaded.connect(_on_game_loaded)
 
 
 func _exit_tree() -> void:
-	SaveService.unregister("corpses")
+	WorldSim.unregister("corpses")
 
 
 func _process(delta: float) -> void:
@@ -68,13 +68,26 @@ func _start_waiting(cause: String, lives_left: int) -> void:
 	_death_screen.set_remaining(_remaining)
 
 
+## Возрождение на личном респе. Респ на другом кластере — переход туда (пересборка сцены).
 func finish_respawn() -> void:
 	_remaining = -1.0
 	_death_screen.close()
 	GameClock.advance(DeathRules.game_minutes_away(Content.death_config(), _rng))
 	PlayerState.respawn()
+	var respawn_cluster := String(WorldSim.region.region["respawn"])
+	if WorldSim.current != respawn_cluster:
+		var at := PlayerState.respawn_position
+		WorldSim.travel(respawn_cluster, {"at": [at.x, at.z]})
+		return
 	hero.global_position = PlayerState.respawn_position
 	_set_hero_active(true)
+
+
+## Перезагрузка кластера: тела героя с рюкзаками исчезают вместе со всем «чужим» (D-08).
+func clear_corpses() -> void:
+	for corpse in _corpses.get_children():
+		_corpses.remove_child(corpse)
+		corpse.queue_free()
 
 
 func _on_continue(mode: String) -> void:

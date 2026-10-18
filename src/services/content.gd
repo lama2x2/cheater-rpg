@@ -11,7 +11,6 @@ const INVENTORY_PATH := "res://data/inventory.json"
 const ITEMS_DIR := "res://data/items"
 const RECIPES_PATH := "res://data/recipes.json"
 const ENEMIES_DIR := "res://data/enemies"
-const TEST_AREA_PATH := "res://data/world/test_area.json"
 const REGION_PATH := "res://data/world/region.json"
 const CLUSTER_TYPES_PATH := "res://data/world/cluster_types.json"
 const POPULATION_PATH := "res://data/world/population.json"
@@ -106,11 +105,6 @@ func combat_config() -> Dictionary:
 
 func noise_config() -> Dictionary:
 	return _cached(NOISE_PATH, NoiseModel.REQUIRED_KEYS)
-
-
-## Тестовая площадка — до перехода сцены на кластеры (задача 11, часть 2).
-func test_area() -> Dictionary:
-	return _cached(TEST_AREA_PATH, ["items", "house", "stashes", "stash_reveal", "infected_seed", "infected"])
 
 
 ## Регион (граф кластеров). Ошибки графа — в лог движка при первой загрузке.

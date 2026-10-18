@@ -25,6 +25,11 @@ func _init(config: Dictionary) -> void:
 	stages = PackedStringArray(config["stages"])
 
 
+## Сколько часов максимум просчитывать при создании мира (прогрев кластеров со случайной фазой).
+func warmup_hours() -> int:
+	return int(_config["warmup_max_h"])
+
+
 ## Пустой кластер: ни людей, ни тварей, лут нетронут.
 func empty_state() -> Dictionary:
 	var infected := {}

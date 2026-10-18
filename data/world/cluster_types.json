@@ -10,8 +10,8 @@
   "fog": {
     "_doc": "Кисляк: цвет и плотность тумана (Environment.fog_*) в начале и к моменту сброса.",
     "color": [0.72, 0.78, 0.45],
-    "density_start": 0.01,
-    "density_end": 0.09
+    "density_start": 0.004,
+    "density_end": 0.024
   },
   "travel_fade_s": 0.8,
   "stash_reveal": {

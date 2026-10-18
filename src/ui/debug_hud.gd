@@ -1,5 +1,5 @@
 extends CanvasLayer
-## Отладочный HUD этапа M0: жизни, уровень, время, Скорость и последние строки лога Системы.
+## Отладочный HUD: жизни, уровень, время, кластер с таймером, Скорость и последние строки лога Системы.
 
 const LOG_LINES := 6
 
@@ -34,8 +34,8 @@ func _process(_delta: float) -> void:
 	var stats := PlayerState.stats
 	var hero := get_tree().get_first_node_in_group("hero")
 	var mode := "   КРАДЁТСЯ" if hero and hero.sneaking else ""
-	_status.text = "Жизни: %d    Уровень: %d    %s%s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [C] красться  [ЛКМ] удар/выстрел (держать — сильнее)  [R] перезарядка  [Q] оружие\n[E] взять  [Tab] инвентарь  [Esc] меню и сохранения  [колесо] зум  [K] умереть  [F5/F9] сохранить/загрузить  [F8] пропустить отсчёт (отладка)" % [
-		PlayerState.lives, stats.general_level(), GameClock.clock_text(), mode,
+	_status.text = "Жизни: %d    Уровень: %d    %s%s\n%s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [C] красться  [ЛКМ] удар/выстрел (держать — сильнее)  [R] перезарядка  [Q] оружие\n[E] взять  [Tab] инвентарь  [Esc] меню и сохранения  [колесо] зум  [K] умереть  [F5/F9] сохранить/загрузить  [F8] пропустить отсчёт (отладка)" % [
+		PlayerState.lives, stats.general_level(), GameClock.clock_text(), mode, WorldSim.hud_line(),
 		stats.get_level("speed"), stats.get_progress("speed"), stats.threshold("speed"),
 	]
 

@@ -16,13 +16,23 @@ extends RefCounted
 ##   6 — player: weapons (в руках, магазины), wounds (кровотечение).
 ##   7 — player.progress (счётчики анти-фарма за игровой час); area.stashes.
 ##   8 — player.ng_plus; meta (сводка для списка ячеек: день, жизни, уровень).
+##   9 — кластеры: секция world (таймеры, популяции, снимки сцен кластеров). Секции площадки
+##       (area, world_items, infected, corpses) и позиция героя выбрасываются — мир создаётся заново.
 
-const VERSION := 8
+const VERSION := 9
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9}
+
+
+static func _v8_to_v9(data: Dictionary) -> Dictionary:
+	var sections: Dictionary = data["sections"]
+	for old in ["area", "world_items", "infected", "corpses", "hero"]:
+		sections.erase(old)
+	sections["world"] = {}
+	return data
 
 
 static func _v7_to_v8(data: Dictionary) -> Dictionary:

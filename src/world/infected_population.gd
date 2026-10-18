@@ -1,31 +1,61 @@
 extends Node3D
-## Заражённые на площадке: стартовый спавн по сиду (data/world/test_area.json) после запекания
-## навигации, сохранение и загрузка (секция infected). Позже их заменит модель популяции кластера
-## (задача 11).
+## Заражённые текущего кластера: появляются из абстрактной популяции (WorldSim, PopulationModel)
+## после запекания навигации, добавляются, когда люди обращаются, убираются при перезагрузке.
+## Состояние сцены — секция infected снимка кластера (живые твари и трупы). В снимке, оставленном
+## при переходе, живых нет — при возвращении твари собираются заново из абстрактных чисел.
 
 const InfectedScript := preload("res://src/actors/infected.gd")
 const InfectedCorpseScript := preload("res://src/actors/infected_corpse.gd")
 
-var area: Node  # test_area.gd
+## Новые твари появляются не ближе этого к герою — за пределами видимости.
+const SPAWN_AWAY := 22.0
 
-var _loaded_from_save := false
+var area: Node  # cluster_area.gd
+
 var _corpses: Node3D
+## Отложенная материализация до готовности навигации: {"agents": {id: count}, "seed": int}.
+var _pending: Dictionary = {}
+var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
 	_corpses = Node3D.new()
 	_corpses.name = "Corpses"
 	add_child(_corpses)
-	SaveService.register("infected", self)
+	WorldSim.register("infected", self)
 	EventBus.infected_killed.connect(_on_killed)
-	if area.is_navigation_ready:
-		_spawn_initial()
-	else:
-		area.navigation_ready.connect(_spawn_initial, CONNECT_ONE_SHOT)
+	if not area.is_navigation_ready:
+		area.navigation_ready.connect(_on_navigation_ready, CONNECT_ONE_SHOT)
 
 
 func _exit_tree() -> void:
-	SaveService.unregister("infected")
+	WorldSim.unregister("infected")
+
+
+## Разложить тварей по кластеру: agents — {"slowpoke": 12, ...} из PopulationModel.agents().
+func materialize(agents: Dictionary, seed_value: int) -> void:
+	if not area.is_navigation_ready:
+		_pending = {"agents": agents, "seed": seed_value}
+		return
+	_rng.seed = seed_value
+	var hero := _hero_position()
+	for id: String in agents:
+		for i in int(agents[id]):
+			spawn(id, Content.enemy_db().roll_level(id, _rng), area.spawn_point(_rng, hero, SPAWN_AWAY))
+
+
+## Люди обратились, пока герой на кластере: новые медляки подальше от него.
+func spawn_turned(count: int) -> void:
+	if count <= 0:
+		return
+	if not area.is_navigation_ready:
+		var agents: Dictionary = _pending.get("agents", {})
+		agents["slowpoke"] = int(agents.get("slowpoke", 0)) + count
+		_pending = {"agents": agents, "seed": int(_pending.get("seed", randi()))}
+		return
+	_rng.randomize()
+	for i in count:
+		spawn("slowpoke", Content.enemy_db().roll_level("slowpoke", _rng), area.spawn_point(_rng, _hero_position(), SPAWN_AWAY))
 
 
 func spawn(id: String, level: int, at: Vector3) -> Node3D:
@@ -37,6 +67,28 @@ func spawn(id: String, level: int, at: Vector3) -> Node3D:
 	infected.rotation.y = randf() * TAU
 	add_child(infected)
 	return infected
+
+
+## Перезагрузка кластера: живые и трупы исчезают.
+func clear_all() -> void:
+	_pending = {}
+	for infected in _living():
+		remove_child(infected)
+		infected.queue_free()
+	for corpse in _corpses.get_children():
+		_corpses.remove_child(corpse)
+		corpse.queue_free()
+
+
+func living_count() -> int:
+	return _living().size()
+
+
+func _on_navigation_ready() -> void:
+	if not _pending.is_empty():
+		var pending := _pending
+		_pending = {}
+		materialize(pending["agents"], int(pending["seed"]))
 
 
 func _on_killed(id: String, level: int, at: Vector3) -> void:
@@ -52,19 +104,9 @@ func _living() -> Array:
 	return get_children().filter(func(n: Node) -> bool: return n != _corpses and not n.is_queued_for_deletion())
 
 
-func _spawn_initial() -> void:
-	if _loaded_from_save:
-		return
-	var config: Dictionary = Content.test_area()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = int(config["infected_seed"]) + PlayerState.ng_plus * 7919
-	for group: Dictionary in config["infected"]:
-		var ring: Array = group["ring"]
-		for i in int(group["count"]):
-			var angle := rng.randf() * TAU
-			var distance := rng.randf_range(float(ring[0]), float(ring[1]))
-			var at: Vector3 = area.snap(Vector3(cos(angle) * distance, 0.0, sin(angle) * distance))
-			spawn(String(group["id"]), Content.enemy_db().roll_level(String(group["id"]), rng), at)
+func _hero_position() -> Vector3:
+	var hero := get_tree().get_first_node_in_group("hero") as Node3D
+	return hero.global_position if hero else Vector3.ZERO
 
 
 func to_dict() -> Dictionary:
@@ -77,19 +119,22 @@ func to_dict() -> Dictionary:
 	return {"infected": list, "corpses": corpses}
 
 
+## Есть "infected" — живые восстанавливаются как были (загрузка сохранения); нет — только трупы.
 func load_dict(data: Dictionary) -> void:
-	_loaded_from_save = true
-	for infected in _living():
-		remove_child(infected)
-		infected.queue_free()
 	for corpse in _corpses.get_children():
 		_corpses.remove_child(corpse)
 		corpse.queue_free()
+	for entry: Dictionary in data.get("corpses", []):
+		var corpse: Node3D = InfectedCorpseScript.new()
+		corpse.load_dict(entry)
+		_corpses.add_child(corpse)
+	if not data.has("infected"):
+		return
+	_pending = {}
+	for infected in _living():
+		remove_child(infected)
+		infected.queue_free()
 	for entry: Dictionary in data["infected"]:
 		var infected: CharacterBody3D = InfectedScript.new()
 		infected.load_dict(entry)
 		add_child(infected)
-	for entry: Dictionary in data["corpses"]:
-		var corpse: Node3D = InfectedCorpseScript.new()
-		corpse.load_dict(entry)
-		_corpses.add_child(corpse)

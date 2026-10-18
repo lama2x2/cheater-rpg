@@ -37,7 +37,7 @@ func _process(delta: float) -> void:
 	var hero := get_tree().get_first_node_in_group("hero") as Node3D
 	if hero == null or not hero.visible:
 		return
-	var reveal: Dictionary = Content.test_area()["stash_reveal"]
+	var reveal: Dictionary = Content.cluster_types()["stash_reveal"]
 	var radius := float(reveal["base_radius"]) + float(reveal["per_perception"]) * (PlayerState.effective("perception") - 1.0)
 	if Vector2(hero.global_position.x - global_position.x, hero.global_position.z - global_position.z).length() <= radius:
 		found = true
