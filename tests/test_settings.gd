@@ -58,3 +58,13 @@ func test_volume_db() -> void:
 	assert_almost(SettingsModelScript.volume_db(1.0), 0.0, "полная — 0 дБ")
 	assert_almost(SettingsModelScript.volume_db(0.0), -80.0, "ноль — тишина")
 	assert_true(SettingsModelScript.volume_db(0.5) < -5.0, "половина — тише")
+
+
+func test_ui_scale_options() -> void:
+	var m := _model()
+	assert_almost(float(m.get_value("ui_scale")), 1.0, "по умолчанию 100% (интерфейс и так тянется под окно)")
+	assert_true(m.set_value("ui_scale", 1.5), "150% — есть в списке")
+	assert_true(not m.set_value("ui_scale", 1.3), "130% — нет в списке")
+	assert_almost(float(m.next_option("ui_scale")), 1.75, "следующий шаг")
+	m.set_value("ui_scale", 2.0)
+	assert_almost(float(m.next_option("ui_scale")), 1.0, "по кругу")

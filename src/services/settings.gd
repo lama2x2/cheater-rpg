@@ -44,9 +44,12 @@ func change(key: String, new_value: Variant) -> bool:
 	return true
 
 
-## Громкость — на общую шину; окно — только когда оно есть (не в headless-прогонах).
+## Громкость — на общую шину, масштаб интерфейса — на корневое окно; размер и режим окна — только
+## когда окно есть (не в headless-прогонах).
 func apply() -> void:
 	AudioServer.set_bus_volume_db(0, SettingsModel.volume_db(float(model.get_value("volume"))))
+	# Масштаб интерфейса: весь 2D (HUD, панели, меню) крупнее, 3D-мир не меняется.
+	get_tree().root.content_scale_factor = float(model.get_value("ui_scale"))
 	if DisplayServer.get_name() == "headless":
 		return
 	var fullscreen := bool(model.get_value("fullscreen"))

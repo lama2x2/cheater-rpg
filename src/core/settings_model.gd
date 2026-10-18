@@ -4,7 +4,7 @@ extends RefCounted
 ## (чужое, испорченное или устаревшее заменяется умолчанием), правило ручного сохранения по режиму.
 ## Чистый класс без Node. Файл и применение — сервис Settings. Спецификация: 12.6a, D-30.
 
-const REQUIRED_KEYS: PackedStringArray = ["defaults", "save_modes", "volume_step", "window_sizes"]
+const REQUIRED_KEYS: PackedStringArray = ["defaults", "save_modes", "volume_step", "window_sizes", "ui_scales"]
 const ANYWHERE := "anywhere"
 const STAB_ONLY := "stab_only"
 
@@ -52,7 +52,7 @@ func to_dict() -> Dictionary:
 
 ## Следующий вариант по кругу (режим сохранений, размер окна) — для кнопок меню.
 func next_option(key: String) -> Variant:
-	var options: Array = _config["save_modes"] if key == "save_mode" else _config["window_sizes"]
+	var options: Array = _config[{"save_mode": "save_modes", "window_size": "window_sizes", "ui_scale": "ui_scales"}[key]]
 	var index := options.find(values[key])
 	return options[(index + 1) % options.size()]
 
@@ -69,6 +69,13 @@ func _validate(key: String, value: Variant) -> Variant:
 			return bool(value) if value is bool else null
 		"volume":
 			return snappedf(clampf(float(value), 0.0, 1.0), 0.01) if value is float or value is int else null
+		"ui_scale":
+			if not (value is float or value is int):
+				return null
+			for option in _config["ui_scales"]:
+				if is_equal_approx(float(option), float(value)):
+					return float(option)
+			return null
 		"window_size":
 			if not value is Array or value.size() != 2:
 				return null

@@ -139,6 +139,9 @@ func _settings_page() -> void:
 	_button(Content.ui("settings_fullscreen", {"value": _on_off(Settings.value("fullscreen"))}), func() -> void:
 		Settings.change("fullscreen", not bool(Settings.value("fullscreen")))
 		_settings_page())
+	_button(Content.ui("settings_ui_scale", {"value": roundi(float(Settings.value("ui_scale")) * 100.0)}), func() -> void:
+		Settings.change("ui_scale", Settings.model.next_option("ui_scale"))
+		_settings_page())
 	var size: Array = Settings.value("window_size")
 	_button(Content.ui("settings_window", {"w": size[0], "h": size[1]}), func() -> void:
 		Settings.change("window_size", Settings.model.next_option("window_size"))

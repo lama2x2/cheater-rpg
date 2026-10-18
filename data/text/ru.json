@@ -438,7 +438,8 @@
     "settings_on": "вкл",
     "settings_off": "выкл",
     "summary_save_mode": "Режим сохранений: {mode}{changes}",
-    "summary_save_mode_changes": " (менялся {n} раз)"
+    "summary_save_mode_changes": " (менялся {n} раз)",
+    "settings_ui_scale": "Масштаб интерфейса: {value}%"
   },
   "item_names": {
     "sporan": "Споран",
