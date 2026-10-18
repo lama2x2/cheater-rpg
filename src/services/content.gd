@@ -16,6 +16,7 @@ const NOISE_PATH := "res://data/noise.json"
 const WEAPONS_PATH := "res://data/weapons.json"
 const COMBAT_PATH := "res://data/combat.json"
 const LOOT_DIR := "res://data/loot"
+const PROGRESS_PATH := "res://data/progress.json"
 
 var _cache: Dictionary = {}
 
@@ -29,7 +30,7 @@ func rules() -> Dictionary:
 
 
 func player_tuning() -> Dictionary:
-	return _cached(PLAYER_PATH, ["walk_speed", "sprint_speed", "speed_bonus_per_level", "sprint_progress_per_meter", "gravity", "interact_radius", "sneak_speed", "sneak_visibility"])
+	return _cached(PLAYER_PATH, ["walk_speed", "sprint_speed", "speed_bonus_per_level", "gravity", "interact_radius", "sneak_speed", "sneak_visibility"])
 
 
 func vitals_config() -> Dictionary:
@@ -91,6 +92,10 @@ func loot() -> LootTable:
 	return _cache[LOOT_DIR]
 
 
+func progress_config() -> Dictionary:
+	return _cached(PROGRESS_PATH, ProgressRules.REQUIRED_KEYS)
+
+
 func combat_config() -> Dictionary:
 	return _cached(COMBAT_PATH, DamageModel.REQUIRED_KEYS)
 
@@ -100,7 +105,7 @@ func noise_config() -> Dictionary:
 
 
 func test_area() -> Dictionary:
-	return _cached(TEST_AREA_PATH, ["items", "house", "infected_seed", "infected"])
+	return _cached(TEST_AREA_PATH, ["items", "house", "stashes", "stash_reveal", "infected_seed", "infected"])
 
 
 func recipes() -> Array:

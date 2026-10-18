@@ -13,6 +13,7 @@ var buffs := Buffs.new()
 var weapons: WeaponState
 var wounds: Wounds
 var combat: DamageModel
+var progress: ProgressRules
 ## Свободные очки характеристик (золотая звезда). Распределение — в окне героя (позже).
 var free_points: int = 0
 ## Сколько раз Система дала умение (жемчуг). Сами умения — задача 13.
@@ -32,6 +33,8 @@ var _rng := RandomNumberGenerator.new()
 var _was_overloaded := false
 ## Кто последним ранил героя — причина смерти, если здоровье кончится.
 var _last_damage_source := "health"
+## Игровой час, в котором уже предупредили об однообразии: {"melee_hit": 12}.
+var _farm_warned: Dictionary = {}
 
 
 func _ready() -> void:
@@ -51,11 +54,28 @@ func setup() -> void:
 	weapons = WeaponState.new(Content.weapon_db())
 	combat = DamageModel.new(Content.combat_config())
 	wounds = Wounds.new(Content.combat_config()["bleeding"])
+	progress = ProgressRules.new(Content.progress_config())
 	start_minutes = GameClock.minutes
 
 
 func add_progress(stat: String, points: float) -> void:
 	stats.add_progress(stat, points)
+
+
+## Прокачка действием (3.2): очки по data/progress.json с убывающей отдачей и уровнем цели.
+## context: {"target_level": int} — уровень твари, если действие против неё.
+func award(action: String, amount: float = 1.0, context: Dictionary = {}) -> void:
+	if awaiting_respawn:
+		return
+	var ctx := context.duplicate()
+	if ctx.has("target_level"):
+		ctx["hero_level"] = stats.general_level()
+	var result := progress.award(action, amount, GameClock.minutes, ctx)
+	stats.add_progress(result["stat"], result["points"])
+	var below := float(Content.progress_config()["farm_warning_below"])
+	if progress.farm_multiplier(action) < below and _farm_warned.get(action, -1) != progress.hour:
+		_farm_warned[action] = progress.hour
+		SystemLog.post("farm_warning", {"stat": Content.stat_name(result["stat"])}, "warning")
 
 
 ## Смерть: −1 жизнь, штраф прогресса, запись в статистику, счётчик смены региона.
@@ -266,7 +286,7 @@ func to_dict() -> Dictionary:
 		"stats": stats.to_dict(), "vitals": vitals.to_dict(), "run": run.to_dict(),
 		"inventory": inventory.to_dict(), "trophies": trophies.to_dict(), "buffs": buffs.to_dict(),
 		"free_points": free_points, "skills_awakened": skills_awakened,
-		"weapons": weapons.to_dict(), "wounds": wounds.to_dict(),
+		"weapons": weapons.to_dict(), "wounds": wounds.to_dict(), "progress": progress.to_dict(),
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
@@ -286,6 +306,7 @@ func load_dict(data: Dictionary) -> void:
 	skills_awakened = int(data["skills_awakened"])
 	weapons.load_dict(data["weapons"])
 	wounds.load_dict(data["wounds"])
+	progress.load_dict(data["progress"])
 	_was_overloaded = inventory.is_overloaded()
 	inventory_changed.emit()
 	lives = int(data["lives"])

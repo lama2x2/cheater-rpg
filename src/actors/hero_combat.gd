@@ -109,6 +109,7 @@ func _melee(weapon: Dictionary, kind: String) -> void:
 	var zone := model.melee_zone(kind, behind, _rng, has_sack)
 	var mult := model.melee_multiplier(PlayerState.effective("strength"), winded)
 	var result := model.hit(float(strike["damage"]), zone, _armor(target), float(weapon["penetration"]), mult)
+	result["attack"] = kind
 	_apply_hit(target, result, PlayerState.weapons.equipped)
 	EventBus.noise_made.emit(String(weapon["noise"]), hero.global_position, {"from_hero": true})
 
@@ -167,6 +168,7 @@ func _ranged_hit(target: Node3D, _at: Vector3, weapon: Dictionary) -> void:
 	var behind := model.is_from_behind(-target.global_transform.basis.z, hero.global_position - target.global_position)
 	var zone := model.ranged_zone(behind, PlayerState.effective("accuracy"), _rng, bool(data.get("spore_sack", false)))
 	var result := model.hit(float(weapon["damage"]), zone, _armor(target), float(weapon["penetration"]))
+	result["attack"] = "ranged"
 	_apply_hit(target, result, PlayerState.weapons.equipped)
 
 
@@ -211,6 +213,7 @@ func _apply_hit(target: Node3D, result: Dictionary, weapon_id: String) -> void:
 	var level: int = target.level
 	var at := target.global_position + Vector3.UP * 2.2
 	_damage_number(at, result)
+	result["distance"] = hero.global_position.distance_to(target.global_position)
 	var killed: bool = target.take_damage(result["damage"], hero.global_position)
 	EventBus.player_hit.emit(weapon_id, enemy_id, level, result, killed)
 	if killed:

@@ -14,13 +14,22 @@ extends RefCounted
 ##   4 — player.inventory; секция world_items.
 ##   5 — player: trophies, buffs, free_points, skills_awakened.
 ##   6 — player: weapons (в руках, магазины), wounds (кровотечение).
+##   7 — player.progress (счётчики анти-фарма за игровой час); area.stashes.
 
-const VERSION := 6
+const VERSION := 7
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7}
+
+
+static func _v6_to_v7(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		data["sections"]["player"].merge({"progress": {}})
+	if data["sections"].has("area"):
+		data["sections"]["area"].merge({"stashes": []})
+	return data
 
 
 static func _v5_to_v6(data: Dictionary) -> Dictionary:

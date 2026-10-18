@@ -15,7 +15,8 @@ signal infected_killed(enemy_id: String, level: int, position: Vector3)
 ## Шумовой импульс: source — ключ из data/noise.json, options — см. NoiseModel.radius() и from_hero.
 @warning_ignore("unused_signal")
 signal noise_made(source: String, position: Vector3, options: Dictionary)
-## Герой попал по твари: result — из DamageModel.hit() (damage, zone, crit, armor_stopped).
+## Герой попал по твари: result — из DamageModel.hit() (damage, zone, crit, armor_stopped)
+## + attack ("light" / "heavy" / "ranged") и distance.
 @warning_ignore("unused_signal")
 signal player_hit(weapon_id: String, enemy_id: String, enemy_level: int, result: Dictionary, killed: bool)
 ## Стрела (или другой подбираемый боеприпас) упала в мире после выстрела.

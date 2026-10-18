@@ -1,0 +1,21 @@
+{
+  "_doc": "Прокачка действием (docs/spec/03_character.md, 3.2). points — очки прогресса за единицу действия (удар, метр, единицу урона). farm_cap — сколько очков действие даёт в полную силу за игровой час; дальше отдача убывает: каждое очко × 1 / (1 + сверх/farm_cap) (D-09).",
+  "actions": {
+    "sprint_meter": { "stat": "speed", "points": 0.1, "farm_cap": 20 },
+    "carry_overloaded_meter": { "stat": "strength", "points": 0.03, "farm_cap": 6 },
+    "melee_hit": { "stat": "strength", "points": 0.6, "farm_cap": 12 },
+    "melee_heavy_hit": { "stat": "strength", "points": 1.0, "farm_cap": 12 },
+    "ranged_hit": { "stat": "accuracy", "points": 0.5, "farm_cap": 10 },
+    "ranged_hard_hit": { "stat": "accuracy", "points": 1.0, "farm_cap": 10 },
+    "wounded": { "stat": "endurance", "points": 0.05, "farm_cap": 8 },
+    "sneak_pass": { "stat": "stealth", "points": 1.5, "farm_cap": 10 },
+    "stash_found": { "stat": "perception", "points": 4.0, "farm_cap": 20 }
+  },
+  "target_level": {
+    "_doc": "Твари слабее героя дают меньше: каждый уровень ниже (общий уровень героя − grace) режет на penalty_per_level, не ниже min_mult. Много сильнее (на strong_above уровней) — ×strong_mult.",
+    "grace": 3, "penalty_per_level": 0.1, "min_mult": 0.05, "strong_above": 8, "strong_mult": 1.5
+  },
+  "hard_shot_distance": 20,
+  "sneak_pass": { "near_radius": 6.0, "min_seconds": 1.5, "leave_radius": 9.0 },
+  "farm_warning_below": 0.5
+}

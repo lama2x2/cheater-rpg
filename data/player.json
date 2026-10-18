@@ -2,7 +2,6 @@
   "walk_speed": 4.0,
   "sprint_speed": 7.0,
   "speed_bonus_per_level": 0.02,
-  "sprint_progress_per_meter": 0.1,
   "gravity": 20.0,
   "interact_radius": 1.8,
   "sneak_speed": 2.0,

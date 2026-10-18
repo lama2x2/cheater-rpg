@@ -13,6 +13,7 @@ const InteractPromptScript := preload("res://src/ui/interact_prompt.gd")
 const TestAreaScript := preload("res://src/world/test_area.gd")
 const InfectedPopulationScript := preload("res://src/world/infected_population.gd")
 const NoiseSystemScript := preload("res://src/world/noise_system.gd")
+const ProgressWatcherScript := preload("res://src/world/progress_watcher.gd")
 
 var _death_flow: Node
 
@@ -24,6 +25,7 @@ func _ready() -> void:
 	area.name = "Area"
 	add_child(area)
 	add_child(NoiseSystemScript.new())
+	add_child(ProgressWatcherScript.new())
 
 	var player: CharacterBody3D = PlayerScript.new()
 	player.name = "Player"

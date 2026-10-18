@@ -6,6 +6,7 @@ extends NavigationRegion3D
 signal navigation_ready
 
 const DoorScript := preload("res://src/world/door.gd")
+const StashScript := preload("res://src/world/stash.gd")
 
 const GROUND_SIZE := 200.0
 const OBSTACLE_COUNT := 40
@@ -17,6 +18,7 @@ var is_navigation_ready := false
 
 var _config: Dictionary
 var _door: StaticBody3D
+var _stashes: Array[Node3D] = []
 
 
 func _ready() -> void:
@@ -25,6 +27,7 @@ func _ready() -> void:
 	_build_house(_config["house"])
 	_build_obstacles()
 	_build_respawn_marker(PlayerState.respawn_position)
+	_build_stashes()
 	SaveService.register("area", self)
 
 	var nav := NavigationMesh.new()
@@ -51,10 +54,18 @@ func snap(point: Vector3) -> Vector3:
 
 
 func to_dict() -> Dictionary:
-	return {"door_open": _door.is_open}
+	var stashes: Array = []
+	for stash in _stashes:
+		stashes.append({"found": stash.found, "contents": stash.contents.duplicate(true)})
+	return {"door_open": _door.is_open, "stashes": stashes}
 
 
 func load_dict(data: Dictionary) -> void:
+	var saved: Array = data["stashes"]
+	for i in mini(saved.size(), _stashes.size()):
+		_stashes[i].found = bool(saved[i]["found"])
+		_stashes[i].contents = saved[i]["contents"]
+		_stashes[i]._apply()
 	if bool(data.get("door_open", false)):
 		_door.open_door()
 	else:
@@ -133,6 +144,15 @@ func _build_obstacles() -> void:
 		var center := at + Vector3(0, size.y / 2.0, 0)
 		add_child(_static_body(box, center, mesh, center, Color(shade, shade * 0.95, shade * 0.9)))
 		placed += 1
+
+
+func _build_stashes() -> void:
+	for entry: Dictionary in _config["stashes"]:
+		var stash: Node3D = StashScript.new()
+		stash.position = Vector3(float(entry["at"][0]), 0.0, float(entry["at"][1]))
+		stash.contents = entry["items"].duplicate(true)
+		add_child(stash)
+		_stashes.append(stash)
 
 
 ## Респ героя — тёмная плита с бледным свечением (позже — шаблоны «общежитие» / «стройка»).

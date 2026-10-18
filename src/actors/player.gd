@@ -15,6 +15,7 @@ var sneaking := false
 var _tuning: Dictionary
 var _sprint_meters: float = 0.0
 var _step_meters: float = 0.0
+var _carry_meters: float = 0.0
 var _body_meshes: Array[MeshInstance3D] = []
 
 
@@ -77,6 +78,8 @@ func _physics_process(delta: float) -> void:
 	var moved := Vector2(global_position.x - before.x, global_position.z - before.z).length()
 	if sprinting:
 		_count_sprint(moved)
+	if inventory.is_overloaded():
+		_count_carry(moved)
 	_count_steps(moved, "sprint" if sprinting else ("sneak" if sneaking else "walk"))
 	_face_cursor()
 	current_interactable = _nearest_interactable()
@@ -110,14 +113,23 @@ func _nearest_interactable() -> Node3D:
 	return best
 
 
-## Спринт качает Скорость: очки за каждый целый пробежанный метр.
+## Спринт качает Скорость, ходьба с перегрузом — Силу: очки за каждый целый метр (3.2).
 func _count_sprint(meters: float) -> void:
 	_sprint_meters += meters
 	if _sprint_meters < 1.0:
 		return
 	var whole := floorf(_sprint_meters)
 	_sprint_meters -= whole
-	PlayerState.add_progress("speed", whole * float(_tuning["sprint_progress_per_meter"]))
+	PlayerState.award("sprint_meter", whole)
+
+
+func _count_carry(meters: float) -> void:
+	_carry_meters += meters
+	if _carry_meters < 1.0:
+		return
+	var whole := floorf(_carry_meters)
+	_carry_meters -= whole
+	PlayerState.award("carry_overloaded_meter", whole)
 
 
 ## Шаг — шумовой импульс. Длина шага зависит от режима, радиус — от Скрытности и перегруза.
