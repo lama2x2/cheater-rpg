@@ -25,3 +25,11 @@ signal arrow_landed(item_id: String, position: Vector3)
 ## Герой вошёл в кластер (переход, возрождение на респе другого кластера).
 @warning_ignore("unused_signal")
 signal cluster_entered(cluster_id: String)
+## Герой применил умение: effects — уже посчитанные SkillRules.effects() (сцена рисует и
+## применяет свои: шум, подсветку, тварей).
+@warning_ignore("unused_signal")
+signal skill_used(skill_id: String, effects: Array)
+## Случайность в пользу героя (D-76): kind — событие из data/luck.json или "immunity";
+## at — где показать (Vector3.INF — над героем).
+@warning_ignore("unused_signal")
+signal luck_event(kind: String, at: Vector3)

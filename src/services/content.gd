@@ -22,6 +22,10 @@ const LOOT_DIR := "res://data/loot"
 const PROGRESS_PATH := "res://data/progress.json"
 const STAB_PATH := "res://data/stab.json"
 const SETTINGS_PATH := "res://data/settings.json"
+const SKILL_RULES_PATH := "res://data/skill_rules.json"
+const SKILLS_DIR := "res://data/skills"
+const LUCK_PATH := "res://data/luck.json"
+const TEXTS_DIR := "res://data/text"
 
 var _cache: Dictionary = {}
 
@@ -97,6 +101,31 @@ func loot() -> LootTable:
 	return _cache[LOOT_DIR]
 
 
+func skill_rules_config() -> Dictionary:
+	return _cached(SKILL_RULES_PATH, SkillRules.REQUIRED_KEYS)
+
+
+## Описания умений из всех data/skills/*.json (схема 14.5).
+func skill_defs() -> Array:
+	if not _cache.has(SKILLS_DIR):
+		var defs: Array = []
+		for file in DirAccess.get_files_at(SKILLS_DIR):
+			if file.ends_with(".json"):
+				defs.append(JsonData.load_dict(SKILLS_DIR.path_join(file), ["id", "slot", "effects"]))
+		_cache[SKILLS_DIR] = defs
+	return _cache[SKILLS_DIR]
+
+
+func luck_model() -> LuckModel:
+	if not _cache.has(LUCK_PATH):
+		_cache[LUCK_PATH] = LuckModel.new(JsonData.load_dict(LUCK_PATH, LuckModel.REQUIRED_KEYS))
+	return _cache[LUCK_PATH]
+
+
+func skill_name(id: String) -> String:
+	return String(texts()["skill_names"].get(id, id))
+
+
 func settings_config() -> Dictionary:
 	return _cached(SETTINGS_PATH, SettingsModel.REQUIRED_KEYS)
 
@@ -165,8 +194,21 @@ func item_name(id: String) -> String:
 	return String(texts()["item_names"].get(id, id))
 
 
+## Тексты: data/text/ru.json + дополнения data/text/ru_*.json (разделы сливаются по ключам —
+## так тексты умений живут отдельно от общего файла).
 func texts() -> Dictionary:
-	return _cached(TEXTS_PATH, ["stat_names", "item_names", "enemy_names", "log", "ui", "death_causes", "death_advice", "epitaphs"])
+	if not _cache.has(TEXTS_PATH):
+		var texts := JsonData.load_dict(TEXTS_PATH, ["stat_names", "item_names", "enemy_names", "log", "ui", "death_causes", "death_advice", "epitaphs"])
+		for file in DirAccess.get_files_at(TEXTS_DIR):
+			if file.begins_with("ru_") and file.ends_with(".json"):
+				var extra := JsonData.load_dict(TEXTS_DIR.path_join(file))
+				for section: String in extra:
+					if extra[section] is Dictionary:
+						if not texts.has(section):
+							texts[section] = {}
+						texts[section].merge(extra[section], true)
+		_cache[TEXTS_PATH] = texts
+	return _cache[TEXTS_PATH]
 
 
 ## Строка интерфейса по ключу (texts.ui), с подстановкой параметров.

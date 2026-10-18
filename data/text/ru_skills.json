@@ -1,0 +1,70 @@
+{
+  "_doc": "Тексты умений и Удачи (задачи 13, 13b). Сливается с ru.json по разделам (Content.texts). Названия — как в книгах (D-75).",
+  "skill_names": {
+    "fortune_smile": "Улыбка Фортуны"
+  },
+  "skill_desc": {
+    "fortune_smile": "Удача ×{stat_mult.value} на {stat_mult.duration_s} с. Твари промахиваются и спотыкаются, удары находят голову и мешок, шаги не слышны, лут щедрее."
+  },
+  "property_names": {
+    "fortune_immunity": "Неприкасаемый: иммунитет к урону 1,5 с",
+    "fortune_quick": "Частая гостья: откат −1 ч",
+    "fortune_echo": "Эхо: после Улыбки Удача ×2 ещё 30 с",
+    "fortune_second_roll": "Второй бросок: пока действует, каждая случайность бросается дважды",
+    "fortune_shared": "На всех: Улыбка и спутникам рядом (M2)",
+    "fortune_big": "Джекпот: множитель +5",
+    "fortune_immunity_long": "Неуязвимый: иммунитет к урону 3 с",
+    "fortune_cd_long": "Любимчик: откат −3 ч",
+    "fortune_vitals": "Подарок: случайно восполняет шкалы на 25–75%"
+  },
+  "log": {
+    "skill_learned": ["Получено умение: {skill}.", "Система выдала умение: {skill}. Пользуйтесь, пока дают."],
+    "skill_learned_pearl": ["Чёрная жемчужина пробудила умение: {skill}. Знахарка не понадобилась.", "Умение пробудилось само: {skill}. Повезло."],
+    "skill_pearl_empty": ["Жемчужина пыталась. Новых умений для вас у Системы пока нет."],
+    "skill_used": ["{skill}.", "Применено: {skill}."],
+    "skill_used_fortune_smile": ["Улыбка Фортуны. Удача ×{mult} на {seconds} с.", "Фортуна улыбается. {seconds} секунд — ваши.", "Улыбка Фортуны. Не тратьте её на пустяки."],
+    "skill_no_mana": ["Не хватает маны: {skill} — {cost}.", "Мана: {mana} из {cost}. {skill} подождёт."],
+    "skill_on_cooldown": ["{skill}: откат, ещё {left}."],
+    "skill_blocked": ["Умения не отвечают. Здесь Система их глушит."],
+    "skill_ready": ["{skill} снова готово."],
+    "skill_slot_set": ["{skill} — в слот {slot}."],
+    "skill_property": ["{skill}: открыто свойство «{property}»."],
+    "skill_property_available": ["{skill}: Ментальная сила открыла выбор свойства. Окно умений — U."],
+    "skill_cooldowns_reset": ["Смерть обнуляет откаты. Хоть что-то хорошее."],
+    "luck_enemy_miss": ["Мимо. Фортуна.", "Тварь промахнулась. Бывает.", "Удача: удар прошёл мимо."],
+    "luck_enemy_stumble": ["Тварь оступилась. Удача.", "Рывок сорвался — повезло."],
+    "luck_hero_crit": ["Удачный удар.", "Удача направила руку."],
+    "luck_quiet_noise": ["Удача: шаг вышел тише."],
+    "luck_unnoticed": ["Тварь отвернулась. Повезло.", "Удача: вас не заметили."],
+    "immunity_saved": ["Удар не прошёл: иммунитет."]
+  },
+  "ui": {
+    "healer_pending": "Умений ждут выбора: {n}",
+    "healer_choose_title": "Дар {level} уровня — выберите умение:",
+    "healer_choose": "Взять",
+    "healer_choose_none": "Системе нечего предложить. Дар подождёт.",
+    "skills_title": "Умения",
+    "skills_none": "Умений нет. Дар Системы — у знахарки в стабе (10, 30, 60 уровень) или в чёрной жемчужине.",
+    "skills_slots": "Слоты: {used} из {open}. Клавиши 1–4 — применить, U — закрыть",
+    "skills_row": "{name}",
+    "skills_row_active": "мана {mana} · откат {cooldown} (игровое время){extra}",
+    "skills_ready_in": " · готово через {left}",
+    "skills_row_passive": "пассив · резерв маны {reserve}%",
+    "skills_to_slot": "Слот {n}",
+    "skills_unslot": "Убрать",
+    "skills_choice": "Свойство (порог {group}):",
+    "skills_blocked": "Умения заглушены",
+    "skill_slot_empty": "[{n}] —",
+    "skill_slot_ready": "[{n}] {name}",
+    "skill_slot_cd": "[{n}] {name}  {left}",
+    "skill_slot_active": "[{n}] {name}  ★ {left}",
+    "skill_slot_passive": "[{n}] {name}  · пассив",
+    "skill_slot_blocked": "[{n}] {name}  ✕",
+    "luck_float_miss": "мимо!",
+    "luck_float_stumble": "оступилась",
+    "luck_float_crit": "удача!",
+    "luck_float_unnoticed": "?",
+    "immunity_float": "иммунитет",
+    "mana_reserve": " (резерв {n})"
+  }
+}

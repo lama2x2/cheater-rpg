@@ -92,6 +92,9 @@ func test_player_and_clock_survive_save_load() -> void:
 	player.inventory.add("vodka", 1)
 	player.lives = 6
 	player.deaths = 3
+	player.learn_skill("fortune_smile")
+	player.vitals.restore("mana", 100.0)
+	player.use_skill("fortune_smile")
 	var clock: Node = GameClockScript.new()
 	clock.minutes = 2000.5
 
@@ -109,11 +112,20 @@ func test_player_and_clock_survive_save_load() -> void:
 	assert_eq(player2.inventory.count_of("sporan"), 40, "споранов")
 	assert_eq(player2.stats.get_level("speed"), 2, "уровень Скорости (27 очков: 10 → ур.2, 17 из 20)")
 	assert_almost(clock2.minutes, 2000.5, "время")
+	assert_eq(player2.skills.slots[0], "fortune_smile", "умение в слоте")
+	assert_true(player2.skills.cooldown_left("fortune_smile", 0.0) > 0.0, "откат пережил сейв")
 	DirAccess.remove_absolute(path)
 	player.free()
 	player2.free()
 	clock.free()
 	clock2.free()
+
+
+func test_v11_save_gets_empty_skills() -> void:
+	var v11 := {"save_version": 11, "meta": {}, "sections": {"player": {"lives": 5}}}
+	var player: Dictionary = SaveFormatScript.migrate(v11)["sections"]["player"]
+	assert_eq(player["skills"], {}, "умений нет")
+	assert_eq(player["skill_offers"], [], "вариантов дара нет")
 
 
 func test_v8_save_drops_test_area_and_gets_new_world() -> void:
