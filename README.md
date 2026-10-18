@@ -47,6 +47,7 @@ CLAUDE.md        ← правила для ИИ-ассистента в этом
 | 13 | [tech](docs/spec/13_tech.md) | Godot, архитектура, данные, сохранения, сборка и запуск на Mac |
 | 14 | [content_data](docs/spec/14_content_data.md) | Схемы данных (статы, враги, трофеи, умения, кластеры) |
 | 15 | [roadmap](docs/spec/15_roadmap.md) | Этапы: M0 → вертикальный срез → альфа |
+| 16 | [origins](docs/spec/16_origins.md) | Происхождение: читер (варианты форс-мажора) или обычный |
 | — | [glossary](docs/spec/glossary.md) | Словарь терминов мира |
 
 ## Запуск
