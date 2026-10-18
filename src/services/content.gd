@@ -12,6 +12,10 @@ const ITEMS_DIR := "res://data/items"
 const RECIPES_PATH := "res://data/recipes.json"
 const ENEMIES_DIR := "res://data/enemies"
 const TEST_AREA_PATH := "res://data/world/test_area.json"
+const REGION_PATH := "res://data/world/region.json"
+const CLUSTER_TYPES_PATH := "res://data/world/cluster_types.json"
+const POPULATION_PATH := "res://data/world/population.json"
+const TEMPLATES_DIR := "res://data/world/templates"
 const NOISE_PATH := "res://data/noise.json"
 const WEAPONS_PATH := "res://data/weapons.json"
 const COMBAT_PATH := "res://data/combat.json"
@@ -104,8 +108,49 @@ func noise_config() -> Dictionary:
 	return _cached(NOISE_PATH, NoiseModel.REQUIRED_KEYS)
 
 
+## Тестовая площадка — до перехода сцены на кластеры (задача 11, часть 2).
 func test_area() -> Dictionary:
 	return _cached(TEST_AREA_PATH, ["items", "house", "stashes", "stash_reveal", "infected_seed", "infected"])
+
+
+## Регион (граф кластеров). Ошибки графа — в лог движка при первой загрузке.
+func region() -> RegionMap:
+	if not _cache.has(REGION_PATH):
+		var map := RegionMap.new(JsonData.load_dict(REGION_PATH, RegionMap.REQUIRED_KEYS))
+		for error in map.errors(PackedStringArray(templates().keys()), PackedStringArray(cluster_types()["types"].keys())):
+			push_error("data/world/region.json: " + error)
+		_cache[REGION_PATH] = map
+	return _cache[REGION_PATH]
+
+
+func cluster_types() -> Dictionary:
+	return _cached(CLUSTER_TYPES_PATH, ["types", "fog", "travel_fade_s", "stash_reveal"])
+
+
+func cluster_type(type_id: String) -> Dictionary:
+	return cluster_types()["types"][type_id]
+
+
+func population_model() -> PopulationModel:
+	if not _cache.has(POPULATION_PATH):
+		_cache[POPULATION_PATH] = PopulationModel.new(JsonData.load_dict(POPULATION_PATH, PopulationModel.REQUIRED_KEYS))
+	return _cache[POPULATION_PATH]
+
+
+## Шаблоны кластеров из data/world/templates/*.json по id.
+func templates() -> Dictionary:
+	if not _cache.has(TEMPLATES_DIR):
+		var result := {}
+		for file in DirAccess.get_files_at(TEMPLATES_DIR):
+			if file.ends_with(".json"):
+				var template := JsonData.load_dict(TEMPLATES_DIR.path_join(file), ClusterLayout.REQUIRED_KEYS)
+				result[String(template["id"])] = template
+		_cache[TEMPLATES_DIR] = result
+	return _cache[TEMPLATES_DIR]
+
+
+func template(id: String) -> Dictionary:
+	return templates()[id]
 
 
 func recipes() -> Array:

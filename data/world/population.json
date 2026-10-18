@@ -1,0 +1,13 @@
+{
+  "_doc": "Абстрактная модель популяции кластера (docs/spec/02_world.md, «Жизненный цикл»; 13.3 «Абстрактный» уровень). Тик — игровой час. stages — порядок эволюции (id из data/enemies). При прилёте: civilians из шаблона, immune_chance из них — иммунные (уходят, в M2 — неписи), infected_on_arrival — доля сразу обращённых. Каждый час: infect_per_h доли людей обращаются в медляков; твари едят food (appetite[стадия] в час); при нехватке старшие (stage ≥ 2) едят младших (body_food еды с тела), медляки голодают и превращаются в ползунов (starve_per_h × доля голода), несытые старшие гибнут (predator_starve_per_h × голод) и сами становятся едой; сытые эволюционируют (evolve_per_h × сытость) в следующую стадию; ползуны умирают (crawler_death_per_h). loot — индекс нетронутого лута 1 → 0, убывает на loot_decay_per_h (мародёры). warmup_max_h — сколько часов максимум просчитывать при создании мира.",
+  "stages": ["crawler", "slowpoke", "jumper", "runner", "lottery", "stomper"],
+  "infect_per_h": 0.15,
+  "appetite": { "crawler": 0.02, "slowpoke": 0.05, "jumper": 0.08, "runner": 0.12, "lottery": 0.2, "stomper": 0.3 },
+  "body_food": 3.0,
+  "starve_per_h": 0.02,
+  "predator_starve_per_h": 0.004,
+  "evolve_per_h": { "slowpoke": 0.004, "jumper": 0.003, "runner": 0.0015, "lottery": 0.001 },
+  "crawler_death_per_h": 0.01,
+  "loot_decay_per_h": 0.006,
+  "warmup_max_h": 336
+}

@@ -1,0 +1,18 @@
+{
+  "_doc": "Промзона (обычный кластер): большие цеха, гаражи, штабеля; людей меньше, укрытий больше.",
+  "id": "industrial",
+  "size": 150,
+  "layout_seed": 4421,
+  "ground_color": [0.4, 0.38, 0.34],
+  "wall_color": [0.5, 0.5, 0.52],
+  "prop_shade": [0.3, 0.55],
+  "clear_radius": 0,
+  "buildings": [
+    { "kind": "workshop", "count": 3, "size": [[14, 20], [10, 14]], "loot": "spot_industrial", "loot_spots": [2, 3], "wall_height": 5 },
+    { "kind": "garage", "count": 4, "size": [[5, 7], [6, 8]], "loot": "spot_garage", "loot_spots": [1, 1] }
+  ],
+  "props": { "count": 45, "size": [[1, 6], [1, 4], [1, 3]] },
+  "outdoor_loot": { "table": "spot_industrial", "count": 6 },
+  "stashes": { "count": 2, "table": "stash_rich" },
+  "population": { "civilians": [80, 160], "immune_chance": 0.07, "infected_on_arrival": 0.05, "food_per_civilian": 1.0, "agents_per_unit": 0.2, "max_agents": 32 }
+}

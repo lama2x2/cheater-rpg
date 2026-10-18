@@ -1,0 +1,77 @@
+{
+  "_doc": "Лут мест на кластерах (docs/spec/06_trophies_items.md; 02 «Жизненный цикл»): точки в домах, магазинах, полиции и т. п. — таблицы для шаблонов data/world/templates. Формат как у мешков (14.3); chance — число. Удача героя умножает шансы так же, как у мешков. Нетронутость лута кластера (индекс loot из population.json) решает, уцелела ли точка.",
+  "luck_scaling": { "chance_mult_per_100_luck": 0.25, "cap": 2.0 },
+  "tables": [
+    { "id": "spot_house", "rolls": [
+      { "item": "canned_food", "count": [1, 2], "chance": 0.5 },
+      { "item": "water_bottle", "count": [1, 2], "chance": 0.4 },
+      { "item": "bandage", "count": [1, 1], "chance": 0.25 },
+      { "item": "vodka", "count": [1, 1], "chance": 0.2 },
+      { "item": "vinegar", "count": [1, 1], "chance": 0.12 },
+      { "item": "knife", "count": [1, 1], "chance": 0.08 },
+      { "item": "gold_ring", "count": [1, 1], "chance": 0.05 }
+    ] },
+    { "id": "spot_shop", "rolls": [
+      { "item": "canned_food", "count": [2, 4], "chance": 0.9 },
+      { "item": "water_bottle", "count": [2, 3], "chance": 0.8 },
+      { "item": "vodka", "count": [1, 3], "chance": 0.7 },
+      { "item": "vinegar", "count": [1, 2], "chance": 0.4 },
+      { "item": "bandage", "count": [1, 2], "chance": 0.3 }
+    ] },
+    { "id": "spot_police", "rolls": [
+      { "item": "pistol", "count": [1, 1], "chance": 0.6 },
+      { "item": "ammo_9mm", "count": [8, 24], "chance": 0.9 },
+      { "item": "shotgun", "count": [1, 1], "chance": 0.25 },
+      { "item": "ammo_12g", "count": [4, 10], "chance": 0.5 },
+      { "item": "bandage", "count": [1, 2], "chance": 0.4 }
+    ] },
+    { "id": "spot_hunter", "rolls": [
+      { "item": "bow", "count": [1, 1], "chance": 0.5 },
+      { "item": "arrow", "count": [6, 12], "chance": 0.8 },
+      { "item": "knife", "count": [1, 1], "chance": 0.4 },
+      { "item": "axe", "count": [1, 1], "chance": 0.3 },
+      { "item": "vodka", "count": [1, 1], "chance": 0.3 }
+    ] },
+    { "id": "spot_garage", "rolls": [
+      { "item": "axe", "count": [1, 1], "chance": 0.3 },
+      { "item": "knife", "count": [1, 1], "chance": 0.2 },
+      { "item": "brick", "count": [1, 3], "chance": 0.5 },
+      { "item": "vodka", "count": [1, 1], "chance": 0.2 }
+    ] },
+    { "id": "spot_street", "rolls": [
+      { "item": "brick", "count": [1, 2], "chance": 0.4 },
+      { "item": "canned_food", "count": [1, 1], "chance": 0.2 },
+      { "item": "water_bottle", "count": [1, 1], "chance": 0.15 },
+      { "item": "bandage", "count": [1, 1], "chance": 0.1 }
+    ] },
+    { "id": "spot_industrial", "rolls": [
+      { "item": "brick", "count": [1, 3], "chance": 0.6 },
+      { "item": "axe", "count": [1, 1], "chance": 0.25 },
+      { "item": "vodka", "count": [1, 2], "chance": 0.3 },
+      { "item": "vinegar", "count": [1, 1], "chance": 0.2 },
+      { "item": "ammo_12g", "count": [2, 6], "chance": 0.1 }
+    ] },
+    { "id": "spot_black", "rolls": [
+      { "item": "sporan", "count": [2, 6], "chance": 0.5 },
+      { "item": "pea_yellow", "count": [1, 1], "chance": 0.2 },
+      { "item": "ammo_9mm", "count": [4, 12], "chance": 0.2 },
+      { "item": "star_black", "count": [1, 1], "chance": 0.05 }
+    ] },
+    { "id": "stash_common", "rolls": [
+      { "item": "sporan", "count": [3, 8], "chance": 1.0 },
+      { "item": "bandage", "count": [1, 1], "chance": 0.4 },
+      { "item": "vodka", "count": [1, 1], "chance": 0.3 },
+      { "item": "ammo_9mm", "count": [4, 10], "chance": 0.3 },
+      { "item": "pea_yellow", "count": [1, 1], "chance": 0.2 },
+      { "item": "zhivchik", "count": [1, 1], "chance": 0.2 }
+    ] },
+    { "id": "stash_rich", "rolls": [
+      { "item": "sporan", "count": [6, 15], "chance": 1.0 },
+      { "item": "zhivchik", "count": [1, 2], "chance": 0.5 },
+      { "item": "pea_yellow", "count": [1, 2], "chance": 0.4 },
+      { "item": "pea_white", "count": [1, 1], "chance": 0.15 },
+      { "item": "star_black", "count": [1, 1], "chance": 0.1 },
+      { "item": "ammo_12g", "count": [4, 8], "chance": 0.3 }
+    ] }
+  ]
+}

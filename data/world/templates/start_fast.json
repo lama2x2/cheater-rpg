@@ -1,0 +1,20 @@
+{
+  "_doc": "Стартовый быстрый кластер (02, «Быстрый»): окраина у трассы — несколько домов, гараж, мало лута, слабые твари. Схема шаблона — docs/spec/14_content_data.md, 14.7 (как сделано в M1). fixed_items — гарантированные вещи у респа после каждой перезагрузки [id, count, x, z] (до пролога, задача 17).",
+  "id": "start_fast",
+  "size": 110,
+  "layout_seed": 1101,
+  "ground_color": [0.36, 0.42, 0.3],
+  "wall_color": [0.62, 0.55, 0.48],
+  "prop_shade": [0.45, 0.7],
+  "respawn": [0, 0],
+  "clear_radius": 8,
+  "buildings": [
+    { "kind": "house", "count": 4, "size": [[6, 9], [5, 8]], "loot": "spot_house", "loot_spots": [1, 2] },
+    { "kind": "garage", "count": 1, "size": [[5, 6], [6, 7]], "loot": "spot_garage", "loot_spots": [1, 1] }
+  ],
+  "props": { "count": 22, "size": [[1, 5], [1, 3], [1, 5]] },
+  "outdoor_loot": { "table": "spot_street", "count": 5 },
+  "stashes": { "count": 2, "table": "stash_common" },
+  "fixed_items": [["knife", 1, 0.0, -2.5], ["sporan", 3, 2.5, 1.5], ["canned_food", 1, -2.0, 2.0]],
+  "population": { "civilians": [20, 40], "immune_chance": 0.07, "infected_on_arrival": 0.1, "food_per_civilian": 1.0, "agents_per_unit": 0.5, "max_agents": 18 }
+}

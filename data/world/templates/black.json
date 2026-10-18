@@ -1,0 +1,16 @@
+{
+  "_doc": "Чёрный (мёртвый) кластер (02): ничего живого, чёрный ландшафт, руины без дверей; тварей нет, но здоровье тает. Остатки снаряжения тех, кто не дошёл.",
+  "id": "black",
+  "size": 120,
+  "layout_seed": 5531,
+  "ground_color": [0.08, 0.08, 0.09],
+  "wall_color": [0.14, 0.14, 0.15],
+  "prop_shade": [0.1, 0.18],
+  "clear_radius": 0,
+  "buildings": [
+    { "kind": "ruin", "count": 4, "size": [[6, 10], [5, 9]], "door": false, "loot": "spot_black", "loot_spots": [0, 1], "wall_height": 2 }
+  ],
+  "props": { "count": 30, "size": [[1, 4], [0.5, 3], [1, 4]] },
+  "outdoor_loot": { "table": "spot_black", "count": 4 },
+  "stashes": { "count": 1, "table": "stash_rich" }
+}

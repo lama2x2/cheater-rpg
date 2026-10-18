@@ -1,0 +1,19 @@
+{
+  "_doc": "Городок (обычный кластер): плотная застройка, магазины, полицейский участок (пистолет, дробовик, патроны).",
+  "id": "town",
+  "size": 150,
+  "layout_seed": 3313,
+  "ground_color": [0.42, 0.42, 0.4],
+  "wall_color": [0.66, 0.62, 0.58],
+  "prop_shade": [0.35, 0.6],
+  "clear_radius": 0,
+  "buildings": [
+    { "kind": "house", "count": 10, "size": [[7, 11], [6, 10]], "loot": "spot_house", "loot_spots": [1, 2] },
+    { "kind": "shop", "count": 2, "size": [[8, 12], [7, 9]], "loot": "spot_shop", "loot_spots": [2, 3] },
+    { "kind": "police", "count": 1, "size": [[9, 11], [7, 9]], "loot": "spot_police", "loot_spots": [2, 3] }
+  ],
+  "props": { "count": 40, "size": [[1.5, 4.5], [1, 2], [1.5, 2.5]] },
+  "outdoor_loot": { "table": "spot_street", "count": 8 },
+  "stashes": { "count": 3, "table": "stash_common" },
+  "population": { "civilians": [150, 300], "immune_chance": 0.07, "infected_on_arrival": 0.05, "food_per_civilian": 1.5, "agents_per_unit": 0.15, "max_agents": 40 }
+}

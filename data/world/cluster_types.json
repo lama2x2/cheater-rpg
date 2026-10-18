@@ -1,0 +1,22 @@
+{
+  "_doc": "Типы кластеров (docs/spec/02_world.md, «Типы кластеров»). period_h — собственный период перезагрузки кластера, бросается один раз при создании мира (игровые часы; 1 игровой час = 2 реальные минуты при сутках 48 мин, D-06); jitter — разброс каждого следующего интервала ±доля (D-56). kislyak_min — за сколько игровых минут до сброса встаёт туман (30 игровых мин = 1 реальная). reloads=false — не перезагружается никогда. infected — живут ли тут заражённые. safe — стаб: тварей нет, автосейв при входе. health_drain — урон здоровью в реальную секунду на чёрном кластере: base / (1 + per_level × общий уровень). color — цвет на карте и в HUD.",
+  "types": {
+    "fast": { "reloads": true, "period_h": [2, 4], "jitter": 0.1, "kislyak_min": [15, 30], "infected": true, "safe": false, "color": [0.55, 0.75, 0.5] },
+    "normal": { "reloads": true, "period_h": [24, 336], "jitter": 0.1, "kislyak_min": [30, 90], "infected": true, "safe": false, "color": [0.75, 0.7, 0.5] },
+    "black": { "reloads": true, "period_h": [24, 336], "jitter": 0.1, "kislyak_min": [30, 90], "infected": false, "safe": false, "color": [0.15, 0.15, 0.17],
+      "health_drain": { "base": 0.5, "per_level": 0.08 } },
+    "stab": { "reloads": false, "infected": false, "safe": true, "color": [0.45, 0.6, 0.85] }
+  },
+  "fog": {
+    "_doc": "Кисляк: цвет и плотность тумана (Environment.fog_*) в начале и к моменту сброса.",
+    "color": [0.72, 0.78, 0.45],
+    "density_start": 0.01,
+    "density_end": 0.09
+  },
+  "travel_fade_s": 0.8,
+  "stash_reveal": {
+    "_doc": "Тайник виден в радиусе base_radius + per_perception × (Наблюдательность − 1).",
+    "base_radius": 2.5,
+    "per_perception": 0.15
+  }
+}
