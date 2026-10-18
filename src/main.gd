@@ -17,6 +17,8 @@ const InfectedPopulationScript := preload("res://src/world/infected_population.g
 const NoiseSystemScript := preload("res://src/world/noise_system.gd")
 const ProgressWatcherScript := preload("res://src/world/progress_watcher.gd")
 const GameMenuScript := preload("res://src/ui/game_menu.gd")
+const SkillsBarScript := preload("res://src/ui/skills_bar.gd")
+const SkillsPanelScript := preload("res://src/ui/skills_panel.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -52,6 +54,8 @@ func _ready() -> void:
 	prompt.hero = player
 	add_child(prompt)
 	add_child(InventoryPanelScript.new())
+	add_child(SkillsBarScript.new())
+	add_child(SkillsPanelScript.new())
 	var menu: CanvasLayer = GameMenuScript.new()
 	add_child(menu)
 
@@ -121,6 +125,10 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --title       показать титульный экран (без аргументов он и так показывается)
 ##   --page=NAME   открыть страницу меню Esc: main, save, load, settings, new_game
 ##   --talk=ID     в стабе: встать у непися ID (trader, healer, barman, board) и открыть его окно
+##   --skills=A,B  выучить умения A, B (в слоты по порядку); --skills=all — все из data/skills
+##   --cast=N      через 0,5 с применить умение из слота N (1–4), мана — полная
+##   --skills-panel  открыть окно умений
+##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 func _handle_debug_args() -> void:
 	if _debug_args_done:
 		return
@@ -168,6 +176,15 @@ func _handle_debug_args() -> void:
 			_debug_page.call_deferred(arg.trim_prefix("--page="))
 		elif arg.begins_with("--talk="):
 			_debug_talk.call_deferred(arg.trim_prefix("--talk="))
+		elif arg.begins_with("--skills="):
+			_debug_skills(arg.trim_prefix("--skills="))
+		elif arg.begins_with("--cast="):
+			_debug_cast.call_deferred(int(arg.trim_prefix("--cast=")))
+		elif arg == "--skills-panel":
+			_debug_skills_panel.call_deferred()
+		elif arg == "--gift":
+			PlayerState.skill_gifts_opened.append(10)
+			PlayerState.pending_skill_choices += 1
 		elif arg.begins_with("--hours="):
 			GameClock.advance(float(arg.trim_prefix("--hours=")) * 60.0)
 		elif arg.begins_with("--shot-at="):
@@ -202,6 +219,28 @@ func _debug_talk(npc_id: String) -> void:
 			hero.global_position = node.global_position - node.global_transform.basis.z * 1.4 + Vector3.UP * 0.1
 			node.interact(hero)
 			return
+
+
+func _debug_skills(list: String) -> void:
+	var ids := PlayerState.skills.all_ids() if list == "all" else PackedStringArray(list.split(","))
+	var slot := 0
+	for id in ids:
+		PlayerState.learn_skill(id)
+		if slot < 4 and PlayerState.skills.knows(id):
+			PlayerState.skills.slots[slot] = id
+			slot += 1
+	PlayerState.skills_changed.emit()
+
+
+func _debug_cast(slot: int) -> void:
+	await get_tree().create_timer(0.5).timeout
+	PlayerState.vitals.restore(Vitals.MANA, PlayerState.vitals.max_value(Vitals.MANA))
+	PlayerState.use_skill_slot(slot - 1)
+
+
+func _debug_skills_panel() -> void:
+	await get_tree().process_frame
+	get_tree().get_first_node_in_group("skills_panel").toggle()
 
 
 func _debug_reload(after: float) -> void:

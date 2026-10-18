@@ -52,6 +52,7 @@ func _ready() -> void:
 
 	StabState.changed.connect(_refresh)
 	PlayerState.inventory_changed.connect(_refresh)
+	PlayerState.skills_changed.connect(_refresh)
 
 
 func open(npc: Node3D) -> void:
@@ -147,6 +148,25 @@ func _healer() -> void:
 		_content.add_child(_row(Content.ui("healer_no_gift", {"level": PlayerState.stats.general_level()}), []))
 	if PlayerState.pending_skill_choices > 0:
 		_content.add_child(_row(Content.ui("healer_pending", {"n": PlayerState.pending_skill_choices}), []))
+		_gift_choice()
+
+
+## Выбор умения из вариантов дара (задача 13): название, описание, кнопка «Взять».
+func _gift_choice() -> void:
+	var offers := PlayerState.gift_offers()
+	if offers.is_empty():
+		_content.add_child(_row(Content.ui("healer_choose_none"), []))
+		return
+	_content.add_child(_header(Content.ui("healer_choose_title", {"level": PlayerState.pending_gift_level()})))
+	var levels := PlayerState.skill_levels()
+	for id in offers:
+		var text := "%s — %s" % [Content.skill_name(id), SkillsPanel.skill_description(id, levels)]
+		_content.add_child(_row(text, [[Content.ui("healer_choose"), _choose_gift.bind(id)]]))
+
+
+func _choose_gift(id: String) -> void:
+	PlayerState.choose_gift(id)
+	_refresh()
 
 
 func _bar() -> void:

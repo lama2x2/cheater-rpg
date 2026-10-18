@@ -33,6 +33,10 @@ var _wander_wait := 0.0
 var _food: Node3D
 var _rng := RandomNumberGenerator.new()
 var _pending_noise: Dictionary = {}
+## Удача героя (D-76): тварь оступилась — стоит; «отвернулась» — не видит героя; повтор броска.
+var _stumble_left := 0.0
+var _unnoticed_left := 0.0
+var _unnoticed_retry := 0.0
 
 
 func _ready() -> void:
@@ -59,6 +63,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_attack_timer = maxf(0.0, _attack_timer - delta)
 	_lunge_cooldown = maxf(0.0, _lunge_cooldown - delta)
+	_stumble_left = maxf(0.0, _stumble_left - delta)
+	_unnoticed_left = maxf(0.0, _unnoticed_left - delta)
+	_unnoticed_retry = maxf(0.0, _unnoticed_retry - delta)
 	_sense_timer -= delta
 	if _sense_timer <= 0.0:
 		_sense_timer = SENSE_INTERVAL
@@ -123,7 +130,7 @@ func _sense() -> Dictionary:
 	var hero := get_tree().get_first_node_in_group("hero") as Node3D
 	if hero and hero.visible and not PlayerState.awaiting_respawn:
 		var distance := _flat_distance(global_position, hero.global_position)
-		if _can_see(hero, distance):
+		if _can_see(hero, distance) and not _luck_unnoticed():
 			senses["sees_player"] = true
 			senses["player_position"] = hero.global_position
 			senses["player_distance"] = distance
@@ -148,6 +155,21 @@ func _can_see(hero: Node3D, distance: float) -> bool:
 		global_position + Vector3.UP * minf(EYE_HEIGHT, float(_data["body"]["height"]) * 0.8),
 		hero.global_position + Vector3.UP * 1.2, LAYER_WORLD)
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+## Удача героя: тварь, ещё не поднявшая тревогу, заметив его, «отворачивается» на unnoticed_s.
+## Бросок — не чаще unnoticed_retry_s, иначе пять проверок в секунду сложились бы в гарантию.
+func _luck_unnoticed() -> bool:
+	if _unnoticed_left > 0.0:
+		return true
+	if brain.is_alert() or _unnoticed_retry > 0.0:
+		return false
+	var luck: Dictionary = Content.luck_model().config()
+	_unnoticed_retry = float(luck["unnoticed_retry_s"])
+	if PlayerState.lucky("unnoticed", global_position + Vector3.UP * 2.4):
+		_unnoticed_left = float(luck["unnoticed_s"])
+		return true
+	return false
 
 
 func _nearest_food() -> Node3D:
@@ -197,6 +219,8 @@ func _act(delta: float) -> void:
 			direction.y = 0.0
 			direction = direction.normalized()
 
+	if _stumble_left > 0.0:
+		direction = Vector3.ZERO
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
 	velocity.y = 0.0 if is_on_floor() else velocity.y - GRAVITY * delta
@@ -240,6 +264,10 @@ func _try_lunge() -> void:
 	var distance := float(_senses["player_distance"])
 	if distance < float(lunge["range"][0]) or distance > float(lunge["range"][1]):
 		return
+	if PlayerState.lucky("enemy_stumble", global_position + Vector3.UP * 2.4):
+		_lunge_cooldown = float(lunge["cooldown"])
+		_stumble_left = float(Content.luck_model().config()["stumble_s"])
+		return
 	_lunge_direction = brain.target_position - global_position
 	_lunge_direction.y = 0.0
 	_lunge_direction = _lunge_direction.normalized()
@@ -252,6 +280,8 @@ func _attack() -> void:
 		return
 	var attack: Dictionary = _data["attack"]
 	_attack_timer = float(attack["cooldown"])
+	if PlayerState.lucky("enemy_miss"):
+		return
 	PlayerState.hurt(float(attack["damage"]), enemy_id, float(attack.get("bleed_chance", 0.0)))
 
 

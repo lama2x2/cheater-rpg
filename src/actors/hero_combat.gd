@@ -106,7 +106,7 @@ func _melee(weapon: Dictionary, kind: String) -> void:
 	var model := PlayerState.combat
 	var behind := model.is_from_behind(-target.global_transform.basis.z, hero.global_position - target.global_position)
 	var has_sack := bool(Content.enemy_db().enemy(target.enemy_id).get("spore_sack", false))
-	var zone := model.melee_zone(kind, behind, _rng, has_sack)
+	var zone := _lucky_zone(model.melee_zone(kind, behind, _rng, has_sack), behind, has_sack, target)
 	var mult := model.melee_multiplier(PlayerState.effective("strength"), winded)
 	var result := model.hit(float(strike["damage"]), zone, _armor(target), float(weapon["penetration"]), mult)
 	result["attack"] = kind
@@ -166,7 +166,8 @@ func _ranged_hit(target: Node3D, _at: Vector3, weapon: Dictionary) -> void:
 	var model := PlayerState.combat
 	var data := Content.enemy_db().enemy(target.enemy_id)
 	var behind := model.is_from_behind(-target.global_transform.basis.z, hero.global_position - target.global_position)
-	var zone := model.ranged_zone(behind, PlayerState.effective("accuracy"), _rng, bool(data.get("spore_sack", false)))
+	var has_sack := bool(data.get("spore_sack", false))
+	var zone := _lucky_zone(model.ranged_zone(behind, PlayerState.effective("accuracy"), _rng, has_sack), behind, has_sack, target)
 	var result := model.hit(float(weapon["damage"]), zone, _armor(target), float(weapon["penetration"]))
 	result["attack"] = "ranged"
 	_apply_hit(target, result, PlayerState.weapons.equipped)
@@ -203,6 +204,14 @@ func _finish_reload() -> void:
 
 
 # --- Общее -------------------------------------------------------------------------------------
+
+## Удача героя (D-76): некритичный удар с шансом уходит в голову, а сзади — в споровый мешок.
+func _lucky_zone(zone: String, behind: bool, has_sack: bool, target: Node3D) -> String:
+	var better := DamageModel.lucky_zone(zone, behind, has_sack)
+	if better == zone or not PlayerState.lucky("hero_crit", target.global_position + Vector3.UP * 2.8):
+		return zone
+	return better
+
 
 func _armor(target: Node3D) -> Dictionary:
 	return Content.enemy_db().enemy(target.enemy_id).get("armor", {})

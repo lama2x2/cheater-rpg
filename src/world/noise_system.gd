@@ -24,6 +24,8 @@ func _on_noise(source: String, at: Vector3, options: Dictionary) -> void:
 	var opts := options.duplicate()
 	opts["weather"] = weather
 	var r := model.radius(source, opts)
+	if bool(options.get("from_hero", false)) and _luck_quiet(source):
+		r *= float(Content.luck_model().config()["quiet_mult"])
 	model.register(r)
 	for infected: Node3D in get_tree().get_nodes_in_group("infected"):
 		var distance := Vector2(infected.global_position.x - at.x, infected.global_position.z - at.z).length()
@@ -34,6 +36,16 @@ func _on_noise(source: String, at: Vector3, options: Dictionary) -> void:
 			infected.hear(at, loudness)
 	if bool(options.get("from_hero", false)) and bool(Settings.value("noise_ring")):
 		_ring(at, r)
+
+
+## Удача героя (D-76): шаг, дверь, упавшая вещь вышли тише. Бросаем, только если рядом есть кому
+## слышать — иначе удача тратилась бы впустую и спамила лог.
+func _luck_quiet(source: String) -> bool:
+	if not Content.luck_model().config()["quiet_sources"].has(source):
+		return false
+	if get_tree().get_nodes_in_group("infected").is_empty():
+		return false
+	return PlayerState.lucky("quiet_noise")
 
 
 ## Сколько стен между точками (до max_walls): луч, потом луч дальше за препятствием.

@@ -4,10 +4,12 @@ extends CharacterBody3D
 
 const HeroCombatScript := preload("res://src/actors/hero_combat.gd")
 const HeroChannelScript := preload("res://src/actors/hero_channel.gd")
+const HeroSkillsScript := preload("res://src/actors/hero_skills.gd")
 
 var camera: Camera3D
 var combat: Node3D
 var channel: Node
+var skills: Node3D
 ## Ближайший объект для E (группа "interactable"), или null.
 var current_interactable: Node3D
 var sneaking := false
@@ -31,6 +33,9 @@ func _ready() -> void:
 	channel = HeroChannelScript.new()
 	channel.hero = self
 	add_child(channel)
+	skills = HeroSkillsScript.new()
+	skills.hero = self
+	add_child(skills)
 	SaveService.register("hero", self)
 
 
