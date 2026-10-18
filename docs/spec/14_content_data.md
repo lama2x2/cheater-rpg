@@ -87,24 +87,34 @@
 ```
 
 ## 14.5 Умения — `data/skills/*.json`
+Один файл — одно умение; общие правила (пороги, слоты, дары) — `data/skill_rules.json`, тексты —
+`data/text/ru_skills.json`. Подробно — 05, «Как сделано».
 ```json
 {
   "id": "fortune_smile",
   "kind": "buff",
+  "slot": "active",
   "mana_cost": 20,
   "cooldown_s": 86400,
+  "jackpot_group": "fortune",
   "effects": [
     { "type": "stat_mult", "stat": "luck", "value": 20, "duration_s": 8 }
   ],
   "scaling": [
-    { "stat": "mental", "per": 10, "effect": "luck_mult", "add": 1 }
+    { "stat": "mental", "per": 10, "path": "stat_mult.value", "add": 1 },
+    { "stat": "mental", "per": 10, "path": "cooldown_s", "add": -600, "min": 43200 }
   ],
   "properties": [
-    { "id": "fortune_immunity", "unlock": { "mental": 60 }, "effect": { "type": "immunity", "duration_s": 1.5 } }
+    { "id": "fortune_immunity", "unlock": { "mental": 30 }, "choice": "m30",
+      "effect": { "type": "on_use", "effect": { "type": "status", "status": "immunity", "duration_s": 1.5 } } },
+    { "id": "fortune_quick", "unlock": { "mental": 30 }, "choice": "m30",
+      "effect": { "type": "modify", "path": "cooldown_s", "add": -3600 } }
   ],
   "blocked_on": ["cluster_disabled", "jammer"]
 }
 ```
+`slot`: `active` или `passive` (пассив — эффект `reserve_mana` с `pct`). `duration_s` — реальные
+секунды, `cooldown_s` — игровые.
 
 ## 14.6 Кластеры — `data/world/clusters/*.json`
 ```json
