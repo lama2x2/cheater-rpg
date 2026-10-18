@@ -1,0 +1,23 @@
+{
+  "_doc": "Споровый форсаж: сжечь 15 спорового баланса — Скорость и Сила ×1,3 на 12 с. Маны не тратит, откат 1 игровой час. Ниже 50% баланса — штрафы шкал, так что это решение. Ментальная сила: каждые 10 — +1 с.",
+  "id": "spore_burst",
+  "kind": "buff",
+  "slot": "active",
+  "theme": "mobility",
+  "mana_cost": 0,
+  "cooldown_s": 3600,
+  "effects": [
+    { "type": "vital_cost", "vital": "spore_balance", "value": 15 },
+    { "type": "stat_mult", "stat": "speed", "value": 1.3, "duration_s": 12 },
+    { "type": "stat_mult", "stat": "strength", "value": 1.3, "duration_s": 12 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "stat_mult.duration_s", "add": 1 }
+  ],
+  "properties": [
+    { "id": "burst_strong", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "stat_mult.value", "set": 1.4 } },
+    { "id": "burst_cheap", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "vital_cost.value", "add": -5 } },
+    { "id": "burst_reaction", "unlock": { "mental": 60 }, "effect": { "type": "on_use", "effect": { "type": "stat_mult", "key": "reaction", "stat": "reaction", "value": 1.3, "duration_of": "stat_mult" } } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

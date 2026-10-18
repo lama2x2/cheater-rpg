@@ -1,0 +1,21 @@
+{
+  "_doc": "Мимо! (пассив): смертельный удар с шансом проходит мимо — удача в бою без кнопки. Шанс 0,25 × L / (L + 40): при Удаче ~1 — 0,7%, под Улыбкой — ~9%. Каждая смерть в регионе −20% шанса, по элитам ×0,5. Держит 15% маны.",
+  "id": "near_miss",
+  "kind": "passive",
+  "slot": "passive",
+  "theme": "luck",
+  "mana_cost": 0,
+  "cooldown_s": 0,
+  "effects": [
+    { "type": "reserve_mana", "pct": 0.15 },
+    { "type": "luck_save", "applies": "lethal", "cap": 0.25, "k": 40, "per_death_in_region": -0.2, "elite_mult": 0.5 }
+  ],
+  "scaling": [],
+  "properties": [
+    { "id": "miss_heavy", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "luck_save.applies", "set": "heavy" } },
+    { "id": "miss_cap", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "luck_save.cap", "add": 0.05 } },
+    { "id": "miss_immunity", "unlock": { "mental": 60 }, "effect": { "type": "modify", "path": "luck_save.immunity_s", "set": 1 } },
+    { "id": "miss_party", "unlock": { "mental": 90 }, "requires": "party", "effect": { "type": "modify", "path": "luck_save.party_m", "set": 6 } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

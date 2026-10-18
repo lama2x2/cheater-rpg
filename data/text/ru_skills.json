@@ -8,7 +8,14 @@
     "second_wind": "Второе дыхание",
     "soft_step": "Мягкий шаг",
     "noise_eater": "Гаситель",
-    "ambusher": "Из тени"
+    "ambusher": "Из тени",
+    "heat_vision": "Тепловое зрение",
+    "near_miss": "Мимо!",
+    "quick_hands": "Ловкие руки",
+    "trophy_nose": "Нюх на мешок",
+    "spore_burst": "Споровый форсаж",
+    "balance_loan": "Кредит баланса",
+    "danger_sense": "Пуля"
   },
   "skill_desc": {
     "fortune_smile": "Удача ×{stat_mult.value} на {stat_mult.duration_s} с. Твари промахиваются и спотыкаются, удары находят голову и мешок, шаги не слышны, лут щедрее.",
@@ -18,7 +25,14 @@
     "second_wind": "Бодрость — полная, {status.duration_s} с бега без усталости. Цена — споровый баланс −{vital_cost.value}.",
     "soft_step": "Пассив: шаги тише (×{noise_mult_self.mult}). Держит {reserve_mana.pct} маны.",
     "noise_eater": "Сфера {noise_zone.radius_m} м на {noise_zone.duration_s} с: шум внутри ×{noise_zone.mult}. Тихий выстрел — это решение.",
-    "ambusher": "Пассив: урон ×{damage_mult_vs.mult} по твари, которая вас не преследует. Держит {reserve_mana.pct} маны."
+    "ambusher": "Пассив: урон ×{damage_mult_vs.mult} по твари, которая вас не преследует. Держит {reserve_mana.pct} маны.",
+    "heat_vision": "Переключатель: тепло живых в {heat_sense.radius_m} м, если нет стены. {heat_sense.upkeep_mana_per_s} маны в секунду. Холодное не видно.",
+    "near_miss": "Пассив: смертельный удар с шансом проходит мимо — тем чаще, чем больше Удача. Каждая смерть в регионе — минус к шансу. Держит {reserve_mana.pct} маны.",
+    "quick_hands": "Пассив: мешок вскрывается ×{channel_speed.mult} быстрее и не срывается, пока не сдвинулись на {channel_speed.interrupt_move_m} м. Держит {reserve_mana.pct} маны.",
+    "trophy_nose": "Пассив: твари в {trophy_hint.radius_m} м с горошиной и дороже в мешке иногда слабо светятся ✧. Держит {reserve_mana.pct} маны.",
+    "spore_burst": "Сжечь {vital_cost.value} спорового баланса: Скорость и Сила ×{stat_mult.value} на {stat_mult.duration_s} с.",
+    "balance_loan": "Удача ×{stat_mult.value} на {stat_mult.duration_s} с. Потом {debt.duration_s} с взыскания: Удача ×{debt.value}. Система не забывает.",
+    "danger_sense": "Пассив: тварь начала рывок — мир замедляется ×{danger_warn.time_scale} на {danger_warn.duration_s} с. Не чаще раза в {danger_warn.min_interval_s} с. Держит {reserve_mana.pct} маны."
   },
   "property_names": {
     "fortune_immunity": "Неприкасаемый: иммунитет к урону 1,5 с",
@@ -52,7 +66,31 @@
     "eater_fast": "Чаще: откат −30 мин",
     "eater_follow": "Следом: сфера идёт за вами",
     "eater_wide": "Шире: радиус 14 м",
-    "ambush_crit": "В затылок: +20% шанс удара в голову или мешок по ничего не подозревающей"
+    "ambush_crit": "В затылок: +20% шанс удара в голову или мешок по ничего не подозревающей",
+    "heat_levels": "Уровни: над теплом — уровень твари",
+    "heat_one_wall": "Сквозь стену: тепло видно через одну стену",
+    "heat_far": "Дальнозоркость: 80 м",
+    "heat_quasi": "Квазы отдельно (позже)",
+    "miss_heavy": "Почти смертельные: и удары больше половины здоровья",
+    "miss_cap": "Везунчик: шанс +5% к потолку",
+    "miss_immunity": "Передышка: после промаха — 1 с иммунитета",
+    "miss_party": "На спутников в 6 м (M2)",
+    "hands_double": "Мастер: вскрытие ×2",
+    "nose_chance": "Чутьё: шанс показа +20%",
+    "nose_pearl": "Жемчуг ярче: мешок с жемчугом светится белым",
+    "nose_far": "Издалека: 40 м",
+    "burst_strong": "Сильнее: ×1,4",
+    "burst_cheap": "Экономно: −5 баланса",
+    "burst_reaction": "И Реакция ×1,3",
+    "loan_bigger": "Крупный кредит: ×6",
+    "loan_soft": "Мягкие условия: взыскание ×0,6",
+    "loan_quick": "Постоянный клиент: откат −2 ч",
+    "loan_elite_payoff": "Погашение: убийство элиты гасит долг (позже)",
+    "loan_short_debt": "Короткий срок: взыскание −2 мин",
+    "danger_direction": "Откуда: «!» над угрозой",
+    "danger_deep_slow": "Глубже: замедление ×0,25",
+    "danger_party": "Отряд: и о спутниках (M2)",
+    "danger_long": "Долгая пуля: 1 с"
   },
   "log": {
     "skill_learned": ["Получено умение: {skill}.", "Система выдала умение: {skill}. Пользуйтесь, пока дают."],
@@ -74,6 +112,9 @@
     "luck_quiet_noise": ["Удача: шаг вышел тише."],
     "luck_unnoticed": ["Тварь отвернулась. Повезло.", "Удача: вас не заметили."],
     "immunity_saved": ["Удар не прошёл: иммунитет."],
+    "luck_near_miss": ["Мимо! Смерть промахнулась.", "Удар, который должен был убить, прошёл мимо. Не обольщайтесь.", "Мимо. Фортуна сегодня на вашей стороне. Сегодня."],
+    "skill_toggled_off": ["{skill} — выключено."],
+    "skill_not_here": ["{skill} здесь не работает."],
     "skill_pulse": ["Вспышка: в радиусе {radius} м отмечено {n}.", "Вспышка. Целей: {n}. Смотрите внимательно."],
     "skill_scare": ["Пугач. Разбежались: {n}.", "Пугач: {n} — прочь. Те, что посильнее, не поверили."]
   },
@@ -106,6 +147,8 @@
     "immunity_float": "иммунитет",
     "ambush_float": "из тени",
     "voice_float": "…эй…",
+    "danger_float": "пуля!",
+    "skill_slot_on": "[{n}] {name}  ◉ вкл",
     "mana_reserve": " (резерв {n})"
   }
 }

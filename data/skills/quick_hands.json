@@ -1,0 +1,18 @@
+{
+  "_doc": "Ловкие руки (пассив): споровый мешок вскрывается в 1,5 раза быстрее, и вскрытие не срывается, пока герой не сдвинулся на 1,5 м (обычно 0,6). Держит 5% маны.",
+  "id": "quick_hands",
+  "kind": "passive",
+  "slot": "passive",
+  "theme": "economy",
+  "mana_cost": 0,
+  "cooldown_s": 0,
+  "effects": [
+    { "type": "reserve_mana", "pct": 0.05 },
+    { "type": "channel_speed", "channel": "spore_sack_open", "mult": 1.5, "interrupt_move_m": 1.5 }
+  ],
+  "scaling": [],
+  "properties": [
+    { "id": "hands_double", "unlock": { "mental": 60 }, "effect": { "type": "modify", "path": "channel_speed.mult", "set": 2.0 } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

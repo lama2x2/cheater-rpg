@@ -1,0 +1,24 @@
+{
+  "_doc": "Тепловое зрение (книга 2, стратег): переключатель. Пока включено — метки над живыми тварями в 40 м, если между ними нет стены; 10 маны на включение и 0,1 маны в реальную секунду. Ментальная сила: каждые 10 — +5 м. Холодное (трупы) не видно; на чёрном кластере не работает. С зрением героя (14a) метки будут видны и вне конуса.",
+  "id": "heat_vision",
+  "kind": "sense",
+  "slot": "active",
+  "toggle": true,
+  "theme": "perception",
+  "mana_cost": 10,
+  "cooldown_s": 0,
+  "effects": [
+    { "type": "heat_sense", "radius_m": 40, "walls": 0, "show_level": false, "upkeep_mana_per_s": 0.1 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "heat_sense.radius_m", "add": 5 }
+  ],
+  "properties": [
+    { "id": "heat_levels", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "heat_sense.show_level", "set": true } },
+    { "id": "heat_one_wall", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "heat_sense.walls", "set": 1 } },
+    { "id": "heat_far", "unlock": { "mental": 60 }, "effect": { "type": "modify", "path": "heat_sense.radius_m", "set": 80 } },
+    { "id": "heat_quasi", "unlock": { "mental": 90 }, "requires": "quasi", "effect": { "type": "modify", "path": "heat_sense.show_quasi", "set": true } }
+  ],
+  "not_on": ["black"],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

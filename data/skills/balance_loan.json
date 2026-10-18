@@ -1,0 +1,25 @@
+{
+  "_doc": "Кредит баланса: Удача ×5 на 60 с, потом 10 минут «взыскания» — Удача ×0,5, снять нельзя. Не складывается с Улыбкой Фортуны — действует больший множитель (джекпот-группа, D-18). Ментальная сила: каждые 10 — +5 с кредита.",
+  "id": "balance_loan",
+  "kind": "buff",
+  "slot": "active",
+  "theme": "luck",
+  "mana_cost": 10,
+  "cooldown_s": 21600,
+  "jackpot_group": "fortune",
+  "effects": [
+    { "type": "stat_mult", "stat": "luck", "value": 5, "duration_s": 60 },
+    { "type": "stat_mult", "key": "debt", "stat": "luck", "value": 0.5, "duration_s": 600, "after": "stat_mult" }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "stat_mult.duration_s", "add": 5 }
+  ],
+  "properties": [
+    { "id": "loan_bigger", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "stat_mult.value", "set": 6 } },
+    { "id": "loan_soft", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "debt.value", "set": 0.6 } },
+    { "id": "loan_quick", "unlock": { "mental": 60 }, "effect": { "type": "modify", "path": "cooldown_s", "add": -7200 } },
+    { "id": "loan_elite_payoff", "unlock": { "mental": 90 }, "requires": "elites", "effect": { "type": "modify", "path": "debt.cleared_by", "set": "kill_elite" } },
+    { "id": "loan_short_debt", "unlock": { "talent_facets": 30 }, "effect": { "type": "modify", "path": "debt.duration_s", "add": -120 } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}
