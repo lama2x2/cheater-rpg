@@ -1,0 +1,457 @@
+class_name SkillRules
+extends RefCounted
+## Умения героя: изученные, слоты, откаты, свойства на порогах, мана и рост от характеристик.
+## Чистый класс без Node. Данные — data/skill_rules.json и data/skills/*.json (схема 14.5).
+## Спецификация: docs/spec/05_skills.md.
+##
+## Время — игровые минуты (как GameClock.minutes): cooldown_s в данных — игровые секунды,
+## duration_s — реальные секунды, переводятся через minutes_per_second (D-06).
+## levels — уровни характеристик героя: {"mental": int, "talent_facets": int, "general": int, "luck": int}.
+##
+## Эффект умения — словарь с type; правила только считают числа (рост, свойства), применяет их
+## PlayerState (баффы, статусы, шкалы) и сцена (шум, подсветка, твари) — так новые умения
+## добавляются данными. Типы: stat_mult, status, vital_fill, vital_cost, vitals_fill_random,
+## reserve_mana (пассив) и сценовые (highlight, noise_zone, …).
+
+const REQUIRED_KEYS: PackedStringArray = [
+	"thresholds", "talent_facets_mults", "slots", "slot_swap_cooldown_s", "status_caps_s", "gifts",
+	"offer_bonus", "always_for_origin", "pearl",
+]
+const PASSIVE := "passive"
+## Возможности движка, которых пока нет: свойства с requires из этого списка не предлагаются.
+const MISSING_ENGINE: PackedStringArray = ["party"]
+
+var _rules: Dictionary
+var _defs: Dictionary = {}
+var _minutes_per_second: float
+## Изученные умения: {id: {"properties": [id свойства, выбранные на порогах]}}.
+var learned: Dictionary = {}
+## Слоты по порядку (клавиши 1–4); "" — пусто. Длина — max из правил.
+var slots: Array[String] = []
+## Готово к применению с игровой минуты: {id: minutes}.
+var cooldowns: Dictionary = {}
+## Статусы от умений до игровой минуты: {"immunity": minutes, "luck_double_roll": minutes}.
+var statuses: Dictionary = {}
+## Что сейчас глушит умения: {"cluster_disabled": true, "jammer": true}. Не сохраняется — сцена
+## выставляет заново.
+var blockers: Dictionary = {}
+
+
+func _init(rules: Dictionary, defs: Array, minutes_per_second: float) -> void:
+	_rules = rules
+	_minutes_per_second = minutes_per_second
+	for def: Dictionary in defs:
+		_defs[String(def["id"])] = def
+	for i in int(rules["slots"]["max"]):
+		slots.append("")
+
+
+# --- Справочник ---------------------------------------------------------------------------------
+
+func has_def(id: String) -> bool:
+	return _defs.has(id)
+
+
+func def(id: String) -> Dictionary:
+	return _defs[id]
+
+
+func all_ids() -> PackedStringArray:
+	return PackedStringArray(_defs.keys())
+
+
+func is_passive(id: String) -> bool:
+	return String(_defs[id].get("slot", "active")) == PASSIVE
+
+
+func knows(id: String) -> bool:
+	return learned.has(id)
+
+
+# --- Слоты --------------------------------------------------------------------------------------
+
+## Сколько слотов открыто (D-17): base + по одному на общих уровнях 30 и 60, не больше max.
+func slot_count(general_level: int, extra: int = 0) -> int:
+	var s: Dictionary = _rules["slots"]
+	var count := int(s["base"]) + extra
+	for at in s["at_general_level"]:
+		if general_level >= int(at):
+			count += 1
+	return mini(count, int(s["max"]))
+
+
+## Умения в открытых слотах (без пустых).
+func slotted(general_level: int) -> PackedStringArray:
+	var result: PackedStringArray = []
+	for i in slot_count(general_level):
+		if not slots[i].is_empty():
+			result.append(slots[i])
+	return result
+
+
+func slot_of(id: String) -> int:
+	return slots.find(id)
+
+
+## Выучить умение: встаёт в первый свободный открытый слот, если он есть.
+func learn(id: String, general_level: int) -> bool:
+	if not _defs.has(id) or learned.has(id):
+		return false
+	learned[id] = {"properties": []}
+	for i in slot_count(general_level):
+		if slots[i].is_empty():
+			slots[i] = id
+			break
+	return true
+
+
+## Поставить умение в слот (или "" — очистить). Умение из другого слота переезжает; вставленное
+## в слот получает откат смены (slot_swap_cooldown_s), чтобы не менять умения посреди боя.
+func set_slot(index: int, id: String, now: float, general_level: int) -> bool:
+	if index < 0 or index >= slot_count(general_level):
+		return false
+	if not id.is_empty() and not learned.has(id):
+		return false
+	if slots[index] == id:
+		return true
+	var old := slot_of(id) if not id.is_empty() else -1
+	if old >= 0:
+		slots[old] = ""
+	slots[index] = id
+	if not id.is_empty() and old < 0:
+		var swap_ready := now + float(_rules["slot_swap_cooldown_s"]) / 60.0
+		cooldowns[id] = maxf(float(cooldowns.get(id, 0.0)), swap_ready)
+	return true
+
+
+# --- Числа: рост от характеристик и свойства ----------------------------------------------------
+
+## Значение параметра с ростом и свойствами. path: "mana_cost", "cooldown_s" или
+## "<тип эффекта>.<поле>" ("stat_mult.value").
+func param(id: String, path: String, levels: Dictionary) -> float:
+	var d: Dictionary = _defs[id]
+	var value := _base_param(d, path)
+	for s: Dictionary in d.get("scaling", []):
+		if String(s["path"]) != path:
+			continue
+		var steps := floori(float(levels.get(String(s["stat"]), 0)) / float(s["per"]))
+		value += float(s["add"]) * steps
+		if s.has("min"):
+			value = maxf(value, float(s["min"]))
+		if s.has("max"):
+			value = minf(value, float(s["max"]))
+	for p: Dictionary in active_properties(id, levels):
+		var e: Dictionary = p["effect"]
+		if String(e["type"]) != "modify" or String(e["path"]) != path:
+			continue
+		if e.has("set"):
+			value = float(e["set"])
+		value += float(e.get("add", 0.0))
+		value *= float(e.get("mult", 1.0))
+	if path == "mana_cost" or path == "cooldown_s":
+		value *= _facet_mult(path, levels)
+	return maxf(0.0, value)
+
+
+func mana_cost(id: String, levels: Dictionary) -> float:
+	return param(id, "mana_cost", levels)
+
+
+## Откат в игровых секундах.
+func cooldown_s(id: String, levels: Dictionary) -> float:
+	return param(id, "cooldown_s", levels)
+
+
+## Сколько игровых минут до готовности (0 — готово).
+func cooldown_left(id: String, now: float) -> float:
+	return maxf(0.0, float(cooldowns.get(id, 0.0)) - now)
+
+
+## Эффекты умения с ростом и свойствами (on_use добавляются в конец). Длительности — в игровых
+## минутах (duration_min), исходные реальные секунды — в duration_s.
+func effects(id: String, levels: Dictionary) -> Array[Dictionary]:
+	var d: Dictionary = _defs[id]
+	var result: Array[Dictionary] = []
+	for base: Dictionary in d.get("effects", []):
+		var e := base.duplicate(true)
+		var type := String(e["type"])
+		for key: String in base:
+			if base[key] is float or base[key] is int:
+				e[key] = param(id, type + "." + key, levels)
+		result.append(e)
+	for p: Dictionary in active_properties(id, levels):
+		var pe: Dictionary = p["effect"]
+		if String(pe["type"]) == "on_use":
+			result.append(Dictionary(pe["effect"]).duplicate(true))
+	for e in result:
+		if e.has("duration_of"):
+			e["duration_s"] = _duration_of(result, String(e["duration_of"]))
+		if e.has("after"):
+			e["delay_s"] = _duration_of(result, String(e["after"]))
+		if e.has("duration_s"):
+			var cap := float(_rules["status_caps_s"].get(String(e.get("status", "")), INF))
+			e["duration_s"] = minf(float(e["duration_s"]), cap)
+			e["duration_min"] = float(e["duration_s"]) * _minutes_per_second
+		if e.has("delay_s"):
+			e["delay_min"] = float(e["delay_s"]) * _minutes_per_second
+	return result
+
+
+## Свойства, которые сейчас действуют: выбранные на порогах (если порог ещё держится), без выбора
+## (открылись сами) и по Граням Таланта.
+func active_properties(id: String, levels: Dictionary) -> Array[Dictionary]:
+	var chosen: Array = learned.get(id, {}).get("properties", [])
+	var result: Array[Dictionary] = []
+	for p: Dictionary in _defs[id].get("properties", []):
+		if not _unlocked(p, levels) or not _available(p):
+			continue
+		if not p.has("choice") or chosen.has(String(p["id"])):
+			result.append(p)
+	return result
+
+
+## Группы выбора, открытые порогом и ещё не выбранные: [{"group": "m30", "options": [свойства]}].
+func property_choices(id: String, levels: Dictionary) -> Array[Dictionary]:
+	if not learned.has(id):
+		return []
+	var chosen: Array = learned[id]["properties"]
+	var groups := {}
+	var order: PackedStringArray = []
+	for p: Dictionary in _defs[id].get("properties", []):
+		if not p.has("choice") or not _unlocked(p, levels) or not _available(p):
+			continue
+		var group := String(p["choice"])
+		if not groups.has(group):
+			groups[group] = []
+			order.append(group)
+		groups[group].append(p)
+	var result: Array[Dictionary] = []
+	for group in order:
+		var taken := false
+		for p: Dictionary in groups[group]:
+			if chosen.has(String(p["id"])):
+				taken = true
+		if not taken:
+			result.append({"group": group, "options": groups[group]})
+	return result
+
+
+func choose_property(id: String, property_id: String, levels: Dictionary) -> bool:
+	for choice in property_choices(id, levels):
+		for p: Dictionary in choice["options"]:
+			if String(p["id"]) == property_id:
+				learned[id]["properties"].append(property_id)
+				return true
+	return false
+
+
+# --- Применение ---------------------------------------------------------------------------------
+
+func is_blocked() -> bool:
+	return not blockers.is_empty()
+
+
+func set_blocker(reason: String, on: bool) -> void:
+	if on:
+		blockers[reason] = true
+	else:
+		blockers.erase(reason)
+
+
+## Можно ли применить: "ok", "unknown", "not_slotted", "passive", "blocked", "cooldown", "mana".
+func can_use(id: String, now: float, mana: float, levels: Dictionary) -> String:
+	if not learned.has(id):
+		return "unknown"
+	if not slotted(int(levels.get("general", 0))).has(id):
+		return "not_slotted"
+	if is_passive(id):
+		return "passive"
+	if is_blocked():
+		return "blocked"
+	if cooldown_left(id, now) > 0.0:
+		return "cooldown"
+	if mana < mana_cost(id, levels) or mana <= 0.0:
+		return "mana"
+	return "ok"
+
+
+## Применить: ставит откат и статусы, возвращает {"result": как can_use, "mana": цена,
+## "effects": [...]} — остальные эффекты применяет вызывающий.
+func use(id: String, now: float, mana: float, levels: Dictionary) -> Dictionary:
+	var check := can_use(id, now, mana, levels)
+	if check != "ok":
+		return {"result": check, "mana": 0.0, "effects": []}
+	var list := effects(id, levels)
+	cooldowns[id] = now + cooldown_s(id, levels) / 60.0
+	for e in list:
+		if String(e["type"]) == "status":
+			var status := String(e["status"])
+			statuses[status] = maxf(float(statuses.get(status, 0.0)), now + float(e["duration_min"]))
+	return {"result": "ok", "mana": mana_cost(id, levels), "effects": list}
+
+
+func has_status(status: String, now: float) -> bool:
+	return float(statuses.get(status, -INF)) > now
+
+
+func status_left(status: String, now: float) -> float:
+	return maxf(0.0, float(statuses.get(status, 0.0)) - now)
+
+
+## Эффекты типа type от пассивов в слотах (под глушителем и на отключённом кластере — нет).
+func passive_effects(type: String, levels: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if is_blocked():
+		return result
+	for id in slotted(int(levels.get("general", 0))):
+		if not is_passive(id):
+			continue
+		for e in effects(id, levels):
+			if String(e["type"]) == type:
+				result.append(e)
+	return result
+
+
+## Доля маны, которую держат пассивы в слотах (D-74; резерв держится и под глушителем).
+func mana_reserve(levels: Dictionary) -> float:
+	var total := 0.0
+	for id in slotted(int(levels.get("general", 0))):
+		for e: Dictionary in _defs[id].get("effects", []):
+			if String(e["type"]) == "reserve_mana":
+				total += float(e["pct"])
+	return clampf(total, 0.0, 0.9)
+
+
+## Смерть обнуляет откаты всех умений (D-73). Статусы гаснут.
+func reset_cooldowns() -> void:
+	cooldowns.clear()
+	statuses.clear()
+
+
+# --- Дары ---------------------------------------------------------------------------------------
+
+## Варианты дара: count умений из пула, которых герой не знает и которые есть в данных; недобор —
+## из других пулов. always — обязательные (Улыбка для читера), если их ещё нет.
+func gift_offer(pool: String, count: int, rng: RandomNumberGenerator, always: PackedStringArray = []) -> PackedStringArray:
+	var result: PackedStringArray = []
+	for id in always:
+		if _offerable(id) and not result.has(id) and result.size() < count:
+			result.append(id)
+	var order: PackedStringArray = [pool]
+	for other: String in _rules["gifts"]:
+		if other != pool and not other.begins_with("_"):
+			order.append(other)
+	for p in order:
+		var candidates: PackedStringArray = []
+		for id: String in _rules["gifts"][p]["skills"]:
+			if _offerable(id) and not result.has(id):
+				candidates.append(id)
+		while result.size() < count and not candidates.is_empty():
+			var i := rng.randi_range(0, candidates.size() - 1)
+			result.append(candidates[i])
+			candidates.remove_at(i)
+	return result
+
+
+## Сколько вариантов предлагает знахарка: нижняя граница + бонус Удачи, не больше верхней.
+func offer_count(pool: String, luck_level: int, extra: int = 0) -> int:
+	var offer: Array = _rules["gifts"][pool]["offer"]
+	var bonus: Dictionary = _rules["offer_bonus"]
+	var count := int(offer[0]) + extra + (int(bonus["value"]) if luck_level >= int(bonus["luck_level"]) else 0)
+	return mini(count, int(offer[1]))
+
+
+## Пул для дара уровня level ("10", "30", "60") — ближайший не выше.
+func gift_pool(level: int) -> String:
+	var best := ""
+	for key: String in _rules["gifts"]:
+		if key.begins_with("_"):
+			continue
+		if int(key) <= level and (best.is_empty() or int(key) > int(best)):
+			best = key
+	return best
+
+
+## Чёрная жемчужина: случайное неизвестное умение из пула по числу известных (D-79). "" — нечего дать.
+func pearl_skill(rng: RandomNumberGenerator) -> String:
+	var pools: Array = _rules["pearl"]["pools_by_skill_count"]
+	var pool := String(pools[mini(learned.size(), pools.size() - 1)])
+	var offer := gift_offer(pool, 1, rng)
+	return offer[0] if not offer.is_empty() else ""
+
+
+func always_for_origin(origin: String) -> PackedStringArray:
+	return PackedStringArray(_rules["always_for_origin"].get(origin, []))
+
+
+# --- Сохранение ---------------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"learned": learned.duplicate(true), "slots": Array(slots), "cooldowns": cooldowns.duplicate(), "statuses": statuses.duplicate()}
+
+
+func load_dict(data: Dictionary) -> void:
+	learned.clear()
+	var known: Dictionary = data.get("learned", {})
+	for id: String in known:
+		if _defs.has(id):
+			var props: Array = []
+			for p in known[id].get("properties", []):
+				props.append(String(p))
+			learned[id] = {"properties": props}
+	var saved: Array = data.get("slots", [])
+	for i in slots.size():
+		var id := String(saved[i]) if i < saved.size() else ""
+		slots[i] = id if learned.has(id) else ""
+	cooldowns.clear()
+	var cd: Dictionary = data.get("cooldowns", {})
+	for id: String in cd:
+		cooldowns[id] = float(cd[id])
+	statuses.clear()
+	var st: Dictionary = data.get("statuses", {})
+	for status: String in st:
+		statuses[status] = float(st[status])
+
+
+# --- Внутреннее ---------------------------------------------------------------------------------
+
+func _base_param(d: Dictionary, path: String) -> float:
+	if not path.contains("."):
+		return float(d.get(path, 0.0))
+	var parts := path.split(".")
+	for e: Dictionary in d.get("effects", []):
+		if String(e["type"]) == parts[0]:
+			return float(e.get(parts[1], 0.0))
+	return 0.0
+
+
+func _facet_mult(path: String, levels: Dictionary) -> float:
+	var f: Dictionary = _rules["talent_facets_mults"]
+	var mult := 1.0
+	for at in f["at"]:
+		if int(levels.get("talent_facets", 0)) >= int(at):
+			mult *= float(f["mana_mult" if path == "mana_cost" else "cooldown_mult"])
+	return mult
+
+
+func _unlocked(p: Dictionary, levels: Dictionary) -> bool:
+	var unlock: Dictionary = p.get("unlock", {})
+	for stat: String in unlock:
+		if int(levels.get(stat, 0)) < int(unlock[stat]):
+			return false
+	return true
+
+
+func _available(p: Dictionary) -> bool:
+	return not MISSING_ENGINE.has(String(p.get("requires", "")))
+
+
+func _offerable(id: String) -> bool:
+	return _defs.has(id) and not learned.has(id)
+
+
+static func _duration_of(list: Array[Dictionary], type: String) -> float:
+	for e in list:
+		if String(e["type"]) == type and e.has("duration_s"):
+			return float(e["duration_s"])
+	return 0.0

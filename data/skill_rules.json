@@ -1,0 +1,17 @@
+{
+  "_doc": "Правила умений (docs/spec/05_skills.md, 14.5; D-17, D-18, D-73, D-74). Время: duration_s — реальные секунды, cooldown_s — игровые (86400 = сутки = 48 реальных минут). Пороги свойств — уровни характеристик: на каждом пороге Ментальной силы выбор 1 из группы (choice), свойства без choice и по Граням Таланта открываются сами. Грани 60 и 90 — мана и откат ×0,9 каждый. Слоты: base + по одному на общих уровнях at_general_level, не больше max. Пассив в слоте держит долю маны (reserve_mana). Смена умения в слоте — откат slot_swap_cooldown_s у вставленного. status_caps_s — потолок длительности статуса (иммунитет ≤ 60 с, D-18).",
+  "thresholds": { "mental": [30, 60, 90, 150], "talent_facets": [30] },
+  "talent_facets_mults": { "at": [60, 90], "mana_mult": 0.9, "cooldown_mult": 0.9 },
+  "slots": { "base": 1, "at_general_level": [30, 60], "max": 4 },
+  "slot_swap_cooldown_s": 1800,
+  "status_caps_s": { "immunity": 60 },
+  "gifts": {
+    "_doc": "Дар уровня у знахарки: offer [мин, макс] вариантов из пула. Умения, которых ещё нет в data/skills, пропускаются; если пул исчерпан — добираются из других пулов.",
+    "10": { "offer": [3, 5], "skills": ["fortune_smile", "sense_pulse", "voice_throw", "scarecrow", "second_wind", "soft_step", "noise_eater", "ambusher"] },
+    "30": { "offer": [3, 5], "skills": ["heat_vision", "near_miss", "quick_hands", "trophy_nose", "spore_burst", "balance_loan", "danger_sense", "mirror_camo", "absolute_calm", "splitting_shot", "illusion_lure", "mark", "hunger_bait", "companion_bond"] },
+    "60": { "offer": [3, 5], "skills": ["danger_sense", "mirror_camo", "absolute_calm", "splitting_shot", "illusion_lure", "mark", "hunger_bait", "companion_bond", "combat_trance", "stretch_aid", "winter_breath", "super_jump", "regen_burst", "false_reload", "telekinesis", "lie_sense"] }
+  },
+  "offer_bonus": { "_doc": "+1 вариант при уровне Удачи ≥ luck_level (свойство fate_reroll, шортлист).", "luck_level": 60, "value": 1 },
+  "always_for_origin": { "cheater": ["fortune_smile"] },
+  "pearl": { "_doc": "Чёрная жемчужина (skill_chance): случайное умение сразу, без выбора и знахарки (D-79). Пул — по числу уже известных умений: 0 → дар 10, 1 → дар 30, 2+ → дар 60.", "pools_by_skill_count": ["10", "30", "60"] }
+}

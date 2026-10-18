@@ -1,0 +1,31 @@
+{
+  "_doc": "Улыбка Фортуны (05, 14.5). Удача ×20 на 8 с, откат 24 игровых часа. Ментальная сила: каждые 10 уровней +1 к множителю, +1 с, +1 маны, −10 игровых минут отката (не меньше 12 ч) — к 150 выходит ×35 на 23 с. Свойства — по шортлисту R1. В группе fortune множители не складываются — берётся больший (D-18).",
+  "id": "fortune_smile",
+  "kind": "buff",
+  "slot": "active",
+  "theme": "luck",
+  "mana_cost": 20,
+  "cooldown_s": 86400,
+  "jackpot_group": "fortune",
+  "effects": [
+    { "type": "stat_mult", "stat": "luck", "value": 20, "duration_s": 8 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "stat_mult.value", "add": 1 },
+    { "stat": "mental", "per": 10, "path": "stat_mult.duration_s", "add": 1 },
+    { "stat": "mental", "per": 10, "path": "mana_cost", "add": 1 },
+    { "stat": "mental", "per": 10, "path": "cooldown_s", "add": -600, "min": 43200 }
+  ],
+  "properties": [
+    { "id": "fortune_immunity", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "on_use", "effect": { "type": "status", "status": "immunity", "duration_s": 1.5 } } },
+    { "id": "fortune_quick", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "cooldown_s", "add": -3600 } },
+    { "id": "fortune_echo", "unlock": { "mental": 60 }, "choice": "m60", "effect": { "type": "on_use", "effect": { "type": "stat_mult", "stat": "luck", "value": 2, "duration_s": 30, "after": "stat_mult" } } },
+    { "id": "fortune_second_roll", "unlock": { "mental": 60 }, "choice": "m60", "effect": { "type": "on_use", "effect": { "type": "status", "status": "luck_double_roll", "duration_of": "stat_mult" } } },
+    { "id": "fortune_shared", "unlock": { "mental": 90 }, "choice": "m90", "requires": "party", "effect": { "type": "on_use", "effect": { "type": "share_with_party", "radius_m": 6 } } },
+    { "id": "fortune_big", "unlock": { "mental": 90 }, "choice": "m90", "effect": { "type": "modify", "path": "stat_mult.value", "add": 5 } },
+    { "id": "fortune_immunity_long", "unlock": { "mental": 150 }, "choice": "m150", "effect": { "type": "on_use", "effect": { "type": "status", "status": "immunity", "duration_s": 3 } } },
+    { "id": "fortune_cd_long", "unlock": { "mental": 150 }, "choice": "m150", "effect": { "type": "modify", "path": "cooldown_s", "add": -10800 } },
+    { "id": "fortune_vitals", "unlock": { "talent_facets": 30 }, "effect": { "type": "on_use", "effect": { "type": "vitals_fill_random", "min": 0.25, "max": 0.75 } } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

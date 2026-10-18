@@ -21,6 +21,8 @@ var _value: Dictionary = {}
 var _max: Dictionary = {}
 ## Постоянные прибавки к максимуму (звёзды): {"health": 5, ...}.
 var _bonus_max: Dictionary = {}
+## Доля маны, которую держат пассивные умения в слотах (D-74): максимум маны меньше на столько.
+var _mana_reserve := 0.0
 var _endurance := 1
 var _mental := 1
 var _stamina_idle := 0.0
@@ -50,6 +52,7 @@ func set_stat_levels(endurance_level: int, mental_level: int) -> void:
 	_max[MANA] = float(m["max_base"]) + float(m["max_per_mental_level"]) * (_mental - 1)
 	for vital: String in _bonus_max:
 		_max[vital] += float(_bonus_max[vital])
+	_max[MANA] *= 1.0 - _mana_reserve
 	for vital in _value:
 		_value[vital] = minf(_value[vital], _max[vital])
 
@@ -59,6 +62,16 @@ func add_max_bonus(vital: String, amount: float) -> void:
 	_bonus_max[vital] = float(_bonus_max.get(vital, 0.0)) + amount
 	set_stat_levels(_endurance, _mental)
 	_value[vital] = minf(_max[vital], _value[vital] + amount)
+
+
+## Резерв маны пассивами (0..1): максимум маны × (1 − резерв), текущая обрезается.
+func set_mana_reserve(fraction: float) -> void:
+	_mana_reserve = clampf(fraction, 0.0, 0.9)
+	set_stat_levels(_endurance, _mental)
+
+
+func mana_reserve() -> float:
+	return _mana_reserve
 
 
 func max_bonus(vital: String) -> float:
