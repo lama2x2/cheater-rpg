@@ -1,0 +1,2689 @@
+{
+  "_doc": "Черновик исследования R1 (docs/research/skills/). Игра этот файл НЕ читает. Схема — 14.5 + поля-предложения: name_ru, slot, theme, stage, requires_engine, properties[].choice (на пороге выбор 1 из группы), extra-ограничения. Порядок = shortlist.md.",
+  "units": {
+    "duration_s": "реальные секунды (бой без паузы, D-05)",
+    "cooldown_s": "игровые секунды (как 86400 в 14.5); 1 игровой час = 3600 = 2 реальные минуты (D-06)",
+    "upkeep_mana_per_s": "мана в реальную секунду",
+    "reserve_mana.pct": "доля максимума маны, занятая пассивом, пока он в слоте"
+  },
+  "rules": {
+    "thresholds": {
+      "mental": [
+        30,
+        60,
+        90,
+        150
+      ],
+      "pick_per_threshold": 1,
+      "talent_facets_30": "одно свойство бесплатно, без выбора"
+    },
+    "talent_facets_60_90": {
+      "mana_mult": 0.9,
+      "cooldown_mult": 0.9
+    },
+    "death_resets_cooldowns": {
+      "max_cooldown_h": 24,
+      "long_cooldowns_per_region": 1,
+      "_status": "предложение, вопрос пользователю"
+    },
+    "blocked_on": [
+      "cluster_disabled",
+      "jammer"
+    ],
+    "luck_model": {
+      "formula": "p = cap * L / (L + K)",
+      "enemy_miss": {
+        "cap": 0.35,
+        "k": 400
+      },
+      "hero_crit_add": {
+        "cap": 0.5,
+        "k": 300
+      },
+      "_status": "предложение, data/luck.json"
+    },
+    "jackpot_groups": {
+      "fortune": "умения группы не складывают множители — берётся больший; после связки с stretch_aid общий откат 24 ч"
+    }
+  },
+  "pools": {
+    "gift_10": {
+      "offer": [
+        3,
+        5
+      ],
+      "offer_bonus": {
+        "luck_at_least_60": 1,
+        "fate_reroll": 1
+      },
+      "always_for_origin": {
+        "cheater": [
+          "fortune_smile"
+        ]
+      },
+      "skills": [
+        "fortune_smile",
+        "sense_pulse",
+        "voice_throw",
+        "scarecrow",
+        "second_wind",
+        "soft_step",
+        "noise_eater",
+        "ambusher"
+      ]
+    },
+    "gift_30": {
+      "offer": [
+        3,
+        5
+      ],
+      "skills": [
+        "heat_vision",
+        "near_miss",
+        "quick_hands",
+        "trophy_nose",
+        "spore_burst",
+        "balance_loan",
+        "danger_sense",
+        "mirror_camo",
+        "absolute_calm",
+        "splitting_shot",
+        "illusion_lure",
+        "mark",
+        "hunger_bait",
+        "companion_bond"
+      ]
+    },
+    "gift_60": {
+      "offer": [
+        3,
+        5
+      ],
+      "skills": [
+        "danger_sense",
+        "mirror_camo",
+        "absolute_calm",
+        "splitting_shot",
+        "illusion_lure",
+        "mark",
+        "hunger_bait",
+        "companion_bond",
+        "combat_trance",
+        "stretch_aid",
+        "winter_breath",
+        "super_jump",
+        "regen_burst",
+        "false_reload",
+        "telekinesis",
+        "lie_sense"
+      ]
+    }
+  },
+  "skills": [
+    {
+      "id": "fortune_smile",
+      "name_ru": "Улыбка Фортуны",
+      "kind": "buff",
+      "slot": "active",
+      "theme": "luck",
+      "stage": "M1",
+      "mana_cost": 20,
+      "cooldown_s": 86400,
+      "effects": [
+        {
+          "type": "stat_mult",
+          "stat": "luck",
+          "value": 20,
+          "duration_s": 8
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "stat_mult.value",
+          "add": 1
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "stat_mult.duration_s",
+          "add": 1
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "mana_cost",
+          "add": 1
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "cooldown_s",
+          "add": -600,
+          "min": 43200
+        }
+      ],
+      "properties": [
+        {
+          "id": "fortune_immunity",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "immunity",
+            "duration_s": 1.5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "fortune_quick",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -3600
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "fortune_echo",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "after_effect",
+            "stat": "luck",
+            "mult": 2,
+            "duration_s": 30,
+            "fade": true
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "fortune_second_roll",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "luck_double_roll",
+            "while_active": true
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "fortune_shared",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "share_with_party",
+            "radius_m": 6
+          },
+          "choice": "m90"
+        },
+        {
+          "id": "fortune_big",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "stat_mult_add",
+            "value": 5
+          },
+          "choice": "m90"
+        },
+        {
+          "id": "fortune_immunity_long",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "immunity",
+            "duration_s": 3
+          },
+          "choice": "m150"
+        },
+        {
+          "id": "fortune_cd_long",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -10800
+          },
+          "choice": "m150"
+        },
+        {
+          "id": "fortune_vitals",
+          "unlock": {
+            "talent_facets": 30
+          },
+          "effect": {
+            "type": "vitals_fill_random",
+            "min": 0.25,
+            "max": 0.75
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "luck_model"
+      ],
+      "stacks_with_self": false,
+      "jackpot_group": "fortune"
+    },
+    {
+      "id": "sense_pulse",
+      "name_ru": "Вспышка",
+      "kind": "sense",
+      "slot": "active",
+      "theme": "perception",
+      "stage": "M1",
+      "mana_cost": 15,
+      "cooldown_s": 2250,
+      "effects": [
+        {
+          "type": "highlight",
+          "through_walls": true,
+          "radius_m": 20,
+          "background_s": 30,
+          "selected_s": 45,
+          "targets": [
+            "living",
+            "trophy",
+            "weapon",
+            "stash"
+          ],
+          "pick": 1
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "mana_cost",
+          "add": -1,
+          "min": 5
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "highlight.radius_m",
+          "add": 2
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "cooldown_s",
+          "add": -150,
+          "min": 300
+        },
+        {
+          "stat": "mental",
+          "per": 30,
+          "effect": "highlight.background_s",
+          "add": 5
+        },
+        {
+          "stat": "mental",
+          "per": 30,
+          "effect": "highlight.selected_s",
+          "add": 10
+        }
+      ],
+      "properties": [
+        {
+          "id": "pulse_perception",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "highlight_bonus",
+            "show": "perception_level"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "pulse_fast",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -450
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "pulse_items_of_hidden",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "highlight_bonus",
+            "show": "items_of_hidden_targets"
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "pulse_wide",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "radius_add",
+            "value_m": 10
+          },
+          "choice": "m90"
+        },
+        {
+          "id": "pulse_two_types",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "highlight_pick",
+            "value": 2
+          },
+          "choice": "m90"
+        },
+        {
+          "id": "pulse_no_cooldown",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "no_cooldown"
+          }
+        },
+        {
+          "id": "pulse_anomalies",
+          "unlock": {
+            "talent_facets": 30
+          },
+          "effect": {
+            "type": "highlight_mode",
+            "mode": "differs_from_background"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "highlight"
+      ],
+      "counterplay": "enemy_sense_detects_pulse",
+      "_note": "откат 75 реальных с = 2250 игровых с"
+    },
+    {
+      "id": "voice_throw",
+      "name_ru": "Чревовещатель",
+      "kind": "control",
+      "slot": "active",
+      "theme": "control",
+      "stage": "M1",
+      "mana_cost": 8,
+      "cooldown_s": 1800,
+      "effects": [
+        {
+          "type": "noise_relocate",
+          "range_m": 20,
+          "count": 1,
+          "window_s": 15
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "noise_relocate.range_m",
+          "add": 2
+        }
+      ],
+      "properties": [
+        {
+          "id": "voice_two",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "noise_relocate_count",
+            "value": 2
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "voice_far",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "range_set",
+            "value_m": 40
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "voice_gunshot",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "noise_relocate_allow",
+            "sources": [
+              "pistol",
+              "rifle",
+              "shotgun"
+            ]
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "scarecrow",
+      "name_ru": "Пугач",
+      "kind": "control",
+      "slot": "active",
+      "theme": "control",
+      "stage": "M1",
+      "mana_cost": 20,
+      "cooldown_s": 10800,
+      "effects": [
+        {
+          "type": "enemy_flee",
+          "max_stage": 3,
+          "radius_m": 30,
+          "duration_s": 60,
+          "wind": "downwind"
+        },
+        {
+          "type": "party_pleasure",
+          "value": -10
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "enemy_flee.radius_m",
+          "add": 5
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "enemy_flee.duration_s",
+          "add": 5
+        }
+      ],
+      "properties": [
+        {
+          "id": "scare_stronger",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "flee_max_stage",
+            "value": 5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "scare_any_wind",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "flee_wind",
+            "value": "any"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "scare_long",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "duration_set",
+            "value_s": 120
+          }
+        },
+        {
+          "id": "scare_elite_hesitate",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "elite_hesitate_s",
+            "value": 2
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "infected_fear_state",
+        "cluster_wind_dir"
+      ]
+    },
+    {
+      "id": "second_wind",
+      "name_ru": "Второе дыхание",
+      "kind": "buff",
+      "slot": "active",
+      "theme": "mobility",
+      "stage": "M1",
+      "mana_cost": 15,
+      "cooldown_s": 7200,
+      "effects": [
+        {
+          "type": "vital_fill",
+          "vital": "stamina",
+          "fraction": 1.0
+        },
+        {
+          "type": "free_sprint",
+          "duration_s": 10
+        },
+        {
+          "type": "vital_cost",
+          "vital": "spore_balance",
+          "value": 3
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "free_sprint.duration_s",
+          "add": 1
+        }
+      ],
+      "properties": [
+        {
+          "id": "wind_fast",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -1800
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "wind_quiet",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "noise_mult_self",
+            "source": "sprint_step",
+            "mult": 0.7,
+            "duration_s": 10
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "wind_stop_bleed",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "cure",
+            "status": "bleeding"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "soft_step",
+      "name_ru": "Мягкий шаг",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "stealth",
+      "stage": "M1",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.05
+        },
+        {
+          "type": "noise_mult_self",
+          "sources": [
+            "sneak_step",
+            "walk_step",
+            "sprint_step"
+          ],
+          "mult": 0.65
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "noise_mult_self.mult",
+          "add": -0.02,
+          "min": 0.4
+        }
+      ],
+      "properties": [
+        {
+          "id": "step_jumps",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "noise_mult_self",
+            "sources": [
+              "jump",
+              "fall"
+            ],
+            "mult": 0.65
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "step_doors",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "noise_mult_self",
+            "sources": [
+              "door"
+            ],
+            "mult": 0.5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "step_run_as_walk",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "noise_source_swap",
+            "from": "sprint_step",
+            "to": "walk_step"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "noise_eater",
+      "name_ru": "Гаситель",
+      "kind": "control",
+      "slot": "active",
+      "theme": "stealth",
+      "stage": "M1",
+      "mana_cost": 35,
+      "cooldown_s": 7200,
+      "effects": [
+        {
+          "type": "noise_zone",
+          "radius_m": 8,
+          "mult": 0.2,
+          "duration_s": 10,
+          "anchor": "point"
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "noise_zone.duration_s",
+          "add": 0.5
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "noise_zone.radius_m",
+          "add": 0.5
+        }
+      ],
+      "properties": [
+        {
+          "id": "eater_deeper",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "noise_zone_mult",
+            "value": 0.1
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "eater_fast",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -1800
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "eater_follow",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "noise_zone_anchor",
+            "value": "hero"
+          }
+        },
+        {
+          "id": "eater_wide",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "radius_set",
+            "value_m": 14
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "exceptions": [
+        "infected_voice"
+      ]
+    },
+    {
+      "id": "ambusher",
+      "name_ru": "Из тени",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "combat",
+      "stage": "M1",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.1
+        },
+        {
+          "type": "damage_mult_vs",
+          "condition": "target_unaware",
+          "mult": 1.6,
+          "elite_mult": 1.2
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "damage_mult_vs.mult",
+          "add": 0.05
+        }
+      ],
+      "properties": [
+        {
+          "id": "ambush_crit",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "crit_chance_add",
+            "condition": "target_unaware",
+            "value": 0.2
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "heat_vision",
+      "name_ru": "Тепловое зрение",
+      "kind": "sense",
+      "slot": "active",
+      "theme": "perception",
+      "stage": "M1",
+      "mana_cost": 10,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "highlight",
+          "through_walls": false,
+          "radius_m": 40,
+          "targets": [
+            "warm_living"
+          ],
+          "toggle": true,
+          "upkeep_mana_per_s": 0.1
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "highlight.radius_m",
+          "add": 5
+        }
+      ],
+      "properties": [
+        {
+          "id": "heat_levels",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "highlight_bonus",
+            "show": "level"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "heat_one_wall",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "highlight_walls",
+            "value": 1
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "heat_far",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "radius_set",
+            "value_m": 80
+          }
+        },
+        {
+          "id": "heat_quasi",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "highlight_bonus",
+            "show": "quasi"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "not_on": [
+        "black_cluster"
+      ],
+      "invisible": [
+        "cold",
+        "grey"
+      ]
+    },
+    {
+      "id": "near_miss",
+      "name_ru": "Мимо!",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "luck",
+      "stage": "M1",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.15
+        },
+        {
+          "type": "luck_save",
+          "applies": "lethal_hit",
+          "cap": 0.25,
+          "k": 300,
+          "per_death_in_region": -0.2,
+          "elite_mult": 0.5
+        }
+      ],
+      "scaling": [],
+      "properties": [
+        {
+          "id": "miss_heavy",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "luck_save_applies",
+            "value": "hit_over_half_hp"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "miss_cap",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "luck_save_cap_add",
+            "value": 0.05
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "miss_immunity",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "immunity",
+            "duration_s": 1,
+            "on": "luck_save"
+          }
+        },
+        {
+          "id": "miss_party",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "share_with_party",
+            "radius_m": 6
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "luck_model"
+      ]
+    },
+    {
+      "id": "quick_hands",
+      "name_ru": "Ловкие руки",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "economy",
+      "stage": "M1",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.05
+        },
+        {
+          "type": "channel_speed",
+          "channel": "spore_sack_open",
+          "mult": 1.5,
+          "interrupt_move_m": 1.5
+        }
+      ],
+      "scaling": [],
+      "properties": [
+        {
+          "id": "hands_double",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "channel_speed_set",
+            "value": 2.0
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "trophy_nose",
+      "name_ru": "Нюх на мешок",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "perception",
+      "stage": "M1",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.08
+        },
+        {
+          "type": "trophy_hint",
+          "radius_m": 20,
+          "min_item": "pea_yellow",
+          "show_chance": 0.5,
+          "per_stage": -0.03
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "trophy_hint.radius_m",
+          "add": 2
+        }
+      ],
+      "properties": [
+        {
+          "id": "nose_chance",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "show_chance_add",
+            "value": 0.2
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "nose_pearl",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "trophy_hint_pearl_bright"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "nose_far",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "radius_set",
+            "value_m": 40
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "highlight",
+        "pre_rolled_sack"
+      ]
+    },
+    {
+      "id": "spore_burst",
+      "name_ru": "Споровый форсаж",
+      "kind": "buff",
+      "slot": "active",
+      "theme": "mobility",
+      "stage": "M1",
+      "mana_cost": 0,
+      "cooldown_s": 3600,
+      "effects": [
+        {
+          "type": "vital_cost",
+          "vital": "spore_balance",
+          "value": 15
+        },
+        {
+          "type": "stat_mult",
+          "stat": "speed",
+          "value": 1.3,
+          "duration_s": 12
+        },
+        {
+          "type": "stat_mult",
+          "stat": "strength",
+          "value": 1.3,
+          "duration_s": 12
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "stat_mult.duration_s",
+          "add": 1
+        }
+      ],
+      "properties": [
+        {
+          "id": "burst_strong",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "stat_mult_set",
+            "value": 1.4
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "burst_cheap",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "vital_cost_add",
+            "vital": "spore_balance",
+            "value": -5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "burst_reaction",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "stat_mult",
+            "stat": "reaction",
+            "value": 1.3,
+            "duration_s": 12
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "balance_loan",
+      "name_ru": "Кредит баланса",
+      "kind": "buff",
+      "slot": "active",
+      "theme": "luck",
+      "stage": "M1",
+      "mana_cost": 10,
+      "cooldown_s": 21600,
+      "effects": [
+        {
+          "type": "stat_mult",
+          "stat": "luck",
+          "value": 5,
+          "duration_s": 60
+        },
+        {
+          "type": "after_effect",
+          "stat": "luck",
+          "mult": 0.5,
+          "duration_s": 600,
+          "removable": false
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "stat_mult.duration_s",
+          "add": 5
+        }
+      ],
+      "properties": [
+        {
+          "id": "loan_bigger",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "stat_mult_set",
+            "value": 6
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "loan_soft",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "after_effect_mult",
+            "value": 0.6
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "loan_refinance",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "recast_during_debt",
+            "debt_mult": 2
+          }
+        },
+        {
+          "id": "loan_elite_payoff",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "clear_after_effect_on",
+            "event": "kill_elite"
+          }
+        },
+        {
+          "id": "loan_short_debt",
+          "unlock": {
+            "talent_facets": 30
+          },
+          "effect": {
+            "type": "after_effect_duration_add",
+            "value_s": -120
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "luck_model"
+      ],
+      "jackpot_group": "fortune",
+      "stacks_with": "max_of_group"
+    },
+    {
+      "id": "danger_sense",
+      "name_ru": "Пуля",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "perception",
+      "stage": "M1-M2",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.1
+        },
+        {
+          "type": "danger_warn",
+          "triggers": [
+            "projectile_incoming",
+            "enemy_lunge"
+          ],
+          "world_time_scale": 0.5,
+          "duration_s": 0.3,
+          "min_interval_s": 8
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "danger_warn.duration_s",
+          "add": 0.03
+        }
+      ],
+      "properties": [
+        {
+          "id": "danger_direction",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "danger_show_direction"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "danger_deep_slow",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "time_scale_set",
+            "value": 0.25
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "danger_party",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "danger_warn_party"
+          }
+        },
+        {
+          "id": "danger_long",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "duration_set",
+            "value_s": 1.0
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "world_time_scale"
+      ]
+    },
+    {
+      "id": "mirror_camo",
+      "name_ru": "Хамелеон",
+      "kind": "stealth",
+      "slot": "active",
+      "theme": "stealth",
+      "stage": "M2",
+      "mana_cost": 40,
+      "cooldown_s": 25200,
+      "effects": [
+        {
+          "type": "camo",
+          "visibility_still": 0.05,
+          "visibility_move": 0.6,
+          "upkeep_mana_per_s": 0.2,
+          "broken_by": [
+            "shoot",
+            "melee_hit",
+            "water_surface",
+            "rain",
+            "snow",
+            "smoke"
+          ]
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "cooldown_s",
+          "add": -1800
+        },
+        {
+          "stat": "mental",
+          "per": 30,
+          "effect": "mana_cost",
+          "add": 10
+        },
+        {
+          "stat": "mental",
+          "per": 30,
+          "effect": "camo.upkeep_mana_per_s",
+          "mult": 0.8
+        }
+      ],
+      "properties": [
+        {
+          "id": "camo_cover_50",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "camo_cover_radius_m",
+            "value": 50
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "camo_walk",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "camo_visibility_move",
+            "value": 0.3
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "camo_cover_75",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "camo_cover_radius_m",
+            "value": 75
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "camo_thermal",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "camo_spectra",
+            "value": [
+              "thermal",
+              "device"
+            ]
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "camo_party",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "share_with_party",
+            "radius_m": 3
+          },
+          "choice": "m90"
+        },
+        {
+          "id": "camo_cheap",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "upkeep_mult",
+            "value": 0.5
+          },
+          "choice": "m90"
+        },
+        {
+          "id": "camo_no_cd",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "no_cooldown"
+          }
+        },
+        {
+          "id": "camo_look_away",
+          "unlock": {
+            "talent_facets": 30
+          },
+          "effect": {
+            "type": "observers_look_away",
+            "resist_by": "perception"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "_note": "cover_radius — дальше этой дистанции замаскированного не видят вовсе; ближе — по visibility",
+      "counterplay": "perception >= 1.5 * stealth видит"
+    },
+    {
+      "id": "absolute_calm",
+      "name_ru": "Абсолютное Спокойствие",
+      "kind": "control",
+      "slot": "active",
+      "theme": "control",
+      "stage": "M2",
+      "mana_cost": 50,
+      "cooldown_s": 86400,
+      "effects": [
+        {
+          "type": "stasis",
+          "radius_m": 0.5,
+          "range_m": 15,
+          "duration_s": 6,
+          "affects": [
+            "bodies",
+            "projectiles",
+            "ai"
+          ]
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "mana_cost",
+          "add": 4
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "stasis.radius_m",
+          "add": 0.05
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "stasis.duration_s",
+          "add": 0.5
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "stasis.range_m",
+          "add": 3
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "cooldown_s",
+          "add": -900
+        }
+      ],
+      "properties": [
+        {
+          "id": "calm_free_recast",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "no_cooldown_chance",
+            "value": 0.5,
+            "repeat_mult": 0.5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "calm_bigger",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "radius_add",
+            "value_m": 0.5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "calm_r3",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "radius_set",
+            "value_m": 3
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "calm_long",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "duration_set",
+            "value_s": 12
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "calm_r8",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "radius_set",
+            "value_m": 8,
+            "safety": "life_support_allowed"
+          }
+        },
+        {
+          "id": "calm_r24",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "radius_set",
+            "value_m": 24
+          },
+          "choice": "m150"
+        },
+        {
+          "id": "calm_two",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "stasis_count",
+            "value": 2
+          },
+          "choice": "m150"
+        },
+        {
+          "id": "calm_sprint",
+          "unlock": {
+            "talent_facets": 30
+          },
+          "effect": {
+            "type": "stat_mult",
+            "stat": "speed",
+            "value": 2.25,
+            "duration_s": 5
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "stasis"
+      ],
+      "immune": [
+        "grey_front_aura",
+        "shield_gift"
+      ]
+    },
+    {
+      "id": "splitting_shot",
+      "name_ru": "Раскол",
+      "kind": "attack",
+      "slot": "active",
+      "theme": "combat",
+      "stage": "M2",
+      "mana_cost": 10,
+      "cooldown_s": 3000,
+      "effects": [
+        {
+          "type": "projectile_charge",
+          "mana_step": 10,
+          "hold_s": 300,
+          "armor_shred_per_step": 0.25,
+          "weapons": [
+            "bow",
+            "crossbow",
+            "firearm"
+          ],
+          "projectiles": 1
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "cooldown_s",
+          "add": -180
+        },
+        {
+          "stat": "mental",
+          "per": 30,
+          "effect": "projectile_charge.hold_s",
+          "add": 50
+        }
+      ],
+      "properties": [
+        {
+          "id": "split_two",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "projectiles_set",
+            "value": 2
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "split_pierce",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "pierce_mm_add",
+            "value": 2
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "split_keep",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "charge_survives_weapon_swap"
+          }
+        },
+        {
+          "id": "split_fast",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "cooldown_mult",
+            "value": 0.5
+          }
+        },
+        {
+          "id": "split_explode",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "on_hit_explosion",
+            "radius_m": 2
+          }
+        },
+        {
+          "id": "split_guaranteed",
+          "unlock": {
+            "talent_facets": 30
+          },
+          "effect": {
+            "type": "guaranteed_pierce_mm",
+            "value": 8
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "_note": "откат 100 реальных с = 3000 игровых с",
+      "requires_engine": [
+        "projectile_tags"
+      ]
+    },
+    {
+      "id": "illusion_lure",
+      "name_ru": "Мираж",
+      "kind": "control",
+      "slot": "active",
+      "theme": "control",
+      "stage": "M2",
+      "mana_cost": 30,
+      "cooldown_s": 3600,
+      "effects": [
+        {
+          "type": "decoy",
+          "range_m": 40,
+          "duration_s": 15,
+          "attract_radius_m": 60,
+          "look": "wounded_human",
+          "on_reach": "enemy_enraged_search_hero"
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "decoy.duration_s",
+          "add": 2
+        }
+      ],
+      "properties": [
+        {
+          "id": "lure_two",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "decoy_count",
+            "value": 2
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "lure_moving",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "decoy_moves",
+            "speed": 2.0
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "lure_pack",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "attract_radius_set",
+            "value_m": 300
+          }
+        },
+        {
+          "id": "lure_horde",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "attract_horde"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "mark",
+      "name_ru": "Метка",
+      "kind": "sense",
+      "slot": "active",
+      "theme": "perception",
+      "stage": "M2",
+      "mana_cost": 15,
+      "cooldown_s": 1800,
+      "effects": [
+        {
+          "type": "mark",
+          "range_m": 30,
+          "duration_s": 2880.0,
+          "show": [
+            "map",
+            "through_walls"
+          ]
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "mark.duration_s",
+          "add": 720
+        }
+      ],
+      "properties": [
+        {
+          "id": "mark_two",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "mark_count",
+            "value": 2
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "mark_region",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "mark_range",
+            "value": "region"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "mark_body",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "mark_persists_on_death"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "_note": "duration_s: 24 игровых ч = 2880 реальных с",
+      "requires_engine": [
+        "map",
+        "highlight"
+      ]
+    },
+    {
+      "id": "hunger_bait",
+      "name_ru": "Сытная приманка",
+      "kind": "control",
+      "slot": "active",
+      "theme": "control",
+      "stage": "M1-M2",
+      "mana_cost": 5,
+      "cooldown_s": 600,
+      "effects": [
+        {
+          "type": "food_bait",
+          "max_stage": 3,
+          "radius_m": 15,
+          "duration_s": 15,
+          "consumes_item": [
+            "sporan",
+            "meat"
+          ]
+        }
+      ],
+      "scaling": [],
+      "properties": [
+        {
+          "id": "bait_stronger",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "bait_max_stage",
+            "value": 5
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "side_effect": "feeds_evolution"
+    },
+    {
+      "id": "companion_bond",
+      "name_ru": "Вера в ближнего",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "support",
+      "stage": "M2",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.1
+        },
+        {
+          "type": "companion_trust_mult",
+          "value": 1.5
+        },
+        {
+          "type": "share_buffs_radius_m",
+          "value": 6
+        }
+      ],
+      "scaling": [],
+      "properties": [
+        {
+          "id": "bond_wide",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "share_buffs_radius_m",
+            "value": 10
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "conflicts": [
+        "lone_wolf"
+      ],
+      "requires_engine": [
+        "companions"
+      ]
+    },
+    {
+      "id": "combat_trance",
+      "name_ru": "Боевой транс",
+      "kind": "buff",
+      "slot": "active",
+      "theme": "mobility",
+      "stage": "M2",
+      "mana_cost": 40,
+      "cooldown_s": 7200,
+      "effects": [
+        {
+          "type": "world_time_scale",
+          "value": 0.4,
+          "duration_s": 3,
+          "hero_unaffected": true
+        },
+        {
+          "type": "vital_cost",
+          "vital": "stamina",
+          "value": 40
+        },
+        {
+          "type": "after_effect",
+          "stat": "speed",
+          "mult": 0.7,
+          "duration_s": 2
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "world_time_scale.duration_s",
+          "add": 0.2
+        }
+      ],
+      "properties": [
+        {
+          "id": "trance_fast",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -1800
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "trance_deep",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "time_scale_set",
+            "value": 0.3
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "trance_long",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "duration_set",
+            "value_s": 5
+          }
+        },
+        {
+          "id": "trance_two",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "charges",
+            "value": 2
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "world_time_scale"
+      ],
+      "exclusive_with": [
+        "fortune_smile"
+      ]
+    },
+    {
+      "id": "stretch_aid",
+      "name_ru": "Растяжение помощи",
+      "kind": "support",
+      "slot": "active",
+      "theme": "support",
+      "stage": "M3",
+      "mana_cost": 125,
+      "cooldown_s": 108000,
+      "effects": [
+        {
+          "type": "positive_duration_mult",
+          "add_pct": 150,
+          "radius_m": 15,
+          "duration_s": 1000,
+          "max_bonus_s": 86400,
+          "exclude": [
+            "pleasure_effects"
+          ]
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 1,
+          "effect": "positive_duration_mult.duration_s",
+          "add": 10
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "positive_duration_mult.add_pct",
+          "add": 50
+        },
+        {
+          "stat": "mental",
+          "per": 30,
+          "effect": "positive_duration_mult.radius_m",
+          "add": 4
+        },
+        {
+          "stat": "stix_care",
+          "per": 10,
+          "effect": "mana_cost",
+          "add": -5
+        }
+      ],
+      "properties": [
+        {
+          "id": "stretch_fast",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -10800
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "stretch_wide",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "radius_add",
+            "value_m": 5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "stretch_x5",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "add_pct_min",
+            "value": 400
+          }
+        },
+        {
+          "id": "stretch_x7",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "add_pct_min",
+            "value": 600
+          }
+        },
+        {
+          "id": "stretch_x9",
+          "unlock": {
+            "mental": 150
+          },
+          "effect": {
+            "type": "add_pct_min",
+            "value": 800
+          }
+        },
+        {
+          "id": "stretch_flare",
+          "unlock": {
+            "talent_facets": 30
+          },
+          "effect": {
+            "type": "blind_flash",
+            "radius_m": 8,
+            "toggle": true
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "limits_D18": {
+        "stacks_with_self": false,
+        "immunity_total_max_s": 60,
+        "shared_jackpot_cooldown_h": 24
+      }
+    },
+    {
+      "id": "winter_breath",
+      "name_ru": "Дыхание зимы",
+      "kind": "attack",
+      "slot": "active",
+      "theme": "control",
+      "stage": "M3",
+      "mana_cost": 60,
+      "cooldown_s": 600,
+      "effects": [
+        {
+          "type": "aoe_cone",
+          "length_m": 8,
+          "angle_deg": 40,
+          "duration_s": 1.5,
+          "damage": 20,
+          "slow": 0.5,
+          "slow_s": 4,
+          "weather": {
+            "hot": 0.5,
+            "headwind": 0.7,
+            "heavy_rain": 0.7
+          },
+          "blocked_by": [
+            "cover",
+            "heavy_clothes"
+          ]
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "aoe_cone.length_m",
+          "add": 0.5
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "aoe_cone.damage",
+          "add": 3
+        }
+      ],
+      "properties": [
+        {
+          "id": "winter_blind",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "status",
+            "status": "blind",
+            "duration_s": 3
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "winter_cheap",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "mana_mult",
+            "value": 0.8
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "winter_freeze",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "status",
+            "status": "frozen",
+            "duration_s": 2
+          }
+        },
+        {
+          "id": "winter_long",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "length_set",
+            "value_m": 12
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "aoe",
+        "weather"
+      ]
+    },
+    {
+      "id": "super_jump",
+      "name_ru": "Сверхпрыжок",
+      "kind": "mobility",
+      "slot": "active",
+      "theme": "mobility",
+      "stage": "M2",
+      "mana_cost": 25,
+      "cooldown_s": 600,
+      "effects": [
+        {
+          "type": "jump",
+          "height_m": 8,
+          "distance_m": 10,
+          "no_fall_damage": true,
+          "landing_noise_m": 20
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "jump.height_m",
+          "add": 0.5
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "cooldown_s",
+          "add": -60,
+          "min": 120
+        }
+      ],
+      "properties": [
+        {
+          "id": "jump_double",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "charges",
+            "value": 2
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "jump_stomp",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "landing_stun",
+            "radius_m": 3,
+            "duration_s": 1.5
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "jump_fast",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "cooldown_mult",
+            "value": 0.5
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "regen_burst",
+      "name_ru": "Живая ткань",
+      "kind": "buff",
+      "slot": "active",
+      "theme": "survival",
+      "stage": "M2",
+      "mana_cost": 30,
+      "cooldown_s": 14400,
+      "effects": [
+        {
+          "type": "regen_mult",
+          "vital": "health",
+          "value": 8,
+          "duration_s": 15
+        },
+        {
+          "type": "cure",
+          "status": "bleeding"
+        },
+        {
+          "type": "vital_cost",
+          "vital": "spore_balance",
+          "value": 8
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "regen_mult.duration_s",
+          "add": 1
+        }
+      ],
+      "properties": [
+        {
+          "id": "regen_fast",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "cooldown_add",
+            "value_s": -3600
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "regen_stamina",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "regen_mult",
+            "vital": "stamina",
+            "value": 3,
+            "duration_s": 15
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "regen_wounds",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "cure",
+            "status": "heavy_wound"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "false_reload",
+      "name_ru": "Ложный сброс",
+      "kind": "control",
+      "slot": "active",
+      "theme": "control",
+      "stage": "M2",
+      "mana_cost": 60,
+      "cooldown_s": 21600,
+      "effects": [
+        {
+          "type": "fake_reload",
+          "radius_m": 6,
+          "duration_s": 20,
+          "infected": "leave_zone",
+          "humans": "panic",
+          "immune": [
+            "elite"
+          ],
+          "attracts": [
+            "kislyak_stalker"
+          ]
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "fake_reload.radius_m",
+          "add": 0.5
+        }
+      ],
+      "properties": [
+        {
+          "id": "fog_big",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "radius_set",
+            "value_m": 12
+          },
+          "choice": "m60"
+        },
+        {
+          "id": "fog_long",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "duration_set",
+            "value_s": 40
+          },
+          "choice": "m60"
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ]
+    },
+    {
+      "id": "telekinesis",
+      "name_ru": "Телекинез",
+      "kind": "utility",
+      "slot": "active",
+      "theme": "support",
+      "stage": "M3",
+      "mana_cost": 15,
+      "cooldown_s": 1800,
+      "effects": [
+        {
+          "type": "telekinesis",
+          "range_m": 10,
+          "max_kg": 5,
+          "actions": [
+            "pull_item",
+            "catch_grenade",
+            "open_lock"
+          ]
+        }
+      ],
+      "scaling": [
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "telekinesis.range_m",
+          "add": 1
+        },
+        {
+          "stat": "mental",
+          "per": 10,
+          "effect": "telekinesis.max_kg",
+          "add": 1
+        }
+      ],
+      "properties": [
+        {
+          "id": "tk_throw_back",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "telekinesis_action",
+            "value": "throw_grenade_back"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "tk_hotwire",
+          "unlock": {
+            "mental": 30
+          },
+          "effect": {
+            "type": "telekinesis_action",
+            "value": "start_vehicle"
+          },
+          "choice": "m30"
+        },
+        {
+          "id": "tk_hold_door",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "telekinesis_action",
+            "value": "hold_door"
+          }
+        },
+        {
+          "id": "tk_lift_small",
+          "unlock": {
+            "mental": 90
+          },
+          "effect": {
+            "type": "telekinesis_action",
+            "value": "lift_infected_stage_2"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "physics_pickables"
+      ]
+    },
+    {
+      "id": "lie_sense",
+      "name_ru": "Правдолюб",
+      "kind": "passive",
+      "slot": "passive",
+      "theme": "perception",
+      "stage": "M2",
+      "mana_cost": 0,
+      "cooldown_s": 0,
+      "effects": [
+        {
+          "type": "reserve_mana",
+          "pct": 0.1
+        },
+        {
+          "type": "dialogue_reveal",
+          "show": "lie"
+        }
+      ],
+      "scaling": [],
+      "properties": [
+        {
+          "id": "lie_hidden",
+          "unlock": {
+            "mental": 60
+          },
+          "effect": {
+            "type": "dialogue_reveal",
+            "show": "withholding"
+          }
+        }
+      ],
+      "blocked_on": [
+        "cluster_disabled",
+        "jammer"
+      ],
+      "requires_engine": [
+        "dialogue_checks"
+      ],
+      "counterplay": "half_truth"
+    }
+  ]
+}
