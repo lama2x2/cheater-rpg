@@ -11,6 +11,7 @@ const GROUND_SIZE := 200.0
 const OBSTACLE_COUNT := 40
 const OBSTACLE_SEED := 74920891
 const BAKE_HALF_SIZE := 70.0
+const SNAP_MAX_SHIFT := 6.0
 
 var is_navigation_ready := false
 
@@ -40,9 +41,13 @@ func _exit_tree() -> void:
 	SaveService.unregister("area")
 
 
-## Ближайшая точка навигации (для спавна тварей).
+## Ближайшая точка навигации (для спавна тварей). Если навигация не нашла точку рядом
+## (точка внутри коробки или карта пуста) — возвращает исходную.
 func snap(point: Vector3) -> Vector3:
-	return NavigationServer3D.map_get_closest_point(get_world_3d().navigation_map, point)
+	var snapped_point := NavigationServer3D.map_get_closest_point(get_world_3d().navigation_map, point)
+	if Vector2(snapped_point.x - point.x, snapped_point.z - point.z).length() > SNAP_MAX_SHIFT:
+		return point
+	return snapped_point
 
 
 func to_dict() -> Dictionary:
@@ -57,8 +62,12 @@ func load_dict(data: Dictionary) -> void:
 
 
 func _on_baked() -> void:
-	# Карта навигации обновляется на следующем кадре синхронизации.
-	await get_tree().physics_frame
+	# Карта навигации синхронизируется асинхронно (4.4+): ждём новую итерацию карты,
+	# иначе map_get_closest_point вернёт ноль.
+	var map := get_world_3d().navigation_map
+	var iteration := NavigationServer3D.map_get_iteration_id(map)
+	while NavigationServer3D.map_get_iteration_id(map) == iteration:
+		await get_tree().physics_frame
 	await get_tree().physics_frame
 	is_navigation_ready = true
 	navigation_ready.emit()

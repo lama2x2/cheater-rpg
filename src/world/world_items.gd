@@ -34,6 +34,7 @@ func spawn(id: String, count: int, at: Vector3) -> Node3D:
 func drop_near(id: String, count: int, at: Vector3) -> void:
 	var offset := Vector3(randf_range(-0.6, 0.6), 0.0, randf_range(-0.6, 0.6))
 	spawn(id, count, Vector3(at.x, 0.0, at.z) + offset)
+	EventBus.noise_made.emit("item_drop", at, {"from_hero": true})
 
 
 func to_dict() -> Dictionary:

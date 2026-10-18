@@ -12,6 +12,7 @@ const ITEMS_DIR := "res://data/items"
 const RECIPES_PATH := "res://data/recipes.json"
 const ENEMIES_DIR := "res://data/enemies"
 const TEST_AREA_PATH := "res://data/world/test_area.json"
+const NOISE_PATH := "res://data/noise.json"
 
 var _cache: Dictionary = {}
 
@@ -25,7 +26,7 @@ func rules() -> Dictionary:
 
 
 func player_tuning() -> Dictionary:
-	return _cached(PLAYER_PATH, ["walk_speed", "sprint_speed", "speed_bonus_per_level", "sprint_progress_per_meter", "gravity", "interact_radius"])
+	return _cached(PLAYER_PATH, ["walk_speed", "sprint_speed", "speed_bonus_per_level", "sprint_progress_per_meter", "gravity", "interact_radius", "sneak_speed", "sneak_visibility"])
 
 
 func vitals_config() -> Dictionary:
@@ -69,6 +70,10 @@ func enemy_db() -> EnemyDB:
 
 func enemy_name(id: String) -> String:
 	return String(texts()["enemy_names"].get(id, id))
+
+
+func noise_config() -> Dictionary:
+	return _cached(NOISE_PATH, NoiseModel.REQUIRED_KEYS)
 
 
 func test_area() -> Dictionary:

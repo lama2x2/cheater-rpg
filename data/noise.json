@@ -1,0 +1,36 @@
+{
+  "_doc": "Шум (docs/spec/08_combat.md, 8.2). radius — на сколько метров слышно на открытом месте в тихую погоду. Громкость у слушателя падает линейно до нуля на краю радиуса.",
+  "sources": {
+    "sneak_step": 3,
+    "walk_step": 6,
+    "sprint_step": 13,
+    "door": 7,
+    "item_drop": 4,
+    "melee_hit": 3,
+    "bow_shot": 5,
+    "pistol_silenced": 15,
+    "pistol": 60,
+    "shotgun": 80,
+    "rifle": 120,
+    "machinegun": 300,
+    "explosion": 450,
+    "car": 110,
+    "spore_sack_open": 5
+  },
+  "step_length_m": { "sneak": 0.9, "walk": 1.6, "sprint": 2.2 },
+  "hear_threshold": 0.05,
+  "wall_mult": 0.5,
+  "max_walls": 2,
+  "indoors_mult": 0.7,
+  "weather": { "clear": 1.0, "rain": 0.7, "wind": 0.7, "storm": 0.5 },
+  "stealth": { "step_reduction_per_level": 0.02, "min_mult": 0.5 },
+  "overload_step_mult_at_double": 1.6,
+  "accumulation": {
+    "_doc": "Серия громких звуков «подтягивает» тварей: множитель радиуса растёт от суммы радиусов недавних импульсов (только громче loud_from метров) и спадает со временем.",
+    "loud_from": 30,
+    "per_meter": 0.002,
+    "decay_per_second": 0.08,
+    "max_bonus": 1.0
+  },
+  "debug_ring": true
+}

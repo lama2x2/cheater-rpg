@@ -12,3 +12,6 @@ signal items_dropped(id: String, count: int)
 signal player_hurt(amount: float, source: String)
 @warning_ignore("unused_signal")
 signal infected_killed(enemy_id: String, level: int, position: Vector3)
+## Шумовой импульс: source — ключ из data/noise.json, options — см. NoiseModel.radius() и from_hero.
+@warning_ignore("unused_signal")
+signal noise_made(source: String, position: Vector3, options: Dictionary)

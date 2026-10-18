@@ -12,6 +12,7 @@ const InventoryPanelScript := preload("res://src/ui/inventory_panel.gd")
 const InteractPromptScript := preload("res://src/ui/interact_prompt.gd")
 const TestAreaScript := preload("res://src/world/test_area.gd")
 const InfectedPopulationScript := preload("res://src/world/infected_population.gd")
+const NoiseSystemScript := preload("res://src/world/noise_system.gd")
 
 var _death_flow: Node
 
@@ -22,6 +23,7 @@ func _ready() -> void:
 	var area: NavigationRegion3D = TestAreaScript.new()
 	area.name = "Area"
 	add_child(area)
+	add_child(NoiseSystemScript.new())
 
 	var player: CharacterBody3D = PlayerScript.new()
 	player.name = "Player"

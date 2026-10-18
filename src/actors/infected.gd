@@ -136,7 +136,7 @@ func _sense() -> Dictionary:
 
 func _can_see(hero: Node3D, distance: float) -> bool:
 	var s: Dictionary = _data["senses"]
-	if distance > float(s["sight"]):
+	if distance > float(s["sight"]) * hero.visibility_multiplier():
 		return false
 	if distance > float(s["notice_close"]):
 		var forward := -global_transform.basis.z
@@ -264,6 +264,7 @@ func _open_doors_on_the_way() -> void:
 			continue
 		if door.side_of(global_position) != door.side_of(brain.target_position):
 			door.open_door()
+			EventBus.noise_made.emit("door", door.global_position, {})
 
 
 func _on_state_changed() -> void:

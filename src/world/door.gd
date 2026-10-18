@@ -74,6 +74,7 @@ func interact(_hero: Node3D) -> void:
 		close_door()
 	else:
 		open_door()
+	EventBus.noise_made.emit("door", global_position, {"from_hero": true})
 
 
 func _apply() -> void:
