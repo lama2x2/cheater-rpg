@@ -1,0 +1,18 @@
+{
+  "main": ["strength", "agility", "speed", "endurance", "mental"],
+  "additional": ["accuracy", "reaction", "luck", "stealth", "perception", "stix_care", "talent_facets"],
+  "start_level": 1,
+  "progress_per_level": 10,
+  "general_level_divisor": 5,
+  "additional_level_divisor": 7,
+  "base_growth_per_general_level": 0.10,
+  "experience_bonus": { "per_additional_sum": 10, "bonus": 0.01, "cap": 0.50 },
+  "first_level_free_points": 50,
+  "death_penalty": {
+    "loss_min": 0.05,
+    "loss_max": 0.50,
+    "min_loss_points": 1,
+    "level_loss_progress_below": 0.05,
+    "level_loss_chance": 0.20
+  }
+}

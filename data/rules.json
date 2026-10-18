@@ -1,0 +1,6 @@
+{
+  "lives_start": 9,
+  "deaths_per_region_shift": 5,
+  "real_seconds_per_game_day": 2880,
+  "start_hour": 8
+}

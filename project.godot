@@ -1,0 +1,29 @@
+; Engine configuration file.
+; Редактируется и вручную, и редактором Godot.
+
+config_version=5
+
+[application]
+
+config/name="Cheater RPG"
+config/description="Survival RPG по мотивам цикла «Читер»"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[autoload]
+
+Content="*res://src/services/content.gd"
+EventBus="*res://src/services/event_bus.gd"
+GameClock="*res://src/services/game_clock.gd"
+SystemLog="*res://src/services/system_log.gd"
+PlayerState="*res://src/services/player_state.gd"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+anti_aliasing/quality/msaa_3d=2
