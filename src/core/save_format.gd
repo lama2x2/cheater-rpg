@@ -12,13 +12,20 @@ extends RefCounted
 ##   3 — player: run, deaths_since_region_shift, awaiting_respawn, start_minutes, respawn_position;
 ##       log.highlights; секция corpses.
 ##   4 — player.inventory; секция world_items.
+##   5 — player: trophies, buffs, free_points, skills_awakened.
 
-const VERSION := 4
+const VERSION := 5
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
+
+
+static func _v4_to_v5(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		data["sections"]["player"].merge({"trophies": {}, "buffs": {}, "free_points": 0, "skills_awakened": 0})
+	return data
 
 
 static func _v3_to_v4(data: Dictionary) -> Dictionary:

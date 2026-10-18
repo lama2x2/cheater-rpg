@@ -46,9 +46,7 @@ func _ready() -> void:
 	var prompt: CanvasLayer = InteractPromptScript.new()
 	prompt.hero = player
 	add_child(prompt)
-	var inventory_panel: CanvasLayer = InventoryPanelScript.new()
-	inventory_panel.hero = player
-	add_child(inventory_panel)
+	add_child(InventoryPanelScript.new())
 
 	var world_items: Node3D = WorldItemsScript.new()
 	add_child(world_items)
@@ -107,8 +105,9 @@ func _handle_debug_args() -> void:
 
 
 func _debug_kit() -> void:
-	for entry: Array in [["sporan", 47], ["pearl_black", 1], ["zhivchik", 2], ["vodka", 2], ["brick", 4], ["canned_food", 3]]:
+	for entry: Array in [["sporan", 47], ["pearl_black", 1], ["pea_yellow", 2], ["vinegar", 1], ["vodka", 2], ["brick", 4], ["canned_food", 3]]:
 		PlayerState.pick_up(entry[0], entry[1])
+	PlayerState.consume("pea_yellow")
 	var open := InputEventAction.new()
 	open.action = "inventory"
 	open.pressed = true

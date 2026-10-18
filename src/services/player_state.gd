@@ -8,6 +8,12 @@ var stats: StatBlock
 var vitals: Vitals
 var inventory: Inventory
 var run := RunStats.new()
+var trophies: TrophyRules
+var buffs := Buffs.new()
+## Свободные очки характеристик (золотая звезда). Распределение — в окне героя (позже).
+var free_points: int = 0
+## Сколько раз Система дала умение (жемчуг). Сами умения — задача 13.
+var skills_awakened: int = 0
 var lives: int = 0
 var deaths: int = 0
 ## Что осталось на трупе последней смерти: {"backpack": [...]}. Забирает DeathFlow.
@@ -36,6 +42,7 @@ func setup() -> void:
 	vitals.depleted.connect(_on_vital_depleted)
 	vitals.spore_state_changed.connect(_on_spore_state_changed)
 	inventory = Inventory.new(Content.item_db(), Content.inventory_config(), stats.get_level("strength"))
+	trophies = TrophyRules.new(Content.item_db())
 	start_minutes = GameClock.minutes
 
 
@@ -65,6 +72,91 @@ func die(cause: String) -> void:
 		SystemLog.post("death_final", {}, "death")
 	awaiting_respawn = true
 	EventBus.player_died.emit(cause, lives)
+
+
+func _process(_delta: float) -> void:
+	for buff in buffs.expire(GameClock.minutes):
+		SystemLog.post("buff_ended", {"stat": Content.stat_name(buff["stat"])})
+
+
+## Итоговое значение характеристики с учётом баффов.
+func effective(stat: String) -> float:
+	return stats.effective_value(stat) * buffs.multiplier(stat, GameClock.minutes)
+
+
+## Приём трофея или расходника. Результат:
+##   "ok" — принят; "needs_confirm" — интервал не соблюдён, нужно подтверждение (confirmed=true);
+##   "missing" — нет предмета или того, что нужно для приёма (уксус); "not_consumable".
+func consume(id: String, confirmed: bool = false) -> String:
+	if not trophies.can_consume(id):
+		return "not_consumable"
+	if inventory.count_of(id) < 1:
+		return "missing"
+	var missing := trophies.missing_requirements(id, inventory)
+	if not missing.is_empty():
+		var need: String = missing.keys()[0]
+		SystemLog.post("consume_missing", {"item": Content.item_name(id), "need": Content.item_name(need)}, "warning")
+		return "missing"
+	if trophies.is_violation(id, GameClock.minutes) and not confirmed:
+		return "needs_confirm"
+	inventory.remove(id, 1)
+	var requires: Dictionary = trophies.spec(id).get("requires", {})
+	for need: String in requires:
+		inventory.remove(need, int(requires[need]))
+	var result := trophies.resolve(id, GameClock.minutes, _rng, {
+		"skill_count": skills_awakened, "main_stats": stats.main_stats(),
+		"additional_stats": stats.additional_stats(), "vitals": Array(Vitals.ALL),
+	})
+	_apply_consume(result)
+	_after_inventory_change()
+	return "ok"
+
+
+## Крафт по рецепту из data/recipes.json. Невлезшее падает под ноги (через сигнал в сцену).
+func craft(recipe: Dictionary) -> bool:
+	var result := Crafting.craft(recipe, inventory)
+	if not result["ok"]:
+		return false
+	var outputs: Dictionary = recipe["outputs"]
+	for id: String in outputs:
+		SystemLog.post("crafted", {"item": Content.item_name(id), "count": int(outputs[id])})
+	var left: Dictionary = result["left"]
+	for id: String in left:
+		EventBus.items_dropped.emit(id, int(left[id]))
+	_after_inventory_change()
+	return true
+
+
+func _apply_consume(result: Dictionary) -> void:
+	var item_name := Content.item_name(result["id"])
+	SystemLog.post("consumed_" + String(trophies.spec(result["id"]).get("verb", "swallow")), {"item": item_name})
+	if result["violation"]:
+		SystemLog.post("cooldown_violated", {"item": item_name}, "warning")
+	for effect: Dictionary in result["effects"]:
+		match String(effect["type"]):
+			"stat_add":
+				stats.add_levels(effect["stat"], effect["value"])
+			"stat_buff":
+				buffs.add(effect["stat"], effect["mult"], GameClock.minutes + float(effect["hours"]) * 60.0, result["id"])
+				SystemLog.post("buff_started", {
+					"stat": Content.stat_name(effect["stat"]), "percent": roundi(float(effect["mult"]) * 100.0),
+					"hours": roundi(float(effect["hours"]))}, "progress")
+			"vital_max_add":
+				vitals.add_max_bonus(effect["vital"], effect["value"])
+				SystemLog.post("vital_max_up", {"vital": Content.ui("vital_" + String(effect["vital"])), "value": effect["value"]}, "progress")
+			"vital_restore":
+				vitals.restore(effect["vital"], effect["value"])
+			"free_points":
+				free_points += int(effect["value"])
+				SystemLog.post("free_points", {"value": effect["value"], "total": free_points}, "progress")
+			"skill_chance":
+				if effect["success"]:
+					skills_awakened += 1
+					run.add("skills_awakened")
+					SystemLog.post("skill_awakened", {}, "special")
+	for risk in result["risks"]:
+		run.add("risk_" + risk)
+		SystemLog.post("risk_" + risk, {}, "special")
 
 
 ## Подбор предмета: в ячейки, если можно, иначе в рюкзак. Возвращает, сколько не влезло.
@@ -113,7 +205,8 @@ func continue_after_final() -> void:
 func to_dict() -> Dictionary:
 	return {
 		"stats": stats.to_dict(), "vitals": vitals.to_dict(), "run": run.to_dict(),
-		"inventory": inventory.to_dict(),
+		"inventory": inventory.to_dict(), "trophies": trophies.to_dict(), "buffs": buffs.to_dict(),
+		"free_points": free_points, "skills_awakened": skills_awakened,
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
@@ -127,6 +220,10 @@ func load_dict(data: Dictionary) -> void:
 	run.load_dict(data["run"])
 	inventory.strength_level = stats.get_level("strength")
 	inventory.load_dict(data["inventory"])
+	trophies.load_dict(data["trophies"])
+	buffs.load_dict(data["buffs"])
+	free_points = int(data["free_points"])
+	skills_awakened = int(data["skills_awakened"])
 	_was_overloaded = inventory.is_overloaded()
 	inventory_changed.emit()
 	lives = int(data["lives"])

@@ -1,10 +1,13 @@
 extends CanvasLayer
-## Инвентарь списком (D-25): слева ячейки Системы, справа рюкзак. Tab / I — открыть и закрыть.
+## Инвентарь списком (D-25): слева ячейки Системы, справа рюкзак, внизу крафт. Tab / I — открыть
+## и закрыть. Трофеи принимаются отсюда; нарушение интервала — с подтверждением.
 ## Игра на паузу не встаёт (D-05). Спецификация: docs/spec/12_ui_ux.md, 12.5.
 
-var hero: Node3D
-
 var _panel: PanelContainer
+var _craft_box: VBoxContainer
+var _free_points: Label
+var _confirm: ConfirmationDialog
+var _confirm_item := ""
 var _primary_box: VBoxContainer
 var _backpack_box: VBoxContainer
 var _backpack_title: Label
@@ -51,7 +54,28 @@ func _ready() -> void:
 	right.add_child(_backpack_box)
 	columns.add_child(right)
 
+	_free_points = UiKit.label(14, Color(0.95, 0.78, 0.3))
+	root.add_child(_free_points)
+	var craft_title := UiKit.label(15, Color(0.7, 0.75, 0.9))
+	craft_title.text = Content.ui("inv_craft")
+	root.add_child(craft_title)
+	_craft_box = VBoxContainer.new()
+	root.add_child(_craft_box)
+
+	_confirm = ConfirmationDialog.new()
+	_confirm.title = Content.ui("confirm_title")
+	_confirm.ok_button_text = Content.ui("confirm_ok")
+	_confirm.cancel_button_text = Content.ui("confirm_cancel")
+	_confirm.confirmed.connect(func() -> void: PlayerState.consume(_confirm_item, true))
+	add_child(_confirm)
+
 	PlayerState.inventory_changed.connect(_refresh)
+
+
+func _process(_delta: float) -> void:
+	# Откаты тикают — раз в секунду перерисовываем открытую панель.
+	if visible and Engine.get_process_frames() % 60 == 0:
+		_refresh()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -66,7 +90,7 @@ func _refresh() -> void:
 	if not visible:
 		return
 	var inv := PlayerState.inventory
-	for box: VBoxContainer in [_primary_box, _backpack_box]:
+	for box: VBoxContainer in [_primary_box, _backpack_box, _craft_box]:
 		for child in box.get_children():
 			box.remove_child(child)
 			child.queue_free()
@@ -80,10 +104,10 @@ func _refresh() -> void:
 		var grams := Content.item_db().weight_g(slot["id"]) * int(slot["count"])
 		var text := Content.ui("inv_primary_slot", {
 			"n": i + 1, "item": Content.item_name(slot["id"]), "count": slot["count"], "grams": _num(grams), "cap": cap})
-		_primary_box.add_child(_row(text, [
-			[Content.ui("inv_to_backpack"), _to_backpack.bind(i)],
-			[Content.ui("inv_drop"), _drop_slot.bind(i)],
-		]))
+		var slot_buttons := _use_buttons(slot["id"])
+		slot_buttons.append([Content.ui("inv_to_backpack"), _to_backpack.bind(i)])
+		slot_buttons.append([Content.ui("inv_drop"), _drop_slot.bind(i)])
+		_primary_box.add_child(_row(text, slot_buttons))
 
 	_backpack_title.text = Content.ui("inv_backpack", {"kg": _num(inv.backpack_weight_kg()), "cap": _num(inv.backpack_capacity_kg())})
 	_overload.text = Content.ui("inv_overload", {"speed": _num(inv.speed_multiplier())}) if inv.is_overloaded() else ""
@@ -91,14 +115,54 @@ func _refresh() -> void:
 		_backpack_box.add_child(_row(Content.ui("inv_backpack_empty"), []))
 	for stack in inv.backpack:
 		var id: String = stack["id"]
-		var kg := Content.item_db().weight_g(id) * int(stack["count"]) / 1000.0
-		var buttons: Array = []
+		var grams := Content.item_db().weight_g(id) * int(stack["count"])
+		var buttons := _use_buttons(id)
 		if inv.primary_room(id) > 0:
 			buttons.append([Content.ui("inv_to_primary"), _to_primary.bind(id)])
 		buttons.append([Content.ui("inv_drop_one"), _drop_backpack.bind(id, 1)])
 		if int(stack["count"]) > 1:
 			buttons.append([Content.ui("inv_drop"), _drop_backpack.bind(id, int(stack["count"]))])
-		_backpack_box.add_child(_row(Content.ui("inv_backpack_row", {"item": Content.item_name(id), "count": stack["count"], "kg": _num(kg)}), buttons))
+		_backpack_box.add_child(_row(Content.ui("inv_backpack_row", {"item": Content.item_name(id), "count": stack["count"], "weight": _weight(grams)}), buttons))
+
+	_free_points.text = Content.ui("inv_free_points", {"n": PlayerState.free_points}) if PlayerState.free_points > 0 else ""
+	for recipe: Dictionary in Content.recipes():
+		var parts: PackedStringArray = []
+		var inputs: Dictionary = recipe["inputs"]
+		for id: String in inputs:
+			parts.append("%s ×%d" % [Content.item_name(id), inputs[id]])
+		var outputs: Dictionary = recipe["outputs"]
+		var out_id: String = outputs.keys()[0]
+		var text := Content.ui("inv_recipe", {"out": "%s ×%d" % [Content.item_name(out_id), outputs[out_id]], "inputs": " + ".join(parts)})
+		var craft_buttons: Array = []
+		if Crafting.times_possible(recipe, inv) > 0:
+			craft_buttons.append([Content.ui("inv_make"), PlayerState.craft.bind(recipe)])
+		_craft_box.add_child(_row(text, craft_buttons))
+
+
+## Кнопка приёма (если предмет можно принять) с подписью отката.
+func _use_buttons(id: String) -> Array:
+	var trophies := PlayerState.trophies
+	if not trophies.can_consume(id):
+		return []
+	var label := Content.ui("inv_use_" + String(trophies.spec(id).get("verb", "swallow")))
+	var left := trophies.cooldown_left(id, GameClock.minutes)
+	if left > 0.0:
+		label += " (" + Content.ui("inv_cooldown", {"time": _hours(left)}) + ")"
+	return [[label, _use.bind(id)]]
+
+
+func _use(id: String) -> void:
+	if PlayerState.consume(id) == "needs_confirm":
+		_confirm_item = id
+		_confirm.dialog_text = Content.ui("confirm_text", {
+			"item": Content.item_name(id), "time": _hours(PlayerState.trophies.cooldown_left(id, GameClock.minutes))})
+		_confirm.popup_centered()
+
+
+## Игровые минуты → «11:05».
+func _hours(minutes: float) -> String:
+	var total := ceili(minutes)
+	return "%d:%02d" % [total / 60, total % 60]
 
 
 func _row(text: String, buttons: Array) -> HBoxContainer:
@@ -145,11 +209,14 @@ func _drop_backpack(id: String, count: int) -> void:
 
 
 func _drop(id: String, count: int) -> void:
-	var world := get_tree().get_first_node_in_group("world_items")
-	if world and hero:
-		world.drop_near(id, count, hero.global_position)
+	EventBus.items_dropped.emit(id, count)
 	SystemLog.post("item_dropped", {"item": Content.item_name(id), "count": count})
 	PlayerState.notify_inventory_changed()
+
+
+## Вес строки рюкзака: до 100 г — в граммах, дальше — в килограммах.
+func _weight(grams: float) -> String:
+	return "%s г" % _num(grams) if grams < 100.0 else "%s кг" % _num(grams / 1000.0)
 
 
 ## Число без лишних нулей: 1.5, 0.35, 12.

@@ -9,6 +9,7 @@ const VITALS_PATH := "res://data/vitals.json"
 const DEATH_PATH := "res://data/death.json"
 const INVENTORY_PATH := "res://data/inventory.json"
 const ITEMS_DIR := "res://data/items"
+const RECIPES_PATH := "res://data/recipes.json"
 
 var _cache: Dictionary = {}
 
@@ -49,6 +50,10 @@ func item_db() -> ItemDB:
 			push_error("data/items: " + error)
 		_cache[ITEMS_DIR] = db
 	return _cache[ITEMS_DIR]
+
+
+func recipes() -> Array:
+	return _cached(RECIPES_PATH, Crafting.REQUIRED_KEYS)["recipes"]
 
 
 func item_name(id: String) -> String:

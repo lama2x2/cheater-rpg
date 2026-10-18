@@ -1,15 +1,84 @@
 {
-  "_doc": "Трофеи тварей (docs/spec/06_trophies_items.md, 6.2). weight_g — вес одной штуки. Эффекты приёма — блок consume (задача 5).",
+  "_doc": "Трофеи тварей (docs/spec/06_trophies_items.md, 6.2; схема — 14.4). weight_g — вес одной штуки. Значения [a, b] — случайно в диапазоне. Правила приёма — src/core/trophy_rules.gd.",
   "items": [
     { "id": "sporan", "category": "trophy", "weight_g": 1, "primary_inventory": true, "base_price": 1 },
-    { "id": "pea_yellow", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 11 },
-    { "id": "pea_white", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 40 },
-    { "id": "pea_gold", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 120 },
-    { "id": "grain", "category": "trophy", "weight_g": 1, "primary_inventory": true, "base_price": 10 },
-    { "id": "nut", "category": "trophy", "weight_g": 2, "primary_inventory": true, "base_price": 20 },
-    { "id": "star_black", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 25 },
-    { "id": "star_white", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 140 },
-    { "id": "star_gold", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 200 },
-    { "id": "pearl_black", "category": "trophy", "weight_g": 2, "primary_inventory": true, "base_price": 2500 }
+    {
+      "id": "pea_yellow", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 11,
+      "consume": {
+        "verb": "dissolve", "requires": { "vinegar": 1 },
+        "cooldown_group": "pea", "cooldown_h": 12, "violation_effect_mult": 0.5,
+        "effects": [ { "type": "stat_add", "stat": "mental", "value": [1, 3] } ],
+        "risks": [ { "type": "become_quasi", "chance": 0.0, "chance_if_cooldown_violated": 0.05 } ]
+      }
+    },
+    {
+      "id": "pea_white", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 40,
+      "consume": {
+        "verb": "dissolve", "requires": { "vinegar": 1 },
+        "cooldown_group": "pea", "cooldown_h": 12, "violation_effect_mult": 0.5,
+        "effects": [ { "type": "stat_add", "stat": "mental", "value": [4, 9] } ],
+        "risks": [ { "type": "become_quasi", "chance": 0.0, "chance_if_cooldown_violated": 0.08 } ]
+      }
+    },
+    {
+      "id": "pea_gold", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 120,
+      "consume": {
+        "verb": "dissolve", "requires": { "vinegar": 1 },
+        "cooldown_group": "pea", "cooldown_h": 12, "violation_effect_mult": 0.5,
+        "effects": [ { "type": "stat_add", "stat": "mental", "value": [10, 20] } ],
+        "risks": [ { "type": "become_quasi", "chance": 0.0, "chance_if_cooldown_violated": 0.12 } ]
+      }
+    },
+    {
+      "id": "grain", "category": "trophy", "weight_g": 1, "primary_inventory": true, "base_price": 10,
+      "consume": {
+        "verb": "swallow",
+        "effects": [ { "type": "stat_buff", "pool": "main", "mult": [0.10, 0.50], "hours": [1, 15] } ]
+      }
+    },
+    {
+      "id": "nut", "category": "trophy", "weight_g": 2, "primary_inventory": true, "base_price": 20,
+      "consume": {
+        "verb": "swallow",
+        "effects": [ { "type": "stat_buff", "pool": "additional", "mult": [0.10, 0.50], "hours": [1, 15] } ]
+      }
+    },
+    {
+      "id": "star_black", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 25,
+      "consume": {
+        "verb": "swallow",
+        "effects": [ { "type": "vital_max_add", "pool": "one", "value": [1, 5] } ]
+      }
+    },
+    {
+      "id": "star_white", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 140,
+      "consume": {
+        "verb": "swallow",
+        "effects": [ { "type": "vital_max_add", "pool": "two", "value": [3, 8] } ]
+      }
+    },
+    {
+      "id": "star_gold", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 200,
+      "consume": {
+        "verb": "swallow",
+        "effects": [
+          { "type": "vital_max_add", "pool": "all", "value": [2, 5] },
+          { "type": "free_points", "value": [1, 3] }
+        ]
+      }
+    },
+    {
+      "id": "pearl_black", "category": "trophy", "weight_g": 2, "primary_inventory": true, "base_price": 2500,
+      "consume": {
+        "verb": "swallow",
+        "cooldown_group": "pearl", "cooldown_h": 36, "violation_effect_mult": 1.0,
+        "effects": [
+          { "type": "stat_add", "stat": "mental", "value": [5, 15] },
+          { "type": "stat_add", "stat": "talent_facets", "value": [1, 5] },
+          { "type": "skill_chance", "by_skill_count": [0.20, 0.10, 0.05] }
+        ],
+        "risks": [ { "type": "become_quasi", "chance": 0.02, "chance_if_cooldown_violated": 0.35 } ]
+      }
+    }
   ]
 }

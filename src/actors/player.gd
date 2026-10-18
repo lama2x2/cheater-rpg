@@ -12,6 +12,7 @@ var _sprint_meters: float = 0.0
 func _ready() -> void:
 	_tuning = Content.player_tuning()
 	_build_body()
+	add_to_group("hero")
 	SaveService.register("hero", self)
 
 

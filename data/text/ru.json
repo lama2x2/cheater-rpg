@@ -96,6 +96,50 @@
     ],
     "item_dropped": [
       "Выброшено: {item} ×{count}."
+    ],
+    "consumed_dissolve": [
+      "{item} растворена в уксусе и выпита. Вкус — как и ожидалось."
+    ],
+    "consumed_swallow": [
+      "{item}: проглочено. Система фиксирует изменения."
+    ],
+    "consumed_drink": [
+      "{item}: выпито."
+    ],
+    "consumed_eat": [
+      "{item}: съедено. Бодрость благодарит."
+    ],
+    "consumed_apply": [
+      "{item}: наложено."
+    ],
+    "consume_missing": [
+      "{item}: для приёма нужно ещё «{need}». Система не волшебник. Почти."
+    ],
+    "cooldown_violated": [
+      "Интервал приёма нарушен ({item}). Эффект снижен, риск повышен. Вас предупреждали."
+    ],
+    "buff_started": [
+      "{stat} +{percent}% на {hours} ч."
+    ],
+    "buff_ended": [
+      "Действие усиления закончилось: {stat}."
+    ],
+    "vital_max_up": [
+      "{vital}: максимум +{value}."
+    ],
+    "free_points": [
+      "Свободные очки характеристик: +{value} (всего {total}). Распределение — позже."
+    ],
+    "skill_awakened": [
+      "Внимание: пробуждено умение. Система подберёт ему применение. Возможно.",
+      "Получено умение. Подробности — после регистрации в Системе."
+    ],
+    "risk_become_quasi": [
+      "Тревога: начат переход в квазы. Иммунитет новичка сопротивляется. Пока.",
+      "Системе не нравится то, что происходит с вашим организмом. Квазы — это не комплимент."
+    ],
+    "crafted": [
+      "Изготовлено: {item} ×{count}."
     ]
   },
   "death_causes": {
@@ -141,13 +185,31 @@
     "inv_primary_slot": "{n}. {item} ×{count}  ({grams} / {cap} г)",
     "inv_primary_empty": "{n}. — пусто —  (0 / {cap} г)",
     "inv_backpack": "Рюкзак — остаётся на трупе  {kg} / {cap} кг",
-    "inv_backpack_row": "{item} ×{count}  ({kg} кг)",
+    "inv_backpack_row": "{item} ×{count}  ({weight})",
     "inv_backpack_empty": "— пусто —",
     "inv_overload": "ПЕРЕГРУЗ: скорость ×{speed}",
     "inv_to_primary": "→ в ячейку",
     "inv_to_backpack": "→ в рюкзак",
     "inv_drop": "выбросить",
-    "inv_drop_one": "выбросить 1"
+    "inv_drop_one": "выбросить 1",
+    "vital_health": "Здоровье",
+    "vital_stamina": "Бодрость",
+    "vital_spore_balance": "Споровый баланс",
+    "vital_mana": "Мана",
+    "inv_use_dissolve": "растворить",
+    "inv_use_swallow": "принять",
+    "inv_use_drink": "выпить",
+    "inv_use_eat": "съесть",
+    "inv_use_apply": "наложить",
+    "inv_cooldown": "откат {time}",
+    "inv_craft": "Крафт",
+    "inv_recipe": "{out} ← {inputs}",
+    "inv_make": "сделать",
+    "confirm_title": "Интервал не соблюдён",
+    "confirm_text": "Интервал приёма «{item}» не соблюдён (осталось {time}).\nЭффект будет слабее, риск — высокий. Принять?",
+    "confirm_ok": "Принять",
+    "confirm_cancel": "Не сейчас",
+    "inv_free_points": "Свободные очки: {n}"
   },
   "item_names": {
     "sporan": "Споран",

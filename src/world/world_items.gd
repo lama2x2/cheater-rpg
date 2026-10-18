@@ -8,6 +8,13 @@ const ItemPickupScript := preload("res://src/world/item_pickup.gd")
 func _ready() -> void:
 	add_to_group("world_items")
 	SaveService.register("world_items", self)
+	EventBus.items_dropped.connect(_on_items_dropped)
+
+
+func _on_items_dropped(id: String, count: int) -> void:
+	var hero := get_tree().get_first_node_in_group("hero") as Node3D
+	if hero:
+		drop_near(id, count, hero.global_position)
 
 
 func _exit_tree() -> void:

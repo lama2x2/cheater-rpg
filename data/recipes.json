@@ -1,0 +1,6 @@
+{
+  "_doc": "Крафт прямо из инвентаря (docs/spec/12_ui_ux.md, 12.5). inputs списываются: сначала из рюкзака, потом из ячеек.",
+  "recipes": [
+    { "id": "zhivchik", "inputs": { "sporan": 3, "vodka": 1 }, "outputs": { "zhivchik": 3 } }
+  ]
+}

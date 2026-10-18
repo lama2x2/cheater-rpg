@@ -19,6 +19,8 @@ const REQUIRED_KEYS: PackedStringArray = [HEALTH, STAMINA, SPORE, MANA, "respawn
 var _config: Dictionary
 var _value: Dictionary = {}
 var _max: Dictionary = {}
+## Постоянные прибавки к максимуму (звёзды): {"health": 5, ...}.
+var _bonus_max: Dictionary = {}
 var _endurance := 1
 var _mental := 1
 var _stamina_idle := 0.0
@@ -46,8 +48,21 @@ func set_stat_levels(endurance_level: int, mental_level: int) -> void:
 	_max[STAMINA] = float(s["max_base"]) + float(s["max_per_endurance_level"]) * (_endurance - 1)
 	_max[SPORE] = float(_config[SPORE]["max"])
 	_max[MANA] = float(m["max_base"]) + float(m["max_per_mental_level"]) * (_mental - 1)
+	for vital: String in _bonus_max:
+		_max[vital] += float(_bonus_max[vital])
 	for vital in _value:
 		_value[vital] = minf(_value[vital], _max[vital])
+
+
+## Постоянно увеличивает максимум шкалы; текущее значение растёт на столько же.
+func add_max_bonus(vital: String, amount: float) -> void:
+	_bonus_max[vital] = float(_bonus_max.get(vital, 0.0)) + amount
+	set_stat_levels(_endurance, _mental)
+	_value[vital] = minf(_max[vital], _value[vital] + amount)
+
+
+func max_bonus(vital: String) -> float:
+	return float(_bonus_max.get(vital, 0.0))
 
 
 func value(vital: String) -> float:
@@ -174,10 +189,17 @@ func restore_after_death() -> void:
 
 
 func to_dict() -> Dictionary:
-	return _value.duplicate()
+	var data := _value.duplicate()
+	data["bonus_max"] = _bonus_max.duplicate()
+	return data
 
 
 func load_dict(data: Dictionary) -> void:
+	_bonus_max.clear()
+	var bonus: Dictionary = data.get("bonus_max", {})
+	for vital: String in bonus:
+		_bonus_max[vital] = float(bonus[vital])
+	set_stat_levels(_endurance, _mental)
 	for vital in ALL:
 		_value[vital] = clampf(float(data.get(vital, _value[vital])), 0.0, _max[vital])
 	_winded = false
