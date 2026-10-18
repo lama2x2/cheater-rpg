@@ -26,7 +26,7 @@ func stats_config() -> Dictionary:
 
 
 func rules() -> Dictionary:
-	return _cached(RULES_PATH, ["lives_start", "deaths_per_region_shift", "real_seconds_per_game_day", "start_hour"])
+	return _cached(RULES_PATH, ["lives_start", "deaths_per_region_shift", "real_seconds_per_game_day", "start_hour", "ng_plus", "save_slots"])
 
 
 func player_tuning() -> Dictionary:

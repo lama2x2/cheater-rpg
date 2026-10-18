@@ -77,7 +77,10 @@ func finish_respawn() -> void:
 	_set_hero_active(true)
 
 
-func _on_continue() -> void:
+func _on_continue(mode: String) -> void:
+	if mode == "ng_plus":
+		SaveService.start_new_game(PlayerState.ng_plus_carry())
+		return
 	PlayerState.continue_after_final()
 	finish_respawn()
 

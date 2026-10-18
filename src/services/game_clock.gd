@@ -10,6 +10,11 @@ var _minutes_per_second: float = 0.0
 
 
 func _ready() -> void:
+	reset()
+
+
+## Начало новой игры: первый день, стартовый час.
+func reset() -> void:
 	var rules := Content.rules()
 	minutes = float(rules["start_hour"]) * 60.0
 	_minutes_per_second = MINUTES_PER_DAY / float(rules["real_seconds_per_game_day"])

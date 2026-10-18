@@ -29,6 +29,8 @@ var awaiting_respawn: bool = false
 var respawn_position := Vector3(0, 0.1, 0)
 ## Игровое время начала игры — для «самой долгой жизни» в итогах.
 var start_minutes: float = 0.0
+## Номер цикла «Новой игры+» (0 — первая игра).
+var ng_plus: int = 0
 var _rng := RandomNumberGenerator.new()
 var _was_overloaded := false
 ## Кто последним ранил героя — причина смерти, если здоровье кончится.
@@ -41,8 +43,22 @@ func _ready() -> void:
 	setup()
 
 
-## Новый герой из данных Content. Отдельно от _ready — чтобы тесты собирали состояние так же.
+## Новый герой из данных Content: всё состояние с нуля. Отдельно от _ready — чтобы тесты
+## собирали состояние так же и чтобы «Новая игра» сбрасывала героя (SaveService.start_new_game).
 func setup() -> void:
+	run = RunStats.new()
+	buffs = Buffs.new()
+	free_points = 0
+	skills_awakened = 0
+	deaths = 0
+	dropped_on_death = {}
+	deaths_since_region_shift = 0
+	awaiting_respawn = false
+	respawn_position = Vector3(0, 0.1, 0)
+	ng_plus = 0
+	_was_overloaded = false
+	_last_damage_source = "health"
+	_farm_warned = {}
 	stats = StatBlock.new(Content.stats_config())
 	lives = int(Content.rules()["lives_start"])
 	stats.stat_level_changed.connect(_on_stat_level_changed)
@@ -275,10 +291,27 @@ func respawn() -> void:
 	EventBus.player_respawned.emit()
 
 
-## Заглушка D-34: после итогов тот же герой получает стартовые жизни. Как продолжать — решаем в M1.
+## «Дальше» после итогов (D-34): тот же герой в том же мире, жизни снова стартовые.
 func continue_after_final() -> void:
 	lives = int(Content.rules()["lives_start"])
-	SystemLog.post("continue_stub", {"lives": lives}, "special")
+	run.add("continues")
+	SystemLog.post("continue_after_final", {"lives": lives}, "special")
+
+
+## Что «Новая игра+» переносит в новый мир (D-34, D-52): ячейки Системы и номер цикла.
+func ng_plus_carry() -> Dictionary:
+	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"]}
+
+
+## Применить перенос к только что созданному герою: ячейки, коэффициенты × (1 + бонус × цикл).
+func apply_carry(carry: Dictionary) -> void:
+	ng_plus = int(carry.get("ng_plus", 0))
+	if carry.has("primary"):
+		inventory.load_dict({"primary": carry["primary"], "backpack": []})
+	var bonus := float(Content.rules()["ng_plus"]["coefficient_bonus"]) * ng_plus
+	for stat in stats.all_stats():
+		stats.set_coefficient(stat, stats.get_coefficient(stat) * (1.0 + bonus))
+	inventory_changed.emit()
 
 
 func to_dict() -> Dictionary:
@@ -288,7 +321,7 @@ func to_dict() -> Dictionary:
 		"free_points": free_points, "skills_awakened": skills_awakened,
 		"weapons": weapons.to_dict(), "wounds": wounds.to_dict(), "progress": progress.to_dict(),
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
-		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes,
+		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
 	}
 
@@ -314,6 +347,7 @@ func load_dict(data: Dictionary) -> void:
 	deaths_since_region_shift = int(data["deaths_since_region_shift"])
 	awaiting_respawn = bool(data["awaiting_respawn"])
 	start_minutes = float(data["start_minutes"])
+	ng_plus = int(data["ng_plus"])
 	var at: Array = data["respawn_position"]
 	respawn_position = Vector3(float(at[0]), float(at[1]), float(at[2]))
 

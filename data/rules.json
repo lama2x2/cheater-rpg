@@ -1,6 +1,11 @@
 {
-  "lives_start": 9,
+  "lives_start": 100,
   "deaths_per_region_shift": 5,
   "real_seconds_per_game_day": 2880,
-  "start_hour": 8
+  "start_hour": 8,
+  "ng_plus": {
+    "_doc": "Новая игра+ (D-34): переносятся ячейки Системы; коэффициенты всех характеристик × (1 + coefficient_bonus) за каждый цикл.",
+    "coefficient_bonus": 0.05
+  },
+  "save_slots": 5
 }

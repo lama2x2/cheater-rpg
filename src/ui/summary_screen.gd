@@ -1,9 +1,11 @@
 extends CanvasLayer
-## Экран итогов при 0 жизней (D-02): «фанфары», эпитафия, статистика героя, лучшие строки лога,
-## кнопка «Продолжить» (как именно продолжать — D-34, пока заглушка).
+## Экран итогов при 0 жизней (D-02): «фанфары», эпитафия, статистика героя, лучшие строки лога.
+## Дальше (D-34): «Дальше» — тот же герой и мир с новыми жизнями, «Новая игра+» — новый мир
+## с переносом ячеек Системы и бонусом к коэффициентам.
 ## Спецификация: docs/spec/04_death_lives.md, 4.1.
 
-signal continue_pressed
+## mode: "continue" или "ng_plus".
+signal continue_pressed(mode: String)
 
 const GOLD := Color(0.95, 0.78, 0.3)
 const LINE_DELAY := 0.25
@@ -97,17 +99,28 @@ func open() -> void:
 		create_tween().tween_property(label, "modulate:a", 1.0, 0.4).set_delay(delay)
 		delay += LINE_DELAY
 
-	var button := Button.new()
-	button.text = Content.ui("summary_continue")
-	button.add_theme_font_override("font", UiKit.font())
-	button.add_theme_font_size_override("font_size", 20)
-	button.custom_minimum_size = Vector2(260, 44)
-	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	button.modulate.a = 0.0
-	button.pressed.connect(_on_continue)
-	_box.add_child(button)
-	create_tween().tween_property(button, "modulate:a", 1.0, 0.4).set_delay(delay)
-	button.grab_focus.call_deferred()
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 16)
+	buttons.modulate.a = 0.0
+	_box.add_child(buttons)
+	var first: Button = null
+	for spec: Array in [["summary_continue", "continue"], ["summary_ng_plus", "ng_plus"]]:
+		var button := Button.new()
+		button.text = Content.ui(spec[0], {"cycle": PlayerState.ng_plus + 1})
+		button.add_theme_font_override("font", UiKit.font())
+		button.add_theme_font_size_override("font_size", 20)
+		button.custom_minimum_size = Vector2(260, 44)
+		button.pressed.connect(_on_choice.bind(spec[1]))
+		buttons.add_child(button)
+		if first == null:
+			first = button
+	var hint := UiKit.label(14, Color(0.6, 0.6, 0.6))
+	hint.text = Content.ui("summary_ng_plus_hint")
+	hint.modulate.a = 0.0
+	_box.add_child(hint)
+	create_tween().tween_property(buttons, "modulate:a", 1.0, 0.4).set_delay(delay)
+	create_tween().tween_property(hint, "modulate:a", 1.0, 0.4).set_delay(delay)
+	first.grab_focus.call_deferred()
 
 
 func close() -> void:
@@ -134,6 +147,6 @@ func _stat_rows() -> PackedStringArray:
 	return rows
 
 
-func _on_continue() -> void:
+func _on_choice(mode: String) -> void:
 	close()
-	continue_pressed.emit()
+	continue_pressed.emit(mode)

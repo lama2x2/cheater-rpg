@@ -14,6 +14,7 @@ const TestAreaScript := preload("res://src/world/test_area.gd")
 const InfectedPopulationScript := preload("res://src/world/infected_population.gd")
 const NoiseSystemScript := preload("res://src/world/noise_system.gd")
 const ProgressWatcherScript := preload("res://src/world/progress_watcher.gd")
+const GameMenuScript := preload("res://src/ui/game_menu.gd")
 
 var _death_flow: Node
 
@@ -43,6 +44,7 @@ func _ready() -> void:
 	prompt.hero = player
 	add_child(prompt)
 	add_child(InventoryPanelScript.new())
+	add_child(GameMenuScript.new())
 
 	var world_items: Node3D = WorldItemsScript.new()
 	add_child(world_items)
@@ -58,7 +60,7 @@ func _ready() -> void:
 	_death_flow = DeathFlowScript.new()
 	_death_flow.hero = player
 	add_child(_death_flow)
-	SystemLog.post("welcome")
+	SystemLog.post("welcome" if PlayerState.ng_plus == 0 else "welcome_ng_plus", {"cycle": PlayerState.ng_plus})
 	_handle_debug_args()
 
 
@@ -81,6 +83,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --no-enemies  без заражённых
 ##   --at=X,Z      поставить героя в точку (для снимков)
 ##   --corpse=ID   труп твари ID в метре от героя и нож в рюкзак (проверка вскрытия мешка)
+##   --menu        сохранить в ячейку 1 и открыть меню загрузки (проверка ячеек)
 func _handle_debug_args() -> void:
 	var shot_path := ""
 	var die_times := 0
@@ -98,6 +101,13 @@ func _handle_debug_args() -> void:
 		elif arg.begins_with("--at="):
 			var xz := arg.trim_prefix("--at=").split(",")
 			get_tree().get_first_node_in_group("hero").position = Vector3(float(xz[0]), 0.1, float(xz[1]))
+		elif arg == "--menu":
+			SaveService.save_game("slot_1")
+			var open_menu := InputEventAction.new()
+			open_menu.action = "menu"
+			open_menu.pressed = true
+			Input.parse_input_event(open_menu)
+			_open_load_page.call_deferred()
 		elif arg.begins_with("--corpse="):
 			PlayerState.pick_up("knife", 1)
 			var enemy := arg.trim_prefix("--corpse=")
@@ -113,6 +123,14 @@ func _handle_debug_args() -> void:
 	await get_tree().create_timer(shot_at).timeout
 	get_viewport().get_texture().get_image().save_png(shot_path)
 	get_tree().quit()
+
+
+func _open_load_page() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	for child in get_children():
+		if child.has_method("_load_page"):
+			child._load_page()
 
 
 func _debug_kit() -> void:

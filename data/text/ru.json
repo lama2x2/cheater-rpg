@@ -71,9 +71,6 @@
       "Жизнь {life} началась. Одежда в комплект не входит.",
       "Объект восстановлен. Жизнь {life}. Постарайтесь протянуть подольше."
     ],
-    "continue_stub": [
-      "Система выдала ещё {lives} жизней. Временно. Это заглушка, а не доброта."
-    ],
     "item_picked": [
       "Подобрано: {item} ×{count}."
     ],
@@ -192,6 +189,13 @@
     ],
     "stash_empty": [
       "Тайник пуст. Кто-то был здесь раньше."
+    ],
+    "continue_after_final": [
+      "Система выдала ещё {lives} жизней. Не благодарите — это не доброта, а статистика.",
+      "Продолжение оформлено. Жизней: {lives}. Попробуйте в этот раз не так бездарно."
+    ],
+    "welcome_ng_plus": [
+      "Объект зарегистрирован повторно. Цикл {cycle}. Система вас помнит. Это не комплимент."
     ]
   },
   "death_causes": {
@@ -229,7 +233,7 @@
     "summary_deaths": "Смертей: {deaths}. Чаще всего — {cause} ({times})",
     "summary_longest_life": "Самая долгая жизнь: {hours} ч {minutes} мин",
     "summary_highlights": "Лучшие моменты",
-    "summary_continue": "Продолжить",
+    "summary_continue": "Дальше",
     "interact_pickup": "[E] Подобрать: {item} ×{count}",
     "interact_corpse": "[E] Забрать вещи (труп жизни {life})",
     "interact_corpse_empty": "Труп жизни {life} — пусто",
@@ -278,7 +282,27 @@
     "interact_sack_no_blade": "Споровый мешок — нужен нож или топор",
     "sack_opening": "Вскрытие мешка",
     "interact_stash": "[E] Забрать из тайника",
-    "interact_stash_empty": "Тайник — пусто"
+    "interact_stash_empty": "Тайник — пусто",
+    "summary_ng_plus": "Новая игра+ (цикл {cycle})",
+    "summary_ng_plus_hint": "«Дальше» — тот же герой и мир, жизни снова полные. «Новая игра+» — новый мир; с собой — ячейки Системы и +5% к коэффициентам.",
+    "menu_title": "Пауза",
+    "menu_resume": "Продолжить",
+    "menu_save": "Сохранить",
+    "menu_load": "Загрузить",
+    "menu_new": "Новая игра",
+    "menu_quit": "Выйти из игры",
+    "menu_back": "Назад",
+    "menu_slot_empty": "{n}. — пусто —",
+    "menu_slot": "{n}. День {day} · жизней {lives} · ур. {level}{ng} · {date}",
+    "menu_slot_auto": "Авто: день {day} · жизней {lives} · ур. {level}{ng} · {date}",
+    "menu_slot_auto_empty": "Авто: — пусто —",
+    "menu_slot_broken": "{n}. сохранение повреждено",
+    "menu_ng": " · NG+{n}",
+    "menu_confirm_overwrite": "Перезаписать ячейку {n}?",
+    "menu_confirm_new": "Начать новую игру? Несохранённый прогресс пропадёт.",
+    "slot_label": "ячейка {n}",
+    "slot_label_auto": "авто",
+    "slot_label_debug": "отладка"
   },
   "item_names": {
     "sporan": "Споран",

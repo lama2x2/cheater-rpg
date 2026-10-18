@@ -14,6 +14,7 @@ const ACTIONS := {
 	"reload": [KEY_R],
 	"weapon_next": [KEY_Q],
 	"inventory": [KEY_TAB, KEY_I],
+	"menu": [KEY_ESCAPE],
 	"debug_die": [KEY_K],
 	"debug_save": [KEY_F5],
 	"debug_load": [KEY_F9],

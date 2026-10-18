@@ -15,13 +15,21 @@ extends RefCounted
 ##   5 — player: trophies, buffs, free_points, skills_awakened.
 ##   6 — player: weapons (в руках, магазины), wounds (кровотечение).
 ##   7 — player.progress (счётчики анти-фарма за игровой час); area.stashes.
+##   8 — player.ng_plus; meta (сводка для списка ячеек: день, жизни, уровень).
 
-const VERSION := 7
+const VERSION := 8
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8}
+
+
+static func _v7_to_v8(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		data["sections"]["player"].merge({"ng_plus": 0})
+	data.merge({"meta": {}})
+	return data
 
 
 static func _v6_to_v7(data: Dictionary) -> Dictionary:
@@ -71,8 +79,9 @@ static func _v1_to_v2(data: Dictionary) -> Dictionary:
 	return data
 
 
-static func wrap(sections: Dictionary, saved_at: float) -> Dictionary:
-	return {"save_version": VERSION, "saved_at": saved_at, "sections": sections}
+## meta — короткая сводка для списка ячеек (день, жизни, уровень), чтобы не грузить всё.
+static func wrap(sections: Dictionary, saved_at: float, meta: Dictionary = {}) -> Dictionary:
+	return {"save_version": VERSION, "saved_at": saved_at, "meta": meta, "sections": sections}
 
 
 ## Доводит данные до текущей версии. Возвращает {} и пишет ошибку, если это невозможно.

@@ -57,7 +57,7 @@ func _spawn_initial() -> void:
 		return
 	var config: Dictionary = Content.test_area()
 	var rng := RandomNumberGenerator.new()
-	rng.seed = int(config["infected_seed"])
+	rng.seed = int(config["infected_seed"]) + PlayerState.ng_plus * 7919
 	for group: Dictionary in config["infected"]:
 		var ring: Array = group["ring"]
 		for i in int(group["count"]):

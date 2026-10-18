@@ -38,6 +38,31 @@ func test_migration_refuses_gaps_and_future() -> void:
 	assert_eq(SaveFormatScript.migrate({"sections": {}}), {}, "без save_version")
 
 
+func test_meta_in_envelope_and_v7_migration() -> void:
+	var data := SaveFormatScript.wrap({}, 5.0, {"day": 3, "lives": 97})
+	assert_eq(data["meta"]["day"], 3, "сводка для списка ячеек")
+	var v7 := {"save_version": 7, "saved_at": 1.0, "sections": {"player": {"lives": 50}}}
+	var migrated := SaveFormatScript.migrate(v7)
+	assert_eq(migrated["meta"], {}, "старый сейв — пустая сводка")
+	assert_eq(int(migrated["sections"]["player"]["ng_plus"]), 0, "цикл NG+ = 0")
+
+
+func test_ng_plus_carries_primary_and_coefficients() -> void:
+	var player := _player()
+	player.inventory.add("sporan", 30)
+	player.inventory.add("vodka", 1)
+	var carry: Dictionary = player.ng_plus_carry()
+	var fresh := _player()
+	fresh.apply_carry(carry)
+	assert_eq(fresh.ng_plus, 1, "первый цикл")
+	assert_eq(fresh.inventory.count_of("sporan"), 30, "ячейки Системы перенесены")
+	assert_eq(fresh.inventory.count_of("vodka"), 0, "рюкзак — нет")
+	assert_almost(fresh.stats.get_coefficient("strength"), 1.05, "коэффициенты +5%")
+	assert_eq(fresh.lives, 100, "жизни полные")
+	player.free()
+	fresh.free()
+
+
 func test_v1_save_gets_default_vitals() -> void:
 	var v1 := {"save_version": 1, "sections": {"player": {"stats": {}, "lives": 9, "deaths": 0}}}
 	var result := SaveFormatScript.migrate(v1)

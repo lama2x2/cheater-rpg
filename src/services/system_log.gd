@@ -24,6 +24,12 @@ func post(key: String, params: Dictionary = {}, kind: String = "info") -> String
 	return text
 
 
+func clear() -> void:
+	history.clear()
+	highlights.clear()
+	history_replaced.emit()
+
+
 func to_dict() -> Dictionary:
 	return {"history": history.slice(maxi(0, history.size() - SAVED_HISTORY)), "highlights": highlights.duplicate()}
 
