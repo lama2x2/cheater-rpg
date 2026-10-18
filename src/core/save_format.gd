@@ -18,13 +18,21 @@ extends RefCounted
 ##   8 — player.ng_plus; meta (сводка для списка ячеек: день, жизни, уровень).
 ##   9 — кластеры: секция world (таймеры, популяции, снимки сцен кластеров). Секции площадки
 ##       (area, world_items, infected, corpses) и позиция героя выбрасываются — мир создаётся заново.
+##   10 — стаб: секция stab (торговец, доска контрактов); player.skill_gifts_opened, pending_skill_choices.
 
-const VERSION := 9
+const VERSION := 10
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9, 9: _v9_to_v10}
+
+
+static func _v9_to_v10(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		data["sections"]["player"].merge({"skill_gifts_opened": [], "pending_skill_choices": 0})
+	data["sections"].merge({"stab": {}})
+	return data
 
 
 static func _v8_to_v9(data: Dictionary) -> Dictionary:

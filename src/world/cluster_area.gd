@@ -34,8 +34,9 @@ func _ready() -> void:
 	template = WorldSim.template()
 	var size := float(template["size"])
 	var clear: Array = []
-	if template.has("respawn"):
-		clear.append({"at": _v2(template["respawn"]), "r": float(template["clear_radius"])})
+	for key in ["respawn", "plaza"]:
+		if template.has(key):
+			clear.append({"at": _v2(template[key]), "r": float(template["clear_radius"])})
 	for neighbor in WorldSim.region.neighbors(cluster_id):
 		clear.append({"at": WorldSim.region.exit_point(cluster_id, neighbor, size, EXIT_INSET), "r": EXIT_CLEAR_RADIUS})
 	layout = ClusterLayout.generate(template, clear)

@@ -10,6 +10,6 @@
     { "id": "c_town", "code": "750-209-03", "name": "Городок", "type": "normal", "template": "town", "map_pos": [2, 0], "neighbors": ["c_village", "c_industrial", "c_stab"] },
     { "id": "c_industrial", "code": "750-210-77", "name": "Промзона", "type": "normal", "template": "industrial", "map_pos": [2, 1], "neighbors": ["c_town", "c_black"] },
     { "id": "c_black", "code": "749-210-40", "name": "Чернота", "type": "black", "template": "black", "map_pos": [1, 1], "neighbors": ["c_start", "c_industrial"] },
-    { "id": "c_stab", "code": "750-208-55", "name": "Три Сосны", "type": "stab", "template": "stab", "map_pos": [1.5, -1], "neighbors": ["c_village", "c_town"] }
+    { "id": "c_stab", "code": "750-208-55", "name": "Перекрёсток", "type": "stab", "template": "stab", "map_pos": [1.5, -1], "neighbors": ["c_village", "c_town"] }
   ]
 }

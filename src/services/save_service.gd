@@ -26,6 +26,7 @@ func _ready() -> void:
 	register("player", PlayerState)
 	register("log", SystemLog)
 	register("world", WorldSim)
+	register("stab", StabState)
 	_service_sections = PackedStringArray(_sections.keys())
 	# Отложенно: сначала сцена кладёт труп с рюкзаком, потом пишем сейв.
 	EventBus.player_died.connect(func(_cause: String, _lives: int) -> void: save_game.call_deferred(AUTO_SLOT))
@@ -83,6 +84,7 @@ func start_new_game(carry: Dictionary = {}) -> void:
 	if not carry.is_empty():
 		PlayerState.apply_carry(carry)
 	WorldSim.new_world()
+	StabState.setup()
 	_pending = {}
 	get_tree().reload_current_scene()
 

@@ -18,6 +18,9 @@ var progress: ProgressRules
 var free_points: int = 0
 ## Сколько раз Система дала умение (жемчуг). Сами умения — задача 13.
 var skills_awakened: int = 0
+## Дары уровней, «вскрытые» у знахарки (10, 30, 60), и сколько умений ждут выбора (задача 13).
+var skill_gifts_opened: Array[int] = []
+var pending_skill_choices: int = 0
 var lives: int = 0
 var deaths: int = 0
 ## Что осталось на трупе последней смерти: {"backpack": [...]}. Забирает DeathFlow.
@@ -50,6 +53,8 @@ func setup() -> void:
 	buffs = Buffs.new()
 	free_points = 0
 	skills_awakened = 0
+	skill_gifts_opened = []
+	pending_skill_choices = 0
 	deaths = 0
 	dropped_on_death = {}
 	deaths_since_region_shift = 0
@@ -319,6 +324,7 @@ func to_dict() -> Dictionary:
 		"stats": stats.to_dict(), "vitals": vitals.to_dict(), "run": run.to_dict(),
 		"inventory": inventory.to_dict(), "trophies": trophies.to_dict(), "buffs": buffs.to_dict(),
 		"free_points": free_points, "skills_awakened": skills_awakened,
+		"skill_gifts_opened": skill_gifts_opened.duplicate(), "pending_skill_choices": pending_skill_choices,
 		"weapons": weapons.to_dict(), "wounds": wounds.to_dict(), "progress": progress.to_dict(),
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus,
@@ -337,6 +343,10 @@ func load_dict(data: Dictionary) -> void:
 	buffs.load_dict(data["buffs"])
 	free_points = int(data["free_points"])
 	skills_awakened = int(data["skills_awakened"])
+	skill_gifts_opened.clear()
+	for level in data["skill_gifts_opened"]:
+		skill_gifts_opened.append(int(level))
+	pending_skill_choices = int(data["pending_skill_choices"])
 	weapons.load_dict(data["weapons"])
 	wounds.load_dict(data["wounds"])
 	progress.load_dict(data["progress"])

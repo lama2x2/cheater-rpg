@@ -20,6 +20,7 @@ const WEAPONS_PATH := "res://data/weapons.json"
 const COMBAT_PATH := "res://data/combat.json"
 const LOOT_DIR := "res://data/loot"
 const PROGRESS_PATH := "res://data/progress.json"
+const STAB_PATH := "res://data/stab.json"
 
 var _cache: Dictionary = {}
 
@@ -93,6 +94,10 @@ func loot() -> LootTable:
 				files.append(JsonData.load_dict(LOOT_DIR.path_join(file), LootTable.REQUIRED_KEYS))
 		_cache[LOOT_DIR] = LootTable.new(files)
 	return _cache[LOOT_DIR]
+
+
+func stab_config() -> Dictionary:
+	return _cached(STAB_PATH, ["cluster", "npcs", "trade", "healer", "bar", "board"])
 
 
 func progress_config() -> Dictionary:

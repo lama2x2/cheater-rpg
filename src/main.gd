@@ -107,6 +107,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --reload=S    через S секунд перезагрузить текущий кластер (проверка сброса при герое)
 ##   --hours=N     прокрутить мир на N игровых часов (проверка симуляции)
 ##   --world-seed=N  сид мира (читает WorldSim), для одинаковых снимков
+##   --talk=ID     в стабе: встать у непися ID (trader, healer, barman, board) и открыть его окно
 func _handle_debug_args() -> void:
 	if _debug_args_done:
 		return
@@ -150,6 +151,8 @@ func _handle_debug_args() -> void:
 				timer["next"] = GameClock.minutes + float(timer["kislyak_min"]) * 0.5
 		elif arg.begins_with("--reload="):
 			_debug_reload(float(arg.trim_prefix("--reload=")))
+		elif arg.begins_with("--talk="):
+			_debug_talk.call_deferred(arg.trim_prefix("--talk="))
 		elif arg.begins_with("--hours="):
 			GameClock.advance(float(arg.trim_prefix("--hours=")) * 60.0)
 		elif arg.begins_with("--shot-at="):
@@ -163,6 +166,16 @@ func _handle_debug_args() -> void:
 	await get_tree().create_timer(shot_at).timeout
 	get_viewport().get_texture().get_image().save_png(shot_path)
 	get_tree().quit()
+
+
+func _debug_talk(npc_id: String) -> void:
+	await get_tree().process_frame
+	for node in get_tree().get_nodes_in_group("interactable"):
+		if node.get("npc_id") == npc_id:
+			var hero := get_tree().get_first_node_in_group("hero") as Node3D
+			hero.global_position = node.global_position - node.global_transform.basis.z * 1.4 + Vector3.UP * 0.1
+			node.interact(hero)
+			return
 
 
 func _debug_reload(after: float) -> void:

@@ -6,6 +6,8 @@ extends Node
 ## Состояние мира — WorldSim (src/services), правила — src/core. Спецификация: docs/spec/02_world.md.
 
 const FOG_UPDATE := 0.5
+const StabNpcScript := preload("res://src/actors/stab_npc.gd")
+const StabWindowScript := preload("res://src/ui/stab_window.gd")
 
 var area: Node            # cluster_area.gd
 var items: Node3D         # world_items.gd
@@ -35,6 +37,7 @@ func _ready() -> void:
 	else:
 		_restore(snapshot)
 	_place_hero()
+	_build_stab()
 	_update_fog()
 	if WorldSim.just_traveled:
 		_on_entered()
@@ -87,6 +90,27 @@ func _restore(snapshot: Dictionary) -> void:
 		population.materialize(WorldSim.population.agents(pop, ratio), WorldSim.reload_seed(WorldSim.current) + randi() % 1000)
 
 
+## Стаб: неписи с услугами на площади, лицом к её центру, и окно услуг (задача 12).
+func _build_stab() -> void:
+	var config := Content.stab_config()
+	if WorldSim.current != String(config["cluster"]):
+		return
+	add_child(StabWindowScript.new())
+	var plaza: Array = WorldSim.template().get("plaza", [0, 0])
+	var center := Vector3(float(plaza[0]), 0.0, float(plaza[1]))
+	for entry: Dictionary in config["npcs"]:
+		var npc: Node3D = StabNpcScript.new()
+		npc.npc_id = String(entry["id"])
+		npc.kind = String(entry["kind"])
+		if entry.has("color"):
+			npc.color = Color(float(entry["color"][0]), float(entry["color"][1]), float(entry["color"][2]))
+		npc.position = center + Vector3(float(entry["at"][0]), 0.0, float(entry["at"][1]))
+		area.add_child(npc)
+		npc.look_at(center, Vector3.UP)
+		npc.rotation.x = 0.0
+	StabState.refresh()
+
+
 ## Пришёл через выход — встать у выхода к прежнему кластеру; после смерти — на респ.
 func _place_hero() -> void:
 	var arrival := WorldSim.arrival
@@ -102,6 +126,7 @@ func _on_entered() -> void:
 	_fade(Color(0, 0, 0), Content.ui("travel_title", {"code": c["code"], "name": c["name"]}))
 	var params := {"code": c["code"], "name": c["name"], "type": Content.ui("cluster_type_" + String(c["type"]))}
 	SystemLog.post("cluster_entered", params)
+	EventBus.cluster_entered.emit(WorldSim.current)
 	var type_id := WorldSim.cluster_type_id()
 	if type_id == "black":
 		SystemLog.post("black_entered", {}, "warning")

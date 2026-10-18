@@ -22,3 +22,6 @@ signal player_hit(weapon_id: String, enemy_id: String, enemy_level: int, result:
 ## Стрела (или другой подбираемый боеприпас) упала в мире после выстрела.
 @warning_ignore("unused_signal")
 signal arrow_landed(item_id: String, position: Vector3)
+## Герой вошёл в кластер (переход, возрождение на респе другого кластера).
+@warning_ignore("unused_signal")
+signal cluster_entered(cluster_id: String)

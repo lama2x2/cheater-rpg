@@ -1,0 +1,53 @@
+{
+  "_doc": "Стаб среза (docs/spec/10_stabs_economy.md): кто где стоит, цены и услуги. Позиции npcs [x, z] — от центра площади стаба. Цены в споранах. trade: торговец покупает у героя по base_price × sell_mult × насыщение (каждая проданная штука вида снижает цену на saturation_per_unit, не ниже saturation_min; за игровые сутки насыщение спадает на recover_per_day), продаёт по base_price × buy_mult (не меньше 1). stock — что есть в продаже, пополняется раз в сутки. not_sold — что торговец не берёт. healer: лечение — heal_per_spore здоровья за споран, остановить кровотечение — bleed_price; дары уровней (05: умение на 10/30/60) — gift_price. bar: сон sleep_hours за sleep_price (прокрутка времени, шкалы по игровому времени, бодрость полная, автосейв), отказ, если споровый баланс после сна упадёт ниже sleep_min_spore; слух за rumor_price открывает таймер случайного кластера. board — доска контрактов: board_size предложений, обновляются каждые сутки, активных — не больше max_active.",
+  "cluster": "c_stab",
+  "npcs": [
+    { "id": "trader", "kind": "trader", "at": [-5, 3], "color": [0.55, 0.45, 0.3] },
+    { "id": "healer", "kind": "healer", "at": [5, 3], "color": [0.85, 0.85, 0.8] },
+    { "id": "barman", "kind": "bar", "at": [0, -5], "color": [0.4, 0.3, 0.45] },
+    { "id": "board", "kind": "board", "at": [0, 6] }
+  ],
+  "trade": {
+    "sell_mult": 0.6,
+    "buy_mult": 1.4,
+    "saturation_per_unit": 0.06,
+    "saturation_min": 0.3,
+    "recover_per_day": 0.5,
+    "not_sold": ["sporan", "brick"],
+    "stock": { "zhivchik": 6, "vodka": 4, "vinegar": 3, "canned_food": 6, "water_bottle": 6, "bandage": 5, "knife": 1, "axe": 1, "bow": 1, "arrow": 30, "pistol": 1, "ammo_9mm": 60, "ammo_12g": 20 }
+  },
+  "healer": {
+    "heal_per_spore": 8,
+    "bleed_price": 3,
+    "gift_levels": [10, 30, 60],
+    "gift_price": [25, 30]
+  },
+  "bar": {
+    "sleep_hours": 8,
+    "sleep_price": 5,
+    "sleep_min_spore": 5,
+    "rumor_price": 5
+  },
+  "board": {
+    "board_size": 3,
+    "max_active": 3,
+    "contracts": [
+      { "type": "hunt", "options": [
+        { "target": "slowpoke", "count": [4, 8], "reward_per": 2 },
+        { "target": "jumper", "count": [2, 3], "reward_per": 8 },
+        { "target": "runner", "count": [1, 2], "reward_per": 20 }
+      ] },
+      { "type": "deliver", "options": [
+        { "target": "canned_food", "count": [3, 5], "reward_per": 3 },
+        { "target": "vodka", "count": [2, 4], "reward_per": 3 },
+        { "target": "ammo_9mm", "count": [10, 20], "reward_per": 2 },
+        { "target": "gold_ring", "count": [1, 2], "reward_per": 25 }
+      ] },
+      { "type": "scout", "options": [
+        { "target": "c_town", "count": [1, 1], "reward_per": 15 },
+        { "target": "c_industrial", "count": [1, 1], "reward_per": 20 },
+        { "target": "c_black", "count": [1, 1], "reward_per": 30 }
+      ] }
+    ]
+  }
+}
