@@ -15,7 +15,7 @@
     "machinegun": 300,
     "explosion": 450,
     "car": 110,
-    "spore_sack_open": 5
+    "spore_sack_open": 5, "voice_throw": 18
   },
   "step_length_m": { "sneak": 0.9, "walk": 1.6, "sprint": 2.2 },
   "hear_threshold": 0.05,

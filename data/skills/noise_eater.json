@@ -1,0 +1,23 @@
+{
+  "_doc": "Гаситель: сфера 8 м на месте героя на 10 с — все шумы внутри ×0,2 («тихий выстрел»). Откат 2 игровых часа. Ментальная сила: каждые 10 — +0,5 с и +0,5 м.",
+  "id": "noise_eater",
+  "kind": "control",
+  "slot": "active",
+  "theme": "stealth",
+  "mana_cost": 35,
+  "cooldown_s": 7200,
+  "effects": [
+    { "type": "noise_zone", "radius_m": 8, "mult": 0.2, "duration_s": 10, "anchor": "point" }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "noise_zone.duration_s", "add": 0.5 },
+    { "stat": "mental", "per": 10, "path": "noise_zone.radius_m", "add": 0.5 }
+  ],
+  "properties": [
+    { "id": "eater_deeper", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "noise_zone.mult", "set": 0.1 } },
+    { "id": "eater_fast", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "cooldown_s", "add": -1800 } },
+    { "id": "eater_follow", "unlock": { "mental": 60 }, "effect": { "type": "modify", "path": "noise_zone.anchor", "set": "hero" } },
+    { "id": "eater_wide", "unlock": { "mental": 90 }, "effect": { "type": "modify", "path": "noise_zone.radius_m", "set": 14 } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

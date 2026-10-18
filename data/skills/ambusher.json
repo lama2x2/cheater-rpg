@@ -1,0 +1,20 @@
+{
+  "_doc": "Из тени (пассив): урон ×1,6 по твари, которая не гонится за героем и не атакует (бродит, проверяет шум, ест, бежит). Каждые 10 Ментальной силы +0,05. Держит 10% маны.",
+  "id": "ambusher",
+  "kind": "passive",
+  "slot": "passive",
+  "theme": "combat",
+  "mana_cost": 0,
+  "cooldown_s": 0,
+  "effects": [
+    { "type": "reserve_mana", "pct": 0.1 },
+    { "type": "damage_mult_vs", "condition": "target_unaware", "mult": 1.6, "elite_mult": 1.2 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "damage_mult_vs.mult", "add": 0.05 }
+  ],
+  "properties": [
+    { "id": "ambush_crit", "unlock": { "mental": 60 }, "effect": { "type": "passive", "effect": { "type": "crit_chance_add", "condition": "target_unaware", "value": 0.2 } } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

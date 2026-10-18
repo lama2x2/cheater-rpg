@@ -1,0 +1,23 @@
+{
+  "_doc": "Пугач: твари до стадии 3 в радиусе 30 м бегут от героя 60 с (элиты не боятся — после M1). Ветер — после погоды. Ментальная сила: каждые 10 — радиус +5 м, бегство +5 с.",
+  "id": "scarecrow",
+  "kind": "control",
+  "slot": "active",
+  "scene_log": true,
+  "theme": "control",
+  "mana_cost": 20,
+  "cooldown_s": 10800,
+  "effects": [
+    { "type": "enemy_flee", "max_stage": 3, "radius_m": 30, "duration_s": 60 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "enemy_flee.radius_m", "add": 5 },
+    { "stat": "mental", "per": 10, "path": "enemy_flee.duration_s", "add": 5 }
+  ],
+  "properties": [
+    { "id": "scare_stronger", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "enemy_flee.max_stage", "set": 5 } },
+    { "id": "scare_wide", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "enemy_flee.radius_m", "add": 15 } },
+    { "id": "scare_long", "unlock": { "mental": 60 }, "effect": { "type": "modify", "path": "enemy_flee.duration_s", "set": 120 } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

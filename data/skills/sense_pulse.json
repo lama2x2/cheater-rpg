@@ -1,0 +1,28 @@
+{
+  "_doc": "Вспышка (книги 4–6): волна сквозь стены подсвечивает тварей, трупы с целым мешком, трофеи, оружие и тайники в радиусе. Откат 75 реальных с (2250 игровых). Ментальная сила: каждые 10 — мана −1 (не меньше 5), радиус +2 м, откат −150 (не меньше 300); каждые 30 — подсветка +5 с. Подсвеченное видно сквозь стены и вне конуса зрения (17, задача 14a).",
+  "id": "sense_pulse",
+  "kind": "sense",
+  "slot": "active",
+  "scene_log": true,
+  "theme": "perception",
+  "mana_cost": 15,
+  "cooldown_s": 2250,
+  "effects": [
+    { "type": "highlight", "radius_m": 20, "duration_s": 30, "targets": ["living", "sack", "trophy", "weapon", "stash"], "show_level": false }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "mana_cost", "add": -1, "min": 5 },
+    { "stat": "mental", "per": 10, "path": "highlight.radius_m", "add": 2 },
+    { "stat": "mental", "per": 10, "path": "cooldown_s", "add": -150, "min": 300 },
+    { "stat": "mental", "per": 30, "path": "highlight.duration_s", "add": 5 }
+  ],
+  "properties": [
+    { "id": "pulse_perception", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "highlight.show_level", "set": true } },
+    { "id": "pulse_fast", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "cooldown_s", "add": -450 } },
+    { "id": "pulse_items_of_hidden", "unlock": { "mental": 60 }, "choice": "m60", "requires": "humans", "effect": { "type": "modify", "path": "highlight.hidden_items", "set": true } },
+    { "id": "pulse_long", "unlock": { "mental": 60 }, "choice": "m60", "effect": { "type": "modify", "path": "highlight.duration_s", "add": 15 } },
+    { "id": "pulse_wide", "unlock": { "mental": 90 }, "effect": { "type": "modify", "path": "highlight.radius_m", "add": 10 } },
+    { "id": "pulse_no_cooldown", "unlock": { "mental": 150 }, "effect": { "type": "modify", "path": "cooldown_s", "set": 0 } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

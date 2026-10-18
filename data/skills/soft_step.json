@@ -1,0 +1,22 @@
+{
+  "_doc": "Мягкий шаг (пассив): шаги тише ×0,65 (каждые 10 Ментальной силы −0,02, не тише ×0,4). Держит 5% маны, пока в слоте (D-74). Под глушителем не работает.",
+  "id": "soft_step",
+  "kind": "passive",
+  "slot": "passive",
+  "theme": "stealth",
+  "mana_cost": 0,
+  "cooldown_s": 0,
+  "effects": [
+    { "type": "reserve_mana", "pct": 0.05 },
+    { "type": "noise_mult_self", "sources": ["sneak_step", "walk_step", "sprint_step"], "mult": 0.65 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "noise_mult_self.mult", "add": -0.02, "min": 0.4 }
+  ],
+  "properties": [
+    { "id": "step_doors", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "passive", "effect": { "type": "noise_mult_self", "sources": ["door"], "mult": 0.5 } } },
+    { "id": "step_hands", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "passive", "effect": { "type": "noise_mult_self", "sources": ["item_drop", "spore_sack_open"], "mult": 0.5 } } },
+    { "id": "step_run_as_walk", "unlock": { "mental": 60 }, "effect": { "type": "passive", "effect": { "type": "noise_source_swap", "from": "sprint_step", "to": "walk_step" } } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

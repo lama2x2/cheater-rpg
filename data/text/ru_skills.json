@@ -1,10 +1,24 @@
 {
   "_doc": "Тексты умений и Удачи (задачи 13, 13b). Сливается с ru.json по разделам (Content.texts). Названия — как в книгах (D-75).",
   "skill_names": {
-    "fortune_smile": "Улыбка Фортуны"
+    "fortune_smile": "Улыбка Фортуны",
+    "sense_pulse": "Вспышка",
+    "voice_throw": "Чревовещатель",
+    "scarecrow": "Пугач",
+    "second_wind": "Второе дыхание",
+    "soft_step": "Мягкий шаг",
+    "noise_eater": "Гаситель",
+    "ambusher": "Из тени"
   },
   "skill_desc": {
-    "fortune_smile": "Удача ×{stat_mult.value} на {stat_mult.duration_s} с. Твари промахиваются и спотыкаются, удары находят голову и мешок, шаги не слышны, лут щедрее."
+    "fortune_smile": "Удача ×{stat_mult.value} на {stat_mult.duration_s} с. Твари промахиваются и спотыкаются, удары находят голову и мешок, шаги не слышны, лут щедрее.",
+    "sense_pulse": "Волна сквозь стены: твари, трупы с целым мешком, трофеи, оружие и тайники в {highlight.radius_m} м отмечены на {highlight.duration_s} с.",
+    "voice_throw": "Шум в точке под курсором (до {noise_at.range_m} м): твари идут проверить, а вы — в другую сторону.",
+    "scarecrow": "Твари до {enemy_flee.max_stage}-й стадии в {enemy_flee.radius_m} м бегут прочь {enemy_flee.duration_s} с. Сильные не верят.",
+    "second_wind": "Бодрость — полная, {status.duration_s} с бега без усталости. Цена — споровый баланс −{vital_cost.value}.",
+    "soft_step": "Пассив: шаги тише (×{noise_mult_self.mult}). Держит {reserve_mana.pct} маны.",
+    "noise_eater": "Сфера {noise_zone.radius_m} м на {noise_zone.duration_s} с: шум внутри ×{noise_zone.mult}. Тихий выстрел — это решение.",
+    "ambusher": "Пассив: урон ×{damage_mult_vs.mult} по твари, которая вас не преследует. Держит {reserve_mana.pct} маны."
   },
   "property_names": {
     "fortune_immunity": "Неприкасаемый: иммунитет к урону 1,5 с",
@@ -15,7 +29,30 @@
     "fortune_big": "Джекпот: множитель +5",
     "fortune_immunity_long": "Неуязвимый: иммунитет к урону 3 с",
     "fortune_cd_long": "Любимчик: откат −3 ч",
-    "fortune_vitals": "Подарок: случайно восполняет шкалы на 25–75%"
+    "fortune_vitals": "Подарок: случайно восполняет шкалы на 25–75%",
+    "pulse_perception": "Уровни: над тварями — их уровень",
+    "pulse_fast": "Частая волна: откат −15 с",
+    "pulse_items_of_hidden": "Вещи скрытых: снаряжение тех, кто прячется (M2)",
+    "pulse_long": "Долгий след: подсветка +15 с",
+    "pulse_wide": "Широкая волна: радиус +10 м",
+    "pulse_no_cooldown": "Без отката",
+    "voice_two": "Два голоса: шум дважды",
+    "voice_far": "Дальний голос: до 40 м",
+    "voice_gunshot": "Выстрел: шум как от пистолета",
+    "scare_stronger": "Страшнее: бегут и стадии 4–5",
+    "scare_wide": "Шире: радиус +15 м",
+    "scare_long": "Надолго: бегство 120 с",
+    "wind_fast": "Привычка: откат −30 мин",
+    "wind_quiet": "Тихий бег: пока действует, бег тише ×0,7",
+    "wind_stop_bleed": "Затянуло: останавливает кровотечение",
+    "step_doors": "Тихие двери: двери ×0,5",
+    "step_hands": "Тихие руки: брошенные вещи и вскрытие мешка ×0,5",
+    "step_run_as_walk": "Бег как шаг: бег шумит как ходьба",
+    "eater_deeper": "Глубже: шум внутри ×0,1",
+    "eater_fast": "Чаще: откат −30 мин",
+    "eater_follow": "Следом: сфера идёт за вами",
+    "eater_wide": "Шире: радиус 14 м",
+    "ambush_crit": "В затылок: +20% шанс удара в голову или мешок по ничего не подозревающей"
   },
   "log": {
     "skill_learned": ["Получено умение: {skill}.", "Система выдала умение: {skill}. Пользуйтесь, пока дают."],
@@ -24,19 +61,21 @@
     "skill_used": ["{skill}.", "Применено: {skill}."],
     "skill_used_fortune_smile": ["Улыбка Фортуны. Удача ×{mult} на {seconds} с.", "Фортуна улыбается. {seconds} секунд — ваши.", "Улыбка Фортуны. Не тратьте её на пустяки."],
     "skill_no_mana": ["Не хватает маны: {skill} — {cost}.", "Мана: {mana} из {cost}. {skill} подождёт."],
-    "skill_on_cooldown": ["{skill}: откат, ещё {left}."],
+    "skill_on_cooldown": ["«{skill}» на откате, ещё {left}."],
     "skill_blocked": ["Умения не отвечают. Здесь Система их глушит."],
-    "skill_ready": ["{skill} снова готово."],
+    "skill_ready": ["Умение «{skill}» снова готово."],
     "skill_slot_set": ["{skill} — в слот {slot}."],
     "skill_property": ["{skill}: открыто свойство «{property}»."],
-    "skill_property_available": ["{skill}: Ментальная сила открыла выбор свойства. Окно умений — U."],
+    "skill_property_available": ["Ментальная сила открыла выбор свойства: {skills}. Окно умений — U."],
     "skill_cooldowns_reset": ["Смерть обнуляет откаты. Хоть что-то хорошее."],
     "luck_enemy_miss": ["Мимо. Фортуна.", "Тварь промахнулась. Бывает.", "Удача: удар прошёл мимо."],
     "luck_enemy_stumble": ["Тварь оступилась. Удача.", "Рывок сорвался — повезло."],
     "luck_hero_crit": ["Удачный удар.", "Удача направила руку."],
     "luck_quiet_noise": ["Удача: шаг вышел тише."],
     "luck_unnoticed": ["Тварь отвернулась. Повезло.", "Удача: вас не заметили."],
-    "immunity_saved": ["Удар не прошёл: иммунитет."]
+    "immunity_saved": ["Удар не прошёл: иммунитет."],
+    "skill_pulse": ["Вспышка: в радиусе {radius} м отмечено {n}.", "Вспышка. Целей: {n}. Смотрите внимательно."],
+    "skill_scare": ["Пугач. Разбежались: {n}.", "Пугач: {n} — прочь. Те, что посильнее, не поверили."]
   },
   "ui": {
     "healer_pending": "Умений ждут выбора: {n}",
@@ -65,6 +104,8 @@
     "luck_float_crit": "удача!",
     "luck_float_unnoticed": "?",
     "immunity_float": "иммунитет",
+    "ambush_float": "из тени",
+    "voice_float": "…эй…",
     "mana_reserve": " (резерв {n})"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "_doc": "Чревовещатель: шум (как окрик) в точке под курсором, до 20 м — твари идут проверить. Учит «шум — оружие». Ментальная сила: каждые 10 — дальность +2 м.",
+  "id": "voice_throw",
+  "kind": "control",
+  "slot": "active",
+  "theme": "control",
+  "mana_cost": 8,
+  "cooldown_s": 1800,
+  "effects": [
+    { "type": "noise_at", "source": "voice_throw", "range_m": 20, "count": 1, "repeat_s": 2.5 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "noise_at.range_m", "add": 2 }
+  ],
+  "properties": [
+    { "id": "voice_two", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "noise_at.count", "set": 2 } },
+    { "id": "voice_far", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "noise_at.range_m", "set": 40 } },
+    { "id": "voice_gunshot", "unlock": { "mental": 60 }, "effect": { "type": "modify", "path": "noise_at.source", "set": "pistol" } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}

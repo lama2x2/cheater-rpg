@@ -1,0 +1,23 @@
+{
+  "_doc": "Второе дыхание: бодрость полная и 10 с бега без расхода бодрости; цена — споровый баланс −3. Откат 2 игровых часа (4 реальные минуты). Ментальная сила: каждые 10 — +1 с бега.",
+  "id": "second_wind",
+  "kind": "buff",
+  "slot": "active",
+  "theme": "mobility",
+  "mana_cost": 15,
+  "cooldown_s": 7200,
+  "effects": [
+    { "type": "vital_fill", "vital": "stamina", "fraction": 1.0 },
+    { "type": "status", "status": "free_sprint", "duration_s": 10 },
+    { "type": "vital_cost", "vital": "spore_balance", "value": 3 }
+  ],
+  "scaling": [
+    { "stat": "mental", "per": 10, "path": "status.duration_s", "add": 1 }
+  ],
+  "properties": [
+    { "id": "wind_fast", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "cooldown_s", "add": -1800 } },
+    { "id": "wind_quiet", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "on_use", "effect": { "type": "status", "status": "quiet_sprint", "duration_of": "status" } } },
+    { "id": "wind_stop_bleed", "unlock": { "mental": 60 }, "effect": { "type": "on_use", "effect": { "type": "cure", "status": "bleeding" } } }
+  ],
+  "blocked_on": ["cluster_disabled", "jammer"]
+}
