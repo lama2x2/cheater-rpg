@@ -22,6 +22,8 @@ var _death_flow: Node
 var _environment: Environment
 ## Отладочные аргументы срабатывают один раз за запуск: переход и загрузка пересобирают сцену.
 static var _debug_args_done := false
+## Титульный экран — один раз за запуск: без аргументов (обычный запуск игры) или с --title.
+static var _title_done := false
 
 
 func _ready() -> void:
@@ -50,7 +52,8 @@ func _ready() -> void:
 	prompt.hero = player
 	add_child(prompt)
 	add_child(InventoryPanelScript.new())
-	add_child(GameMenuScript.new())
+	var menu: CanvasLayer = GameMenuScript.new()
+	add_child(menu)
 
 	var world_items: Node3D = WorldItemsScript.new()
 	add_child(world_items)
@@ -79,6 +82,11 @@ func _ready() -> void:
 	if SystemLog.history.is_empty():
 		SystemLog.post("welcome" if PlayerState.ng_plus == 0 else "welcome_ng_plus", {"cycle": PlayerState.ng_plus})
 	SaveService.finish_scene_load()
+	var args := OS.get_cmdline_user_args()
+	if not _title_done and (args.is_empty() or "--title" in args):
+		_title_done = true
+		menu.open_title()
+	_title_done = true
 	_handle_debug_args()
 
 
@@ -86,7 +94,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_die"):
 		PlayerState.die("debug")
 	elif event.is_action_pressed("debug_save"):
-		SaveService.save_game(SaveService.DEBUG_SLOT)
+		if SaveService.can_manual_save():
+			SaveService.save_game(SaveService.DEBUG_SLOT)
+		else:
+			SystemLog.post("save_blocked", {}, "warning")
 	elif event.is_action_pressed("debug_load"):
 		SaveService.load_game(SaveService.DEBUG_SLOT)
 
@@ -107,6 +118,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --reload=S    через S секунд перезагрузить текущий кластер (проверка сброса при герое)
 ##   --hours=N     прокрутить мир на N игровых часов (проверка симуляции)
 ##   --world-seed=N  сид мира (читает WorldSim), для одинаковых снимков
+##   --title       показать титульный экран (без аргументов он и так показывается)
+##   --page=NAME   открыть страницу меню Esc: main, save, load, settings, new_game
 ##   --talk=ID     в стабе: встать у непися ID (trader, healer, barman, board) и открыть его окно
 func _handle_debug_args() -> void:
 	if _debug_args_done:
@@ -151,6 +164,8 @@ func _handle_debug_args() -> void:
 				timer["next"] = GameClock.minutes + float(timer["kislyak_min"]) * 0.5
 		elif arg.begins_with("--reload="):
 			_debug_reload(float(arg.trim_prefix("--reload=")))
+		elif arg.begins_with("--page="):
+			_debug_page.call_deferred(arg.trim_prefix("--page="))
 		elif arg.begins_with("--talk="):
 			_debug_talk.call_deferred(arg.trim_prefix("--talk="))
 		elif arg.begins_with("--hours="):
@@ -166,6 +181,17 @@ func _handle_debug_args() -> void:
 	await get_tree().create_timer(shot_at).timeout
 	get_viewport().get_texture().get_image().save_png(shot_path)
 	get_tree().quit()
+
+
+func _debug_page(page: String) -> void:
+	await get_tree().process_frame
+	for child in get_children():
+		if child.has_method("open_title"):
+			child._open()
+			if page == "new_game":
+				child._open_new_game()
+			else:
+				child.call("_" + page + "_page")
 
 
 func _debug_talk(npc_id: String) -> void:

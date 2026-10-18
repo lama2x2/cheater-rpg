@@ -13,6 +13,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 [autoload]
 
 Content="*res://src/services/content.gd"
+Settings="*res://src/services/settings.gd"
 EventBus="*res://src/services/event_bus.gd"
 GameClock="*res://src/services/game_clock.gd"
 SystemLog="*res://src/services/system_log.gd"

@@ -76,17 +76,41 @@ func slot_info(slot: String) -> Dictionary:
 
 
 ## Новая игра: всё состояние с нуля, сцена пересобирается. carry — перенос «Новой игры+».
-func start_new_game(carry: Dictionary = {}) -> void:
+## options: {"save_mode": ...} — с экрана новой игры (D-30).
+func start_new_game(carry: Dictionary = {}, options: Dictionary = {}) -> void:
 	get_tree().paused = false
 	GameClock.reset()
 	SystemLog.clear()
 	PlayerState.setup()
 	if not carry.is_empty():
 		PlayerState.apply_carry(carry)
+	if options.has("save_mode"):
+		PlayerState.save_mode = String(options["save_mode"])
 	WorldSim.new_world()
 	StabState.setup()
 	_pending = {}
 	get_tree().reload_current_scene()
+
+
+## Ручное сохранение разрешено режимом партии здесь и сейчас (D-30). Автосейв и загрузка — всегда.
+func can_manual_save() -> bool:
+	return SettingsModel.can_manual_save(PlayerState.save_mode, bool(WorldSim.cluster_config().get("safe", false)))
+
+
+## Самое свежее сохранение (ячейки и автосейв) — для «Продолжить». "" — сохранений нет.
+func latest_slot() -> String:
+	var best := ""
+	var best_time := -1.0
+	var slots := manual_slots()
+	slots.append(AUTO_SLOT)
+	for slot in slots:
+		var info := slot_info(slot)
+		if info.is_empty() or info.has("broken"):
+			continue
+		if float(info["saved_at"]) > best_time:
+			best_time = float(info["saved_at"])
+			best = slot
+	return best
 
 
 func save_game(slot: String) -> bool:
@@ -95,7 +119,7 @@ func save_game(slot: String) -> bool:
 		sections[section] = _sections[section].to_dict()
 	var meta := {
 		"day": GameClock.day(), "clock": GameClock.clock_text(), "lives": PlayerState.lives,
-		"level": PlayerState.stats.general_level(), "ng_plus": PlayerState.ng_plus,
+		"level": PlayerState.stats.general_level(), "ng_plus": PlayerState.ng_plus, "save_mode": PlayerState.save_mode,
 	}
 	var err := SaveFormat.write_file(slot_path(slot), SaveFormat.wrap(sections, Time.get_unix_time_from_system(), meta))
 	if err != OK:

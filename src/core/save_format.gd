@@ -19,13 +19,20 @@ extends RefCounted
 ##   9 — кластеры: секция world (таймеры, популяции, снимки сцен кластеров). Секции площадки
 ##       (area, world_items, infected, corpses) и позиция героя выбрасываются — мир создаётся заново.
 ##   10 — стаб: секция stab (торговец, доска контрактов); player.skill_gifts_opened, pending_skill_choices.
+##   11 — player.save_mode (режим сохранений партии, D-30); meta.save_mode.
 
-const VERSION := 10
+const VERSION := 11
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9, 9: _v9_to_v10}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9, 9: _v9_to_v10, 10: _v10_to_v11}
+
+
+static func _v10_to_v11(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		data["sections"]["player"].merge({"save_mode": "anywhere"})
+	return data
 
 
 static func _v9_to_v10(data: Dictionary) -> Dictionary:

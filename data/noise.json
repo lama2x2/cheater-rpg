@@ -31,6 +31,5 @@
     "per_meter": 0.002,
     "decay_per_second": 0.08,
     "max_bonus": 1.0
-  },
-  "debug_ring": true
+  }
 }

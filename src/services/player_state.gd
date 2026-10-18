@@ -34,6 +34,8 @@ var respawn_position := Vector3(0, 0.1, 0)
 var start_minutes: float = 0.0
 ## Номер цикла «Новой игры+» (0 — первая игра).
 var ng_plus: int = 0
+## Режим сохранений партии (D-30): "anywhere" / "stab_only". Умолчание для новой игры — в настройках.
+var save_mode: String = SettingsModel.ANYWHERE
 var _rng := RandomNumberGenerator.new()
 var _was_overloaded := false
 ## Кто последним ранил героя — причина смерти, если здоровье кончится.
@@ -61,6 +63,7 @@ func setup() -> void:
 	awaiting_respawn = false
 	respawn_position = Vector3(0, 0.1, 0)
 	ng_plus = 0
+	save_mode = String(Settings.value("save_mode"))
 	_was_overloaded = false
 	_last_damage_source = "health"
 	_farm_warned = {}
@@ -297,6 +300,15 @@ func respawn() -> void:
 
 
 ## «Дальше» после итогов (D-34): тот же герой в том же мире, жизни снова стартовые.
+## Сменить режим сохранений посреди игры (D-30): можно в любую сторону, итоги это запомнят.
+func change_save_mode(mode: String) -> void:
+	if mode == save_mode:
+		return
+	save_mode = mode
+	run.add("save_mode_changes")
+	SystemLog.post("save_mode_changed", {"mode": Content.ui("save_mode_" + mode)}, "warning")
+
+
 func continue_after_final() -> void:
 	lives = int(Content.rules()["lives_start"])
 	run.add("continues")
@@ -305,12 +317,13 @@ func continue_after_final() -> void:
 
 ## Что «Новая игра+» переносит в новый мир (D-34, D-52): ячейки Системы и номер цикла.
 func ng_plus_carry() -> Dictionary:
-	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"]}
+	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"], "save_mode": save_mode}
 
 
 ## Применить перенос к только что созданному герою: ячейки, коэффициенты × (1 + бонус × цикл).
 func apply_carry(carry: Dictionary) -> void:
 	ng_plus = int(carry.get("ng_plus", 0))
+	save_mode = String(carry.get("save_mode", save_mode))
 	if carry.has("primary"):
 		inventory.load_dict({"primary": carry["primary"], "backpack": []})
 	var bonus := float(Content.rules()["ng_plus"]["coefficient_bonus"]) * ng_plus
@@ -327,7 +340,7 @@ func to_dict() -> Dictionary:
 		"skill_gifts_opened": skill_gifts_opened.duplicate(), "pending_skill_choices": pending_skill_choices,
 		"weapons": weapons.to_dict(), "wounds": wounds.to_dict(), "progress": progress.to_dict(),
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
-		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus,
+		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus, "save_mode": save_mode,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
 	}
 
@@ -358,6 +371,7 @@ func load_dict(data: Dictionary) -> void:
 	awaiting_respawn = bool(data["awaiting_respawn"])
 	start_minutes = float(data["start_minutes"])
 	ng_plus = int(data["ng_plus"])
+	save_mode = String(data["save_mode"])
 	var at: Array = data["respawn_position"]
 	respawn_position = Vector3(float(at[0]), float(at[1]), float(at[2]))
 

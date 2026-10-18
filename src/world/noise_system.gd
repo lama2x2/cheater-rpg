@@ -1,7 +1,7 @@
 extends Node3D
 ## Раздаёт шумовые импульсы тварям: радиус по NoiseModel (src/core), стены между источником и
 ## слушателем — лучами, громкость — в infected.hear(). Источник шлёт EventBus.noise_made.
-## Вокруг героя рисует кольцо шума (обучающее, 12.1; выключается в data/noise.json).
+## Вокруг героя рисует кольцо шума (обучающее, 12.1; выключается в настройках).
 
 const RAY_LIFT := Vector3(0, 1.0, 0)
 const LAYER_WORLD := 1
@@ -32,7 +32,7 @@ func _on_noise(source: String, at: Vector3, options: Dictionary) -> void:
 		var loudness := model.loudness_at(r, distance, _walls_between(at, infected.global_position))
 		if loudness > 0.0:
 			infected.hear(at, loudness)
-	if bool(options.get("from_hero", false)) and bool(Content.noise_config()["debug_ring"]):
+	if bool(options.get("from_hero", false)) and bool(Settings.value("noise_ring")):
 		_ring(at, r)
 
 

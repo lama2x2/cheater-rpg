@@ -142,6 +142,11 @@ func _stat_rows() -> PackedStringArray:
 		rows.append(Content.ui("summary_deaths", {
 			"deaths": run.deaths.size(), "cause": Content.death_cause(causes[0][0]), "times": causes[0][1]}))
 	rows.append(Content.ui("summary_kills", {"kills": run.count("kills")}))
+	var changes := run.count("save_mode_changes")
+	rows.append(Content.ui("summary_save_mode", {
+		"mode": Content.ui("save_mode_" + PlayerState.save_mode),
+		"changes": Content.ui("summary_save_mode_changes", {"n": changes}) if changes > 0 else "",
+	}))
 	var longest := run.longest_life_minutes(PlayerState.start_minutes)
 	rows.append(Content.ui("summary_longest_life", {"hours": floori(longest / 60.0), "minutes": floori(fmod(longest, 60.0))}))
 	return rows

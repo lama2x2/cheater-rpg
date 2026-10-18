@@ -266,6 +266,12 @@
     ],
     "contract_done": [
       "Контракт сдан: {text} Получено {reward} сп."
+    ],
+    "save_mode_changed": [
+      "Режим сохранений: {mode}. Система отметит это в итогах. Система всё отмечает."
+    ],
+    "save_blocked": [
+      "Сохранение недоступно: режим «только в стабах». Доберитесь до стаба — или не умирайте."
     ]
   },
   "death_causes": {
@@ -411,7 +417,28 @@
     "board_full": "Больше контрактов не взять — сначала сдайте взятые.",
     "contract_hunt": "Убить: {target} {progress}/{count} — {reward} сп.",
     "contract_deliver": "Принести: {target} ×{count} — {reward} сп.",
-    "contract_scout": "Разведать: {target} — {reward} сп."
+    "contract_scout": "Разведать: {target} — {reward} сп.",
+    "menu_settings": "Настройки",
+    "menu_save_stab_only": "Сохранить — только в стабе (режим «только в стабах»)",
+    "title_name": "ЧИТЕР",
+    "title_subtitle": "Континент не прощает. Система — тем более.",
+    "title_continue": "Продолжить",
+    "new_game_title": "Новая игра",
+    "new_game_save_mode": "Режим сохранений",
+    "new_game_start": "Начать",
+    "save_mode_anywhere": "где угодно",
+    "save_mode_stab_only": "только в стабах (хардкор)",
+    "save_mode_hint_anywhere": "Сохраняйтесь в любой момент. Автосейв — при смерти и в стабе.",
+    "save_mode_hint_stab_only": "Ручное сохранение — только в стабе. Автосейв при смерти и в стабе остаётся. Вылазка — это всерьёз.",
+    "settings_save_mode": "Режим сохранений: {value}",
+    "settings_noise_ring": "Кольцо шума: {value}",
+    "settings_volume": "Громкость: {value}%",
+    "settings_fullscreen": "Полный экран: {value}",
+    "settings_window": "Размер окна: {w}×{h}",
+    "settings_on": "вкл",
+    "settings_off": "выкл",
+    "summary_save_mode": "Режим сохранений: {mode}{changes}",
+    "summary_save_mode_changes": " (менялся {n} раз)"
   },
   "item_names": {
     "sporan": "Споран",
