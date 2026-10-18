@@ -12,6 +12,7 @@ var _timer := 0.0
 
 
 func _ready() -> void:
+	add_to_group("stashes")
 	var box := BoxMesh.new()
 	box.size = Vector3(0.5, 0.3, 0.4)
 	var material := StandardMaterial3D.new()

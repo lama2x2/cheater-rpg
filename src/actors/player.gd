@@ -64,7 +64,9 @@ func _physics_process(delta: float) -> void:
 	if sprinting and sneaking:
 		_set_sneaking(false)
 	var inventory := PlayerState.inventory
-	vitals.tick(delta, GameClock.game_minutes_for(delta), sprinting, inventory.stamina_cost_multiplier())
+	# Второе дыхание: бег без расхода бодрости.
+	var free_sprint := PlayerState.skills.has_status("free_sprint", GameClock.minutes)
+	vitals.tick(delta, GameClock.game_minutes_for(delta), sprinting, 0.0 if free_sprint else inventory.stamina_cost_multiplier())
 	var speed: float = float(_tuning["sprint_speed"]) if sprinting else float(_tuning["walk_speed"])
 	if sneaking:
 		speed = float(_tuning["sneak_speed"])

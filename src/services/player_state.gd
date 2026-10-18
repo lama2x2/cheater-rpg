@@ -584,8 +584,14 @@ func _apply_skill_effects(id: String, list: Array[Dictionary]) -> void:
 			"vitals_fill_random":
 				for vital in Vitals.ALL:
 					vitals.restore(vital, vitals.max_value(vital) * _rng.randf_range(float(e["min"]), float(e["max"])))
+			"cure":
+				if String(e["status"]) == "bleeding" and wounds.is_bleeding():
+					wounds.stop_bleeding()
+					SystemLog.post("bleeding_stopped")
+	# Умения со своей строкой из сцены (Вспышка: «целей: N») общую не пишут.
 	var key := "skill_used_" + id
-	SystemLog.post(key if SystemLog.has_key(key) else "skill_used", log_params, "special")
+	if not bool(skills.def(id).get("scene_log", false)):
+		SystemLog.post(key if SystemLog.has_key(key) else "skill_used", log_params, "special")
 	EventBus.skill_used.emit(id, list)
 
 
@@ -631,7 +637,10 @@ func _on_skill_levels_changed(stat: String, old_level: int, new_level: int) -> v
 			crossed = true
 	if crossed:
 		var levels := skill_levels()
+		var names: PackedStringArray = []
 		for id: String in skills.learned:
 			if not skills.property_choices(id, levels).is_empty():
-				SystemLog.post("skill_property_available", {"skill": Content.skill_name(id)}, "progress")
+				names.append(Content.skill_name(id))
+		if not names.is_empty():
+			SystemLog.post("skill_property_available", {"skills": ", ".join(names)}, "progress")
 	skills_changed.emit()

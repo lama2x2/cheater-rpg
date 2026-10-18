@@ -29,9 +29,13 @@ func _ready() -> void:
 	root.add_child(title)
 	_slots = UiKit.label(14, Color(0.6, 0.85, 0.6))
 	root.add_child(_slots)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(560, 560)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root.add_child(scroll)
 	_content = VBoxContainer.new()
 	_content.add_theme_constant_override("separation", 10)
-	root.add_child(_content)
+	scroll.add_child(_content)
 	PlayerState.skills_changed.connect(_refresh)
 
 
@@ -79,7 +83,7 @@ func _skill_block(id: String, levels: Dictionary, open: int) -> VBoxContainer:
 	for i in open:
 		if skills.slots[i] != id:
 			buttons.add_child(_button(Content.ui("skills_to_slot", {"n": i + 1}), PlayerState.set_skill_slot.bind(i, id)))
-	if slot >= 0:
+	if slot >= 0 and slot < open:
 		buttons.add_child(_button(Content.ui("skills_unslot"), PlayerState.set_skill_slot.bind(slot, "")))
 	block.add_child(buttons)
 	for choice in skills.property_choices(id, levels):
@@ -99,9 +103,16 @@ static func skill_description(id: String, levels: Dictionary) -> String:
 	for e in PlayerState.skills.effects(id, levels):
 		for key: String in e:
 			if e[key] is float or e[key] is int:
-				var value := float(e[key])
-				params["%s.%s" % [e["type"], key]] = str(snappedf(value, 0.1)).trim_suffix(".0")
+				params["%s.%s" % [e["type"], key]] = _num(float(e[key]) * 100.0) + "%" if key == "pct" else _num(float(e[key]))
 	return text.format(params)
+
+
+## Число для текста: целое — без дроби, иначе до сотых, с запятой («0,65», «8», «12,5»).
+static func _num(value: float) -> String:
+	if absf(value - roundf(value)) < 0.001:
+		return str(roundi(value))
+	var text := ("%.2f" % value).rstrip("0").rstrip(".")
+	return text.replace(".", ",")
 
 
 func _numbers(id: String, levels: Dictionary) -> String:

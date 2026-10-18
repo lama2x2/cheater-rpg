@@ -125,8 +125,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --title       показать титульный экран (без аргументов он и так показывается)
 ##   --page=NAME   открыть страницу меню Esc: main, save, load, settings, new_game
 ##   --talk=ID     в стабе: встать у непися ID (trader, healer, barman, board) и открыть его окно
-##   --skills=A,B  выучить умения A, B (в слоты по порядку); --skills=all — все из data/skills
-##   --cast=N      через 0,5 с применить умение из слота N (1–4), мана — полная
+##   --skills=A,B  выучить умения A, B (первое — в слот 1); --skills=all — все из data/skills
+##   --cast=N      через 1 с применить умение из слота N (1–4), мана — полная
 ##   --skills-panel  открыть окно умений
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 func _handle_debug_args() -> void:
@@ -223,17 +223,12 @@ func _debug_talk(npc_id: String) -> void:
 
 func _debug_skills(list: String) -> void:
 	var ids := PlayerState.skills.all_ids() if list == "all" else PackedStringArray(list.split(","))
-	var slot := 0
 	for id in ids:
 		PlayerState.learn_skill(id)
-		if slot < 4 and PlayerState.skills.knows(id):
-			PlayerState.skills.slots[slot] = id
-			slot += 1
-	PlayerState.skills_changed.emit()
 
 
 func _debug_cast(slot: int) -> void:
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(1.0).timeout
 	PlayerState.vitals.restore(Vitals.MANA, PlayerState.vitals.max_value(Vitals.MANA))
 	PlayerState.use_skill_slot(slot - 1)
 

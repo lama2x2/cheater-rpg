@@ -107,7 +107,7 @@ func _melee(weapon: Dictionary, kind: String) -> void:
 	var behind := model.is_from_behind(-target.global_transform.basis.z, hero.global_position - target.global_position)
 	var has_sack := bool(Content.enemy_db().enemy(target.enemy_id).get("spore_sack", false))
 	var zone := _lucky_zone(model.melee_zone(kind, behind, _rng, has_sack), behind, has_sack, target)
-	var mult := model.melee_multiplier(PlayerState.effective("strength"), winded)
+	var mult := model.melee_multiplier(PlayerState.effective("strength"), winded) * _skill_mult(target)
 	var result := model.hit(float(strike["damage"]), zone, _armor(target), float(weapon["penetration"]), mult)
 	result["attack"] = kind
 	_apply_hit(target, result, PlayerState.weapons.equipped)
@@ -168,7 +168,7 @@ func _ranged_hit(target: Node3D, _at: Vector3, weapon: Dictionary) -> void:
 	var behind := model.is_from_behind(-target.global_transform.basis.z, hero.global_position - target.global_position)
 	var has_sack := bool(data.get("spore_sack", false))
 	var zone := _lucky_zone(model.ranged_zone(behind, PlayerState.effective("accuracy"), _rng, has_sack), behind, has_sack, target)
-	var result := model.hit(float(weapon["damage"]), zone, _armor(target), float(weapon["penetration"]))
+	var result := model.hit(float(weapon["damage"]), zone, _armor(target), float(weapon["penetration"]), _skill_mult(target))
 	result["attack"] = "ranged"
 	_apply_hit(target, result, PlayerState.weapons.equipped)
 
@@ -206,11 +206,25 @@ func _finish_reload() -> void:
 # --- Общее -------------------------------------------------------------------------------------
 
 ## Удача героя (D-76): некритичный удар с шансом уходит в голову, а сзади — в споровый мешок.
+## Пассивы (Из тени, свойство 60) добавляют свой шанс по ничего не подозревающей твари.
 func _lucky_zone(zone: String, behind: bool, has_sack: bool, target: Node3D) -> String:
 	var better := DamageModel.lucky_zone(zone, behind, has_sack)
-	if better == zone or not PlayerState.lucky("hero_crit", target.global_position + Vector3.UP * 2.8):
+	if better == zone:
+		return zone
+	if _rng.randf() < PlayerState.skills.crit_chance(target.is_unaware(), PlayerState.skill_levels()):
+		return better
+	if not PlayerState.lucky("hero_crit", target.global_position + Vector3.UP * 2.8):
 		return zone
 	return better
+
+
+## Множитель урона от пассивов (Из тени: тварь не гонится и не атакует).
+func _skill_mult(target: Node3D) -> float:
+	var elite := bool(Content.enemy_db().enemy(target.enemy_id).get("elite", false))
+	var mult := PlayerState.skills.damage_mult(target.is_unaware(), elite, PlayerState.skill_levels())
+	if mult > 1.0:
+		EventBus.luck_event.emit("ambush", target.global_position + Vector3.UP * 3.2)
+	return mult
 
 
 func _armor(target: Node3D) -> Dictionary:

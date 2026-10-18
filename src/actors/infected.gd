@@ -103,6 +103,23 @@ func take_damage(amount: float, from: Vector3 = Vector3.INF) -> bool:
 	return false
 
 
+## Пугач: бежать прочь от точки from на seconds секунд (на 25 м в сторону от неё).
+func scare(from: Vector3, seconds: float) -> void:
+	var away := global_position - from
+	away.y = 0.0
+	if away.length() < 0.1:
+		away = Vector3.FORWARD
+	var point := global_position + away.normalized() * 25.0
+	brain.flee(NavigationServer3D.map_get_closest_point(get_world_3d().navigation_map, point), seconds)
+	_lunge_left = 0.0
+	_on_state_changed()
+
+
+## Тварь не гонится за героем и не атакует — для умения «Из тени».
+func is_unaware() -> bool:
+	return not brain.is_alert()
+
+
 func to_dict() -> Dictionary:
 	return {
 		"id": enemy_id, "level": level, "hp": hp, "yaw": rotation.y,
@@ -199,6 +216,8 @@ func _act(delta: float) -> void:
 			_try_lunge()
 		InfectedBrain.ATTACK:
 			_attack()
+		InfectedBrain.FLEE:
+			speed = float(move["run"])
 		InfectedBrain.EAT:
 			speed = float(move["walk"])
 			if bool(_senses.get("at_target", false)):
@@ -308,6 +327,9 @@ func _on_state_changed() -> void:
 		InfectedBrain.EAT:
 			_mark.text = "…"
 			_mark.modulate = Color(0.8, 0.8, 0.8)
+		InfectedBrain.FLEE:
+			_mark.text = "≈"
+			_mark.modulate = Color(0.6, 0.8, 1.0)
 		_:
 			_mark.text = ""
 

@@ -8,6 +8,8 @@ const LAYER_WORLD := 1
 
 var model: NoiseModel
 var weather := "clear"
+## Зоны тишины (умение Гаситель): {"at": Vector3, "radius", "mult", "until_ms", "follow": Node3D или null}.
+var zones: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -23,8 +25,14 @@ func _process(delta: float) -> void:
 func _on_noise(source: String, at: Vector3, options: Dictionary) -> void:
 	var opts := options.duplicate()
 	opts["weather"] = weather
-	var r := model.radius(source, opts)
-	if bool(options.get("from_hero", false)) and _luck_quiet(source):
+	var from_hero := bool(options.get("from_hero", false))
+	var skill_mult := 1.0
+	if from_hero:
+		var adjust := PlayerState.skills.noise_adjust(source, GameClock.minutes, PlayerState.skill_levels())
+		source = String(adjust["source"])
+		skill_mult = float(adjust["mult"])
+	var r := model.radius(source, opts) * skill_mult * _zone_mult(at)
+	if from_hero and _luck_quiet(source):
 		r *= float(Content.luck_model().config()["quiet_mult"])
 	model.register(r)
 	for infected: Node3D in get_tree().get_nodes_in_group("infected"):
@@ -36,6 +44,28 @@ func _on_noise(source: String, at: Vector3, options: Dictionary) -> void:
 			infected.hear(at, loudness)
 	if bool(options.get("from_hero", false)) and bool(Settings.value("noise_ring")):
 		_ring(at, r)
+
+
+## Гаситель: зона тишины на duration_s реальных секунд; follow — следует за узлом (героем).
+func add_zone(at: Vector3, radius: float, mult: float, duration_s: float, follow: Node3D = null) -> void:
+	zones.append({"at": at, "radius": radius, "mult": mult, "until_ms": Time.get_ticks_msec() + int(duration_s * 1000.0), "follow": follow})
+
+
+## Множитель громкости от зон тишины в точке (наименьший из зон, где лежит точка).
+func _zone_mult(at: Vector3) -> float:
+	var now := Time.get_ticks_msec()
+	var mult := 1.0
+	for zone in zones.duplicate():
+		if int(zone["until_ms"]) <= now:
+			zones.erase(zone)
+			continue
+		var center: Vector3 = zone["at"]
+		var follow: Variant = zone["follow"]
+		if follow != null and is_instance_valid(follow):
+			center = (follow as Node3D).global_position
+		if Vector2(at.x - center.x, at.z - center.z).length() <= float(zone["radius"]):
+			mult = minf(mult, float(zone["mult"]))
+	return mult
 
 
 ## Удача героя (D-76): шаг, дверь, упавшая вещь вышли тише. Бросаем, только если рядом есть кому
