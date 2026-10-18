@@ -78,6 +78,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --kit         выдать отладочный набор предметов и открыть инвентарь
 ##   --no-enemies  без заражённых
 ##   --at=X,Z      поставить героя в точку (для снимков)
+##   --corpse=ID   труп твари ID в метре от героя и нож в рюкзак (проверка вскрытия мешка)
 func _handle_debug_args() -> void:
 	var shot_path := ""
 	var die_times := 0
@@ -95,6 +96,10 @@ func _handle_debug_args() -> void:
 		elif arg.begins_with("--at="):
 			var xz := arg.trim_prefix("--at=").split(",")
 			get_tree().get_first_node_in_group("hero").position = Vector3(float(xz[0]), 0.1, float(xz[1]))
+		elif arg.begins_with("--corpse="):
+			PlayerState.pick_up("knife", 1)
+			var enemy := arg.trim_prefix("--corpse=")
+			EventBus.infected_killed.emit(enemy, int(Content.enemy_db().enemy(enemy)["level"][1]), Vector3(0.8, 0, -0.8))
 		elif arg.begins_with("--shot-at="):
 			shot_at = float(arg.trim_prefix("--shot-at="))
 		elif arg.begins_with("--shot="):

@@ -89,7 +89,7 @@ func load_dict(data: Dictionary) -> void:
 		var infected: CharacterBody3D = InfectedScript.new()
 		infected.load_dict(entry)
 		add_child(infected)
-	for entry: Dictionary in data.get("corpses", []):
+	for entry: Dictionary in data["corpses"]:
 		var corpse: Node3D = InfectedCorpseScript.new()
 		corpse.load_dict(entry)
 		_corpses.add_child(corpse)

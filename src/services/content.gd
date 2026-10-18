@@ -15,6 +15,7 @@ const TEST_AREA_PATH := "res://data/world/test_area.json"
 const NOISE_PATH := "res://data/noise.json"
 const WEAPONS_PATH := "res://data/weapons.json"
 const COMBAT_PATH := "res://data/combat.json"
+const LOOT_DIR := "res://data/loot"
 
 var _cache: Dictionary = {}
 
@@ -78,6 +79,16 @@ func weapon_db() -> WeaponDB:
 	if not _cache.has(WEAPONS_PATH):
 		_cache[WEAPONS_PATH] = WeaponDB.new(JsonData.load_dict(WEAPONS_PATH, WeaponDB.REQUIRED_KEYS))
 	return _cache[WEAPONS_PATH]
+
+
+func loot() -> LootTable:
+	if not _cache.has(LOOT_DIR):
+		var files: Array = []
+		for file in DirAccess.get_files_at(LOOT_DIR):
+			if file.ends_with(".json"):
+				files.append(JsonData.load_dict(LOOT_DIR.path_join(file), LootTable.REQUIRED_KEYS))
+		_cache[LOOT_DIR] = LootTable.new(files)
+	return _cache[LOOT_DIR]
 
 
 func combat_config() -> Dictionary:

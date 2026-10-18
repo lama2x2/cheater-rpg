@@ -1,5 +1,5 @@
 {
-  "_doc": "Заражённые, стадии 0–5 (docs/spec/07_enemies.md, 7.1; схема — 14.2). Скорости в м/с (герой: шаг 4, бег 7). Время — реальные секунды. ai — пороги мозга (src/core/infected_brain.gd). armor — броня по зонам (бронепластины топтуна), attack.bleed_chance — шанс кровотечения у героя. spore_sack — задача 9.",
+  "_doc": "Заражённые, стадии 0–5 (docs/spec/07_enemies.md, 7.1; схема — 14.2). Скорости в м/с (герой: шаг 4, бег 7). Время — реальные секунды. ai — пороги мозга (src/core/infected_brain.gd). armor — броня по зонам (бронепластины топтуна), attack.bleed_chance — шанс кровотечения у героя. spore_sack — есть ли мешок, loot — таблица из data/loot, sack_open_s — базовое время вскрытия; делится на sack_open_mult лучшего клинка в инвентаре (нож ×2 → 2–6 с, топор ×1,5).",
   "enemies": [
     {
       "id": "crawler",
@@ -105,7 +105,9 @@
         "torso": 0,
         "limbs": 0,
         "spore_sack": 0
-      }
+      },
+      "loot": "loot_slowpoke",
+      "sack_open_s": 4.0
     },
     {
       "id": "jumper",
@@ -167,7 +169,9 @@
         "torso": 0,
         "limbs": 0,
         "spore_sack": 0
-      }
+      },
+      "loot": "loot_jumper",
+      "sack_open_s": 5.0
     },
     {
       "id": "runner",
@@ -229,7 +233,9 @@
         "torso": 2,
         "limbs": 0,
         "spore_sack": 0
-      }
+      },
+      "loot": "loot_runner",
+      "sack_open_s": 7.0
     },
     {
       "id": "lottery",
@@ -291,7 +297,9 @@
         "torso": 6,
         "limbs": 2,
         "spore_sack": 0
-      }
+      },
+      "loot": "loot_lottery",
+      "sack_open_s": 9.0
     },
     {
       "id": "stomper",
@@ -344,7 +352,9 @@
         "torso": 18,
         "limbs": 4,
         "spore_sack": 8
-      }
+      },
+      "loot": "loot_stomper",
+      "sack_open_s": 12.0
     }
   ]
 }

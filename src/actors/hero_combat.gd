@@ -39,6 +39,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("reload"):
 		_start_reload()
 	elif event.is_action_pressed("attack"):
+		hero.channel.cancel()
 		_on_press()
 	elif event.is_action_released("attack"):
 		_on_release()

@@ -3,9 +3,11 @@ extends CharacterBody3D
 ## Шаги шумят (EventBus.noise_made); C — красться: медленнее, тише, заметнее хуже.
 
 const HeroCombatScript := preload("res://src/actors/hero_combat.gd")
+const HeroChannelScript := preload("res://src/actors/hero_channel.gd")
 
 var camera: Camera3D
 var combat: Node3D
+var channel: Node
 ## Ближайший объект для E (группа "interactable"), или null.
 var current_interactable: Node3D
 var sneaking := false
@@ -25,6 +27,9 @@ func _ready() -> void:
 	combat = HeroCombatScript.new()
 	combat.hero = self
 	add_child(combat)
+	channel = HeroChannelScript.new()
+	channel.hero = self
+	add_child(channel)
 	SaveService.register("hero", self)
 
 
