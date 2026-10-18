@@ -10,6 +10,22 @@ var _sprint_meters: float = 0.0
 func _ready() -> void:
 	_tuning = Content.player_tuning()
 	_build_body()
+	SaveService.register("hero", self)
+
+
+func _exit_tree() -> void:
+	SaveService.unregister("hero")
+
+
+func to_dict() -> Dictionary:
+	return {"position": [global_position.x, global_position.y, global_position.z], "yaw": rotation.y}
+
+
+func load_dict(data: Dictionary) -> void:
+	var at: Array = data["position"]
+	global_position = Vector3(float(at[0]), float(at[1]), float(at[2]))
+	rotation.y = float(data["yaw"])
+	velocity = Vector3.ZERO
 
 
 func _physics_process(delta: float) -> void:

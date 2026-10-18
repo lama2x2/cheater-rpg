@@ -23,6 +23,14 @@ func _process(delta: float) -> void:
 		hour_passed.emit(hour_now % 24, day())
 
 
+func to_dict() -> Dictionary:
+	return {"minutes": minutes}
+
+
+func load_dict(data: Dictionary) -> void:
+	minutes = float(data["minutes"])
+
+
 func day() -> int:
 	return floori(minutes / MINUTES_PER_DAY) + 1
 

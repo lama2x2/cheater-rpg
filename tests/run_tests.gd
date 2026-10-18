@@ -2,11 +2,14 @@ extends SceneTree
 ## Мини-раннер тестов без сторонних плагинов.
 ## Запуск: scripts/test.sh  (или godot --headless --path . -s res://tests/run_tests.gd)
 ## Находит tests/test_*.gd и вызывает каждый метод test_* на новом экземпляре.
+## Запуск в _initialize, а не в _init: к этому моменту autoload-сервисы уже зарегистрированы,
+## и тесты могут грузить скрипты, которые к ним обращаются.
+## Ошибка внутри теста (SCRIPT ERROR) обрывает метод, но раннер её не видит — её ловит scripts/test.sh.
 
 const TESTS_DIR := "res://tests"
 
 
-func _init() -> void:
+func _initialize() -> void:
 	var passed := 0
 	var failed := 0
 	for file in DirAccess.get_files_at(TESTS_DIR):

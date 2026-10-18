@@ -25,17 +25,23 @@ func _ready() -> void:
 	_log.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(_log)
 
-	for entry in SystemLog.history:
-		_push(entry["text"])
+	_reload_log()
 	SystemLog.message_posted.connect(func(text: String, _kind: String) -> void: _push(text))
+	SystemLog.history_replaced.connect(_reload_log)
 
 
 func _process(_delta: float) -> void:
 	var stats := PlayerState.stats
-	_status.text = "Жизни: %d    Уровень: %d    %s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [колесо] зум  [K] умереть (отладка)" % [
+	_status.text = "Жизни: %d    Уровень: %d    %s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [колесо] зум  [K] умереть  [F5/F9] сохранить/загрузить (отладка)" % [
 		PlayerState.lives, stats.general_level(), GameClock.clock_text(),
 		stats.get_level("speed"), stats.get_progress("speed"), stats.threshold("speed"),
 	]
+
+
+func _reload_log() -> void:
+	_lines.clear()
+	for entry in SystemLog.history:
+		_push(entry["text"])
 
 
 func _push(text: String) -> void:

@@ -35,6 +35,10 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_die"):
 		PlayerState.die("debug")
+	elif event.is_action_pressed("debug_save"):
+		SaveService.save_game(SaveService.DEBUG_SLOT)
+	elif event.is_action_pressed("debug_load"):
+		SaveService.load_game(SaveService.DEBUG_SLOT)
 
 
 ## Отладочные аргументы после «--»:

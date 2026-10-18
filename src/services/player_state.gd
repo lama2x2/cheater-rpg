@@ -31,6 +31,16 @@ func die(cause: String) -> void:
 	EventBus.player_died.emit(cause, lives)
 
 
+func to_dict() -> Dictionary:
+	return {"stats": stats.to_dict(), "lives": lives, "deaths": deaths}
+
+
+func load_dict(data: Dictionary) -> void:
+	stats.load_dict(data["stats"])
+	lives = int(data["lives"])
+	deaths = int(data["deaths"])
+
+
 func _on_stat_level_changed(stat: String, old_level: int, new_level: int) -> void:
 	var params := {"stat": Content.stat_name(stat), "level": new_level}
 	if new_level < old_level:
