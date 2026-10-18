@@ -2,6 +2,8 @@ extends CharacterBody3D
 ## Герой: движение относительно камеры, спринт качает Скорость, поворот к курсору.
 
 var camera: Camera3D
+## Ближайший объект для E (группа "interactable"), или null.
+var current_interactable: Node3D
 
 var _tuning: Dictionary
 var _sprint_meters: float = 0.0
@@ -35,10 +37,11 @@ func _physics_process(delta: float) -> void:
 		direction = Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera.global_rotation.y)
 	var vitals := PlayerState.vitals
 	var sprinting := Input.is_action_pressed("sprint") and direction.length() > 0.1 and vitals.can_sprint()
-	vitals.tick(delta, GameClock.game_minutes_for(delta), sprinting)
+	var inventory := PlayerState.inventory
+	vitals.tick(delta, GameClock.game_minutes_for(delta), sprinting, inventory.stamina_cost_multiplier())
 	var speed: float = float(_tuning["sprint_speed"]) if sprinting else float(_tuning["walk_speed"])
 	speed *= 1.0 + float(_tuning["speed_bonus_per_level"]) * (PlayerState.stats.get_level("speed") - 1)
-	speed *= vitals.speed_multiplier()
+	speed *= vitals.speed_multiplier() * inventory.speed_multiplier()
 
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
@@ -52,6 +55,27 @@ func _physics_process(delta: float) -> void:
 	if sprinting:
 		_count_sprint(Vector2(global_position.x - before.x, global_position.z - before.z).length())
 	_face_cursor()
+	current_interactable = _nearest_interactable()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("interact") and current_interactable:
+		current_interactable.interact(self)
+		get_viewport().set_input_as_handled()
+
+
+func _nearest_interactable() -> Node3D:
+	var radius := float(_tuning["interact_radius"])
+	var best: Node3D = null
+	var best_distance := radius
+	for node: Node3D in get_tree().get_nodes_in_group("interactable"):
+		if node.is_queued_for_deletion():
+			continue
+		var distance := Vector2(node.global_position.x - global_position.x, node.global_position.z - global_position.z).length()
+		if distance <= best_distance:
+			best = node
+			best_distance = distance
+	return best
 
 
 ## Спринт качает Скорость: очки за каждый целый пробежанный метр.

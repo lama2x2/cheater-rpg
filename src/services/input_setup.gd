@@ -9,6 +9,8 @@ const ACTIONS := {
 	"move_left": [KEY_A, KEY_LEFT],
 	"move_right": [KEY_D, KEY_RIGHT],
 	"sprint": [KEY_SHIFT],
+	"interact": [KEY_E],
+	"inventory": [KEY_TAB, KEY_I],
 	"debug_die": [KEY_K],
 	"debug_save": [KEY_F5],
 	"debug_load": [KEY_F9],

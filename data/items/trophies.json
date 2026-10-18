@@ -1,0 +1,15 @@
+{
+  "_doc": "Трофеи тварей (docs/spec/06_trophies_items.md, 6.2). weight_g — вес одной штуки. Эффекты приёма — блок consume (задача 5).",
+  "items": [
+    { "id": "sporan", "category": "trophy", "weight_g": 1, "primary_inventory": true, "base_price": 1 },
+    { "id": "pea_yellow", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 11 },
+    { "id": "pea_white", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 40 },
+    { "id": "pea_gold", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 120 },
+    { "id": "grain", "category": "trophy", "weight_g": 1, "primary_inventory": true, "base_price": 10 },
+    { "id": "nut", "category": "trophy", "weight_g": 2, "primary_inventory": true, "base_price": 20 },
+    { "id": "star_black", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 25 },
+    { "id": "star_white", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 140 },
+    { "id": "star_gold", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 200 },
+    { "id": "pearl_black", "category": "trophy", "weight_g": 2, "primary_inventory": true, "base_price": 2500 }
+  ]
+}

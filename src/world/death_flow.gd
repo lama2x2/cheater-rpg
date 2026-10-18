@@ -51,7 +51,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_player_died(cause: String, lives_left: int) -> void:
-	_spawn_corpse(PlayerState.deaths, hero.global_position, hero.rotation.y, {})
+	_spawn_corpse(PlayerState.deaths, hero.global_position, hero.rotation.y, PlayerState.dropped_on_death)
+	PlayerState.dropped_on_death = {}
 	_set_hero_active(false)
 	_start_waiting(cause, lives_left)
 

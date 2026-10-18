@@ -1,0 +1,14 @@
+{
+  "_doc": "Инвентарь (docs/spec/06_trophies_items.md, 6.3). Первичный — ячейки Системы, сохраняется при смерти. Рюкзак — список по весу (D-25), остаётся на трупе.",
+  "primary": {
+    "slots_start": 3,
+    "slot_capacity_g": 35
+  },
+  "backpack": {
+    "capacity_base_kg": 15,
+    "capacity_per_strength_level_kg": 1.5,
+    "overload_speed_at_double": 0.5,
+    "overload_stamina_cost_at_double": 2.0,
+    "hard_limit_ratio": 2.0
+  }
+}

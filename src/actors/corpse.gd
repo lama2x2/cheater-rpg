@@ -10,6 +10,7 @@ var contents: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("corpses")
+	add_to_group("interactable")
 	var body := CapsuleMesh.new()
 	body.radius = 0.35
 	body.height = 1.8
@@ -32,6 +33,37 @@ func _ready() -> void:
 	label.pixel_size = 0.01
 	label.outline_size = 8
 	add_child(label)
+
+
+func interact_text() -> String:
+	if _backpack().is_empty():
+		return Content.ui("interact_corpse_empty", {"life": life})
+	return Content.ui("interact_corpse", {"life": life})
+
+
+## Забрать своё: всё из рюкзака трупа — в рюкзак героя, что не влезло — остаётся на трупе.
+func interact(_hero: Node3D) -> void:
+	var stacks := _backpack()
+	if stacks.is_empty():
+		SystemLog.post("corpse_empty")
+		return
+	var inv := PlayerState.inventory
+	var remaining: Array = []
+	var moved := 0
+	for stack: Dictionary in stacks:
+		var left := inv.add_backpack(String(stack["id"]), int(stack["count"]))
+		moved += int(stack["count"]) - left
+		if left > 0:
+			remaining.append({"id": stack["id"], "count": left})
+	contents["backpack"] = remaining
+	SystemLog.post("corpse_looted", {"count": moved})
+	if not remaining.is_empty():
+		SystemLog.post("too_heavy", {"item": Content.item_name(remaining[0]["id"]), "strength": PlayerState.stats.get_level("strength")}, "warning")
+	PlayerState.notify_inventory_changed()
+
+
+func _backpack() -> Array:
+	return contents.get("backpack", [])
 
 
 func to_dict() -> Dictionary:

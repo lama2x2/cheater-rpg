@@ -73,6 +73,29 @@
     ],
     "continue_stub": [
       "Система выдала ещё {lives} жизней. Временно. Это заглушка, а не доброта."
+    ],
+    "item_picked": [
+      "Подобрано: {item} ×{count}."
+    ],
+    "item_picked_primary": [
+      "Подобрано: {item} ×{count} (в ячейки Системы)."
+    ],
+    "too_heavy": [
+      "Не унести: {item}. Рюкзак не резиновый, объект — не вьючное животное.",
+      "Слишком тяжело: {item}. Сила — уровень {strength}, на большее не рассчитывайте."
+    ],
+    "overloaded": [
+      "Перегруз. Скорость снижена, бодрость тратится быстрее. Шуметь вы тоже будете громче.",
+      "Рюкзак тянет к земле. Система рекомендует расстаться с кирпичами."
+    ],
+    "corpse_looted": [
+      "Своё забрано с трупа: {count} предм. Покойник не возражал."
+    ],
+    "corpse_empty": [
+      "На трупе ничего нет. Даже совести."
+    ],
+    "item_dropped": [
+      "Выброшено: {item} ×{count}."
     ]
   },
   "death_causes": {
@@ -109,6 +132,41 @@
     "summary_deaths": "Смертей: {deaths}. Чаще всего — {cause} ({times})",
     "summary_longest_life": "Самая долгая жизнь: {hours} ч {minutes} мин",
     "summary_highlights": "Лучшие моменты",
-    "summary_continue": "Продолжить"
+    "summary_continue": "Продолжить",
+    "interact_pickup": "[E] Подобрать: {item} ×{count}",
+    "interact_corpse": "[E] Забрать вещи (труп жизни {life})",
+    "interact_corpse_empty": "Труп жизни {life} — пусто",
+    "inv_title": "Инвентарь  [Tab] закрыть",
+    "inv_primary": "Ячейки Системы — сохраняются при смерти",
+    "inv_primary_slot": "{n}. {item} ×{count}  ({grams} / {cap} г)",
+    "inv_primary_empty": "{n}. — пусто —  (0 / {cap} г)",
+    "inv_backpack": "Рюкзак — остаётся на трупе  {kg} / {cap} кг",
+    "inv_backpack_row": "{item} ×{count}  ({kg} кг)",
+    "inv_backpack_empty": "— пусто —",
+    "inv_overload": "ПЕРЕГРУЗ: скорость ×{speed}",
+    "inv_to_primary": "→ в ячейку",
+    "inv_to_backpack": "→ в рюкзак",
+    "inv_drop": "выбросить",
+    "inv_drop_one": "выбросить 1"
+  },
+  "item_names": {
+    "sporan": "Споран",
+    "pea_yellow": "Жёлтая горошина",
+    "pea_white": "Белая горошина",
+    "pea_gold": "Золотая горошина",
+    "grain": "Зерно",
+    "nut": "Орех",
+    "star_black": "Чёрная звезда",
+    "star_white": "Белая звезда",
+    "star_gold": "Золотая звезда",
+    "pearl_black": "Чёрный жемчуг",
+    "zhivchik": "Живчик",
+    "vodka": "Водка",
+    "vinegar": "Уксус",
+    "canned_food": "Тушёнка",
+    "water_bottle": "Бутылка воды",
+    "bandage": "Бинт",
+    "gold_ring": "Золотое кольцо",
+    "brick": "Кирпич"
   }
 }

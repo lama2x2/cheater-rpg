@@ -18,7 +18,8 @@ func _ready() -> void:
 	register("clock", GameClock)
 	register("player", PlayerState)
 	register("log", SystemLog)
-	EventBus.player_died.connect(func(_cause: String, _lives: int) -> void: save_game(AUTO_SLOT))
+	# Отложенно: сначала сцена кладёт труп с рюкзаком, потом пишем сейв.
+	EventBus.player_died.connect(func(_cause: String, _lives: int) -> void: save_game.call_deferred(AUTO_SLOT))
 
 
 func register(section: String, owner: Object) -> void:

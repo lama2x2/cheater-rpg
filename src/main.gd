@@ -7,6 +7,16 @@ const IsoCameraScript := preload("res://src/world/iso_camera.gd")
 const DebugHudScript := preload("res://src/ui/debug_hud.gd")
 const VitalsBarsScript := preload("res://src/ui/vitals_bars.gd")
 const DeathFlowScript := preload("res://src/world/death_flow.gd")
+const WorldItemsScript := preload("res://src/world/world_items.gd")
+const InventoryPanelScript := preload("res://src/ui/inventory_panel.gd")
+const InteractPromptScript := preload("res://src/ui/interact_prompt.gd")
+
+## Стартовая россыпь предметов у респа (пока нет лута и кластеров): [id, count, x, z].
+const STARTER_ITEMS := [
+	["sporan", 12, 3.0, 2.0], ["pea_yellow", 1, -2.5, 3.0], ["vodka", 1, 4.0, -2.0],
+	["canned_food", 2, -3.5, -2.0], ["bandage", 2, 1.5, -4.0], ["vinegar", 1, -1.0, 5.0],
+	["gold_ring", 1, 5.5, 4.0], ["brick", 5, 7.0, 0.0],
+]
 
 const GROUND_SIZE := 200.0
 const OBSTACLE_COUNT := 40
@@ -33,6 +43,17 @@ func _ready() -> void:
 
 	add_child(DebugHudScript.new())
 	add_child(VitalsBarsScript.new())
+	var prompt: CanvasLayer = InteractPromptScript.new()
+	prompt.hero = player
+	add_child(prompt)
+	var inventory_panel: CanvasLayer = InventoryPanelScript.new()
+	inventory_panel.hero = player
+	add_child(inventory_panel)
+
+	var world_items: Node3D = WorldItemsScript.new()
+	add_child(world_items)
+	for entry: Array in STARTER_ITEMS:
+		world_items.spawn(entry[0], entry[1], Vector3(entry[2], 0.0, entry[3]))
 	_build_respawn_marker(PlayerState.respawn_position)
 
 	_death_flow = DeathFlowScript.new()
@@ -57,6 +78,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --shot-at=S   снимать не через 4, а через S секунд
 ##   --fast-respawn  возрождение через 5 с вместо 100–180
 ##   --die=N       через секунду умереть N раз подряд (N ≥ жизней — сразу экран итогов)
+##   --kit         выдать отладочный набор предметов и открыть инвентарь
 func _handle_debug_args() -> void:
 	var shot_path := ""
 	var die_times := 0
@@ -65,6 +87,8 @@ func _handle_debug_args() -> void:
 		if arg == "--demo":
 			Input.action_press("move_forward")
 			Input.action_press("sprint")
+		elif arg == "--kit":
+			_debug_kit()
 		elif arg == "--fast-respawn":
 			_death_flow.fast_respawn = true
 		elif arg.begins_with("--die="):
@@ -80,6 +104,15 @@ func _handle_debug_args() -> void:
 	await get_tree().create_timer(shot_at).timeout
 	get_viewport().get_texture().get_image().save_png(shot_path)
 	get_tree().quit()
+
+
+func _debug_kit() -> void:
+	for entry: Array in [["sporan", 47], ["pearl_black", 1], ["zhivchik", 2], ["vodka", 2], ["brick", 4], ["canned_food", 3]]:
+		PlayerState.pick_up(entry[0], entry[1])
+	var open := InputEventAction.new()
+	open.action = "inventory"
+	open.pressed = true
+	Input.parse_input_event(open)
 
 
 func _debug_die(times: int) -> void:

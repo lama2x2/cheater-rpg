@@ -2,19 +2,15 @@ extends "res://tests/test_case.gd"
 ## Сохранения: docs/spec/13_tech.md, 13.5.
 
 const SaveFormatScript := preload("res://src/core/save_format.gd")
-const StatBlockScript := preload("res://src/core/stat_block.gd")
-const JsonDataScript := preload("res://src/core/json_data.gd")
 const PlayerStateScript := preload("res://src/services/player_state.gd")
 const GameClockScript := preload("res://src/services/game_clock.gd")
-const VitalsScript := preload("res://src/core/vitals.gd")
 
 const TEST_DIR := "user://test_saves"
 
 
 func _player() -> Node:
 	var player: Node = PlayerStateScript.new()
-	player.stats = StatBlockScript.new(JsonDataScript.load_dict("res://data/stats.json"))
-	player.vitals = VitalsScript.new(JsonDataScript.load_dict("res://data/vitals.json"))
+	player.setup()
 	return player
 
 
@@ -67,6 +63,8 @@ func test_player_and_clock_survive_save_load() -> void:
 	player.stats.set_coefficient("luck", 1.3)
 	player.vitals.damage(33.0)
 	player.vitals.drain("spore_balance", 41.0)
+	player.inventory.add("sporan", 40)
+	player.inventory.add("vodka", 1)
 	player.lives = 6
 	player.deaths = 3
 	var clock: Node = GameClockScript.new()
@@ -83,6 +81,7 @@ func test_player_and_clock_survive_save_load() -> void:
 
 	assert_eq(player2.to_dict(), player.to_dict(), "состояние героя")
 	assert_eq(typeof(player2.lives), TYPE_INT, "жизни остаются целым числом")
+	assert_eq(player2.inventory.count_of("sporan"), 40, "споранов")
 	assert_eq(player2.stats.get_level("speed"), 2, "уровень Скорости (27 очков: 10 → ур.2, 17 из 20)")
 	assert_almost(clock2.minutes, 2000.5, "время")
 	DirAccess.remove_absolute(path)

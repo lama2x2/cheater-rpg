@@ -92,13 +92,14 @@ func speed_multiplier() -> float:
 
 
 ## Шаг симуляции. real_seconds — для бодрости, game_minutes — для остального.
-func tick(real_seconds: float, game_minutes: float, sprinting: bool) -> void:
+## stamina_cost_mult — перегруз рюкзака и т. п. увеличивают расход на бег.
+func tick(real_seconds: float, game_minutes: float, sprinting: bool, stamina_cost_mult: float = 1.0) -> void:
 	if is_dead():
 		return
 	var s: Dictionary = _config[STAMINA]
 	var spent := 0.0
 	if sprinting and can_sprint():
-		spent = spend_stamina(float(s["sprint_cost_per_second"]) * real_seconds)
+		spent = spend_stamina(float(s["sprint_cost_per_second"]) * real_seconds * stamina_cost_mult)
 	else:
 		_stamina_idle += real_seconds
 		if _stamina_idle >= float(s["regen_delay_seconds"]):

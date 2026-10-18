@@ -11,13 +11,20 @@ extends RefCounted
 ##   2 — player.vitals (шкалы). Старые сейвы получают шкалы по умолчанию.
 ##   3 — player: run, deaths_since_region_shift, awaiting_respawn, start_minutes, respawn_position;
 ##       log.highlights; секция corpses.
+##   4 — player.inventory; секция world_items.
 
-const VERSION := 3
+const VERSION := 4
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
+
+
+static func _v3_to_v4(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		data["sections"]["player"].merge({"inventory": {}})
+	return data
 
 
 static func _v2_to_v3(data: Dictionary) -> Dictionary:

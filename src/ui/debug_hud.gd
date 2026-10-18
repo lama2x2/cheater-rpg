@@ -32,7 +32,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	var stats := PlayerState.stats
-	_status.text = "Жизни: %d    Уровень: %d    %s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [колесо] зум  [K] умереть  [F5/F9] сохранить/загрузить  [F8] пропустить отсчёт (отладка)" % [
+	_status.text = "Жизни: %d    Уровень: %d    %s\nСкорость: %d  (%.1f / %.0f)\n\n[WASD] идти  [Shift] бежать  [E] взять  [Tab] инвентарь  [колесо] зум  [K] умереть  [F5/F9] сохранить/загрузить  [F8] пропустить отсчёт (отладка)" % [
 		PlayerState.lives, stats.general_level(), GameClock.clock_text(),
 		stats.get_level("speed"), stats.get_progress("speed"), stats.threshold("speed"),
 	]
