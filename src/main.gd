@@ -138,6 +138,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --skills-panel  открыть окно умений
 ##   --gaze        через 1,5 с показать карточку Пристального взгляда ближайшей твари (нет тварей —
 ##                 ближайшей другой цели)
+##   --zoom=N      размер ортокамеры N м (обычно 10–40; больше — снять кластер целиком)
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
@@ -196,6 +197,8 @@ func _handle_debug_args() -> void:
 			_debug_skills_panel.call_deferred()
 		elif arg == "--pearl":
 			PlayerState.pending_pearl_skills += 1
+		elif arg.begins_with("--zoom="):
+			get_viewport().get_camera_3d().size = float(arg.trim_prefix("--zoom="))
 		elif arg == "--inside":
 			_debug_inside()
 		elif arg == "--gaze":

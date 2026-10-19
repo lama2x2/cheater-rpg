@@ -5,15 +5,13 @@ extends Node3D
 const LENGTH := 8.0
 
 var target: String = ""
-## Трещина тянется вдоль оси X (выход на северном/южном краю) или Z (на восточном/западном).
-var along_x := true
 
 
 func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("cluster_exits")
 	var crack := BoxMesh.new()
-	crack.size = Vector3(LENGTH, 0.04, 0.5) if along_x else Vector3(0.5, 0.04, LENGTH)
+	crack.size = Vector3(LENGTH, 0.04, 0.5)  # вдоль локальной X — вдоль стороны соты (cluster_area)
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(0.08, 0.08, 0.08)
 	material.emission_enabled = true

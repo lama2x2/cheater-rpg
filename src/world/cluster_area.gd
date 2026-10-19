@@ -61,7 +61,8 @@ func _ready() -> void:
 	nav.agent_radius = 0.5
 	nav.agent_height = 1.75
 	var half := size / 2.0
-	nav.filter_baking_aabb = AABB(Vector3(-half, -2, -half), Vector3(size, 10, size))
+	var reach := half * 2.0 / HexGrid.SQRT3  # до вершины соты
+	nav.filter_baking_aabb = AABB(Vector3(-half, -2, -reach), Vector3(size, 10, reach * 2.0))
 	navigation_mesh = nav
 	bake_finished.connect(_on_baked)
 	bake_navigation_mesh(true)
@@ -89,13 +90,13 @@ func entry_point(from_id: String) -> Vector3:
 	return Vector3(p.x, 0.1, p.y)
 
 
-## Точки появления тварей: случайные на свободной земле, не ближе min_distance к герою.
+## Точки появления тварей: случайные на свободной земле соты, не ближе min_distance к герою.
 func spawn_point(rng: RandomNumberGenerator, avoid: Vector3, min_distance: float) -> Vector3:
 	var limit := float(template["size"]) / 2.0 - 8.0
 	var point := Vector3.ZERO
-	for attempt in 20:
+	for attempt in 30:
 		point = Vector3(rng.randf_range(-limit, limit), 0.0, rng.randf_range(-limit, limit))
-		if Vector2(point.x - avoid.x, point.z - avoid.z).length() >= min_distance:
+		if HexGrid.inside(Vector2(point.x, point.z), limit) and Vector2(point.x - avoid.x, point.z - avoid.z).length() >= min_distance:
 			break
 	return snap(point)
 
@@ -146,26 +147,34 @@ func _on_baked() -> void:
 	navigation_ready.emit()
 
 
-## Земля и невидимые стены по краю: уйти можно только через выход к соседу.
+## Земля — шестиугольник (сота, D-70; size — между противоположными сторонами) и невидимые
+## стены по шести сторонам: уйти можно только через выход к соседу.
 func _build_ground(size: float) -> void:
+	var apothem := size / 2.0
 	var box := BoxShape3D.new()
-	box.size = Vector3(size + 20.0, 1, size + 20.0)
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(size, size)
-	add_child(_static_body(box, Vector3(0, -0.5, 0), plane, Vector3.ZERO, _color(template["ground_color"])))
-	var half := size / 2.0
-	for side in [Vector3(half, 0, 0), Vector3(-half, 0, 0), Vector3(0, 0, half), Vector3(0, 0, -half)]:
+	box.size = Vector3(size * 1.2 + 20.0, 1, size * 1.2 + 20.0)
+	var hex := CylinderMesh.new()  # 6 граней: вершины на севере и юге, как HexGrid
+	hex.radial_segments = 6
+	hex.rings = 1
+	hex.top_radius = apothem * 2.0 / HexGrid.SQRT3
+	hex.bottom_radius = hex.top_radius
+	hex.height = 0.1
+	add_child(_static_body(box, Vector3(0, -0.5, 0), hex, Vector3(0, -0.05, 0), _color(template["ground_color"])))
+	var side_length := apothem * 2.0 / HexGrid.SQRT3
+	for side in 6:
+		var normal := HexGrid.side_normal(side)
 		var edge := StaticBody3D.new()
 		var shape := CollisionShape3D.new()
 		var edge_box := BoxShape3D.new()
-		edge_box.size = Vector3(1.0, EDGE_WALL_HEIGHT, size) if side.x != 0.0 else Vector3(size, EDGE_WALL_HEIGHT, 1.0)
+		edge_box.size = Vector3(1.0, EDGE_WALL_HEIGHT, side_length + 1.5)
 		shape.shape = edge_box
-		shape.position = side + Vector3(signf(side.x) * 0.5, EDGE_WALL_HEIGHT / 2.0, signf(side.z) * 0.5)
 		edge.add_child(shape)
+		edge.position = Vector3(normal.x, 0.0, normal.y) * (apothem + 0.5) + Vector3.UP * EDGE_WALL_HEIGHT / 2.0
+		edge.rotation.y = -deg_to_rad(60.0 * side)
 		add_child(edge)
 	# Полоса за краем — «трещина» границы кластера, другой оттенок земли.
 	var rim := PlaneMesh.new()
-	rim.size = Vector2(size + 60.0, size + 60.0)
+	rim.size = Vector2(size * 1.2 + 60.0, size * 1.2 + 60.0)
 	var rim_instance := MeshInstance3D.new()
 	rim_instance.mesh = rim
 	rim_instance.position.y = -0.02
@@ -240,8 +249,9 @@ func _build_exit(neighbor: String, size: float) -> void:
 	exit.target = neighbor
 	var p := WorldSim.region.exit_point(cluster_id, neighbor, size, EXIT_INSET)
 	exit.position = Vector3(p.x, 0.0, p.y)
+	# Трещина — вдоль стороны соты: локальная ось X поворачивается к касательной стороны.
 	var dir := WorldSim.region.direction(cluster_id, neighbor)
-	exit.along_x = absf(dir.y) >= absf(dir.x)
+	exit.rotation.y = -dir.angle() - PI / 2.0
 	add_child(exit)
 
 

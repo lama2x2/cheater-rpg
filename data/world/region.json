@@ -1,15 +1,15 @@
 {
-  "_doc": "Регион среза M1 (docs/spec/02_world.md; схема 14.8): 6 кластеров в графе. map_pos — центр кластера на карте региона в условных клетках (стороны: +x восток, +y юг, как ось z в сцене); выходы ставятся на краю кластера в сторону соседа. code — номер кластера для интерфейса. neighbors — рёбра графа (симметричны). start — где начинается игра, respawn — кластер личного респа героя.",
+  "_doc": "Регион среза M1 (docs/spec/02_world.md «Соты и ландшафт»; схема 14.8): 6 кластеров на сотовой сетке (D-70). hex — осевые координаты соты [q, r] (src/core/hex_grid.gd): соседи по сторонам — (q+1, r) восток, (q, r+1) юго-восток, (q−1, r+1) юго-запад, (q−1, r) запад, (q, r−1) северо-запад, (q+1, r−1) северо-восток. Соседи кластера — все кластеры на соседних сотах, выход — посередине общей стороны. code — номер кластера для интерфейса. start — где начинается игра, respawn — кластер личного респа героя.",
   "id": "steppe_edge",
   "name": "Степная окраина",
   "start": "c_start",
   "respawn": "c_start",
   "clusters": [
-    { "id": "c_start", "code": "749-208-91", "name": "Окраина", "type": "fast", "template": "start_fast", "map_pos": [0, 0], "neighbors": ["c_village", "c_black"] },
-    { "id": "c_village", "code": "749-209-14", "name": "Деревня", "type": "normal", "template": "village", "map_pos": [1, 0], "neighbors": ["c_start", "c_town", "c_stab"] },
-    { "id": "c_town", "code": "750-209-03", "name": "Городок", "type": "normal", "template": "town", "map_pos": [2, 0], "neighbors": ["c_village", "c_industrial", "c_stab"] },
-    { "id": "c_industrial", "code": "750-210-77", "name": "Промзона", "type": "normal", "template": "industrial", "map_pos": [2, 1], "neighbors": ["c_town", "c_black"] },
-    { "id": "c_black", "code": "749-210-40", "name": "Чернота", "type": "black", "template": "black", "map_pos": [1, 1], "neighbors": ["c_start", "c_industrial"] },
-    { "id": "c_stab", "code": "750-208-55", "name": "Перекрёсток", "type": "stab", "template": "stab", "map_pos": [1.5, -1], "neighbors": ["c_village", "c_town"] }
+    { "id": "c_start", "code": "749-208-91", "name": "Окраина", "type": "fast", "template": "start_fast", "hex": [0, 0] },
+    { "id": "c_village", "code": "749-209-14", "name": "Деревня", "type": "normal", "template": "village", "hex": [1, 0] },
+    { "id": "c_town", "code": "750-209-03", "name": "Городок", "type": "normal", "template": "town", "hex": [2, 0] },
+    { "id": "c_industrial", "code": "750-210-77", "name": "Промзона", "type": "normal", "template": "industrial", "hex": [1, 1] },
+    { "id": "c_black", "code": "749-210-40", "name": "Чернота", "type": "black", "template": "black", "hex": [0, 1] },
+    { "id": "c_stab", "code": "750-208-55", "name": "Перекрёсток", "type": "stab", "template": "stab", "hex": [2, -1] }
   ]
 }

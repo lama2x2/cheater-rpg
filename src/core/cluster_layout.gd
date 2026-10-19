@@ -9,7 +9,9 @@ extends RefCounted
 ##     "door": сторона проёма "n"/"s"/"e"/"w", "leaf": есть ли створка (у руин — просто дыра)}],
 ##   "props": [{"center": Vector2, "size": Vector3, "shade"}],
 ##   "loot": [{"at": Vector2, "table"}], "stashes": [{"at": Vector2, "table"}] }
-## Координаты — (x, z) в метрах от центра кластера; «n» — сторона +z.
+## Координаты — (x, z) в метрах от центра кластера; «n» — сторона +z. Кластер — шестиугольник
+## (сота, D-70): half — апофема (половина size, расстояния между противоположными сторонами);
+## всё ставится внутрь шестиугольника, отступив EDGE_MARGIN от краёв.
 
 const REQUIRED_KEYS: PackedStringArray = [
 	"id", "size", "layout_seed", "ground_color", "wall_color", "prop_shade", "clear_radius", "buildings", "props",
@@ -76,11 +78,12 @@ static func _place(size: Vector2, half: float, gap: float, occupied: Array[Rect2
 	var limit := half - EDGE_MARGIN
 	if size.x / 2.0 >= limit or size.y / 2.0 >= limit:
 		return Rect2()
+	var reach := limit * 2.0 / HexGrid.SQRT3  # по оси z сота дотягивается до вершины
 	for attempt in ATTEMPTS:
 		var center := Vector2(rng.randf_range(-limit + size.x / 2.0, limit - size.x / 2.0),
-				rng.randf_range(-limit + size.y / 2.0, limit - size.y / 2.0))
+				rng.randf_range(-reach + size.y / 2.0, reach - size.y / 2.0))
 		var rect := Rect2(center - size / 2.0, size)
-		if not _blocked(rect.grow(gap), occupied, clear):
+		if HexGrid.encloses(limit, rect) and not _blocked(rect.grow(gap), occupied, clear):
 			return rect
 	return Rect2()
 
@@ -103,7 +106,7 @@ static func _free_point(half: float, occupied: Array[Rect2], rng: RandomNumberGe
 	var point := Vector2.ZERO
 	for attempt in ATTEMPTS:
 		point = Vector2(rng.randf_range(-limit, limit), rng.randf_range(-limit, limit))
-		if not _blocked(Rect2(point - Vector2(0.4, 0.4), Vector2(0.8, 0.8)), occupied, []):
+		if HexGrid.inside(point, limit) and not _blocked(Rect2(point - Vector2(0.4, 0.4), Vector2(0.8, 0.8)), occupied, []):
 			return point
 	return point
 

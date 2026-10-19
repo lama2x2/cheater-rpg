@@ -105,23 +105,37 @@ func test_region_graph_valid() -> void:
 		assert_true(types.has(needed), "есть тип %s" % needed)
 
 
-func test_region_errors_detect_bad_edges() -> void:
+func test_region_errors_detect_bad_cells() -> void:
 	var data := {"id": "r", "name": "r", "start": "a", "respawn": "a", "clusters": [
-		{"id": "a", "code": "1", "name": "A", "type": "fast", "template": "t", "map_pos": [0, 0], "neighbors": ["b", "zzz"]},
-		{"id": "b", "code": "2", "name": "B", "type": "fast", "template": "t", "map_pos": [1, 0], "neighbors": []},
+		{"id": "a", "code": "1", "name": "A", "type": "fast", "template": "t", "hex": [0, 0]},
+		{"id": "b", "code": "2", "name": "B", "type": "fast", "template": "t", "hex": [0, 0]},
+		{"id": "c", "code": "3", "name": "C", "type": "fast", "template": "t", "hex": [5, 5]},
 	]}
 	var errors := RegionMapScript.new(data).errors(PackedStringArray(["t"]), PackedStringArray(["fast"]))
-	assert_eq(errors.size(), 2, "несимметричное ребро и неизвестный сосед: %s" % str(errors))
+	assert_eq(errors.size(), 3, "две соты в одной клетке, и до двух не дойти от старта: %s" % str(errors))
 
 
-func test_exit_points_on_edge_towards_neighbor() -> void:
+func test_neighbors_from_hex_grid() -> void:
+	var region := _region()
+	var start := region.neighbors("c_start")
+	assert_true(start.has("c_village") and start.has("c_black") and start.size() == 2, "у Окраины — Деревня и Чернота: %s" % [start])
+	assert_true(region.neighbors("c_stab").has("c_village") and region.neighbors("c_stab").has("c_town"), "стаб между Деревней и Городком")
+	for id in region.ids():
+		assert_true(region.neighbors(id).size() <= 6, "%s: не больше шести соседей" % id)
+		for other in region.neighbors(id):
+			assert_true(region.neighbors(other).has(id), "%s ↔ %s: соседство взаимно" % [id, other])
+			assert_eq(region.side(other, id), (region.side(id, other) + 3) % 6, "%s ↔ %s: противоположные стороны" % [id, other])
+
+
+func test_exit_points_on_shared_side() -> void:
 	var region := _region()
 	var p := region.exit_point("c_start", "c_village", 110.0, 3.0)
-	assert_almost(p.x, 52.0, "сосед на востоке — выход на восточном краю")
-	assert_almost(p.y, 0.0, "по центру края")
+	assert_almost(p.x, 52.0, "сосед на востоке — выход посередине восточной стороны")
+	assert_almost(p.y, 0.0, "по центру стороны")
 	var q := region.exit_point("c_village", "c_stab", 140.0, 3.0)
-	assert_almost(q.y, -67.0, "стаб севернее (−y) — выход на северном краю карты")
-	assert_true(q.x > 0.0, "и чуть восточнее")
+	assert_almost(q.length(), 67.0, "на апофеме минус отступ", 0.001)
+	assert_true(q.y < 0.0 and q.x > 0.0, "стаб на северо-востоке")
+	assert_almost(rad_to_deg(q.angle()), -60.0, "сторона СВ — 300°", 0.01)
 
 
 func test_layouts_valid_and_deterministic() -> void:
@@ -140,7 +154,7 @@ func test_layouts_valid_and_deterministic() -> void:
 		var rects: Array[Rect2] = []
 		for b: Dictionary in layout["buildings"]:
 			var rect := Rect2(b["center"] - b["size"] / 2.0, b["size"])
-			assert_true(Rect2(-layout["half"], -layout["half"], layout["half"] * 2, layout["half"] * 2).encloses(rect), "%s: здание внутри" % id)
+			assert_true(HexGrid.encloses(layout["half"], rect), "%s: здание внутри соты" % id)
 			assert_true(Vector2.ZERO.distance_to(b["center"]) > 8.0, "%s: чистая зона пуста" % id)
 			for other in rects:
 				assert_true(not rect.intersects(other), "%s: здания не пересекаются" % id)
