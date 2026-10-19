@@ -58,6 +58,8 @@ func load_dict(data: Dictionary) -> void:
 
 func _physics_process(delta: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if UiKit.typing:
+		input = Vector2.ZERO  # печатают в поле поиска окна
 	var direction := Vector3.ZERO
 	if camera:
 		direction = Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera.global_rotation.y)

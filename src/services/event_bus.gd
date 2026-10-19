@@ -43,3 +43,6 @@ signal sack_prerolled(at: Vector3, loot: Dictionary)
 ## карта и миникарта перерисовываются.
 @warning_ignore("unused_signal")
 signal map_changed
+## Герой подобрал предметы (всплывающая строка «+ бинт ×2» у края экрана, 12.8).
+@warning_ignore("unused_signal")
+signal item_picked(item_id: String, count: int)

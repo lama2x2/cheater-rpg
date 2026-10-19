@@ -45,6 +45,10 @@ var start_minutes: float = 0.0
 var ng_plus: int = 0
 ## Режим сохранений партии (D-30): "anywhere" / "stab_only". Умолчание для новой игры — в настройках.
 var save_mode: String = SettingsModel.ANYWHERE
+## Быстрые слоты расходников F1–F4 (12.8): id предмета или "".
+var quick_slots: PackedStringArray = ["", "", "", ""]
+## Помеченное игроком как хлам (вкладка «Хлам», «Продать весь хлам»): {id: true}.
+var junk_marks: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var _was_overloaded := false
 ## Кто последним ранил героя — причина смерти, если здоровье кончится.
@@ -80,6 +84,8 @@ func setup() -> void:
 	respawn_position = Vector3(0, 0.1, 0)
 	ng_plus = 0
 	save_mode = String(Settings.value("save_mode"))
+	quick_slots = ["", "", "", ""]
+	junk_marks = {}
 	_was_overloaded = false
 	_last_damage_source = "health"
 	_farm_warned = {}
@@ -303,6 +309,40 @@ func equip_weapon(id: String) -> String:
 	return id
 
 
+## Быстрый слот index (0..3) ← предмет id ("" — очистить). Один предмет — в одном слоте.
+func set_quick_slot(index: int, id: String) -> void:
+	for i in quick_slots.size():
+		if quick_slots[i] == id:
+			quick_slots[i] = ""
+	quick_slots[index] = id
+	inventory_changed.emit()
+
+
+## F1–F4: оружие — в руки, расходник — применить. Возвращает итог consume / "equipped" / "".
+func use_quick_slot(index: int) -> String:
+	var id := quick_slots[index] if index < quick_slots.size() else ""
+	if id.is_empty() or awaiting_respawn:
+		return ""
+	if inventory.count_of(id) < 1:
+		SystemLog.post("quick_missing", {"item": Content.item_name(id), "n": index + 1}, "warning")
+		return "missing"
+	if Content.weapon_db().has_weapon(id):
+		equip_weapon(id)
+		return "equipped"
+	var result := consume(id)
+	if result == "needs_confirm":
+		SystemLog.post("quick_needs_confirm", {"item": Content.item_name(id)}, "warning")
+	return result
+
+
+func toggle_junk(id: String) -> void:
+	if junk_marks.has(id):
+		junk_marks.erase(id)
+	else:
+		junk_marks[id] = true
+	inventory_changed.emit()
+
+
 ## Подбор предмета: в ячейки, если можно, иначе в рюкзак. Возвращает, сколько не влезло.
 func pick_up(id: String, count: int) -> int:
 	var result := inventory.add(id, count)
@@ -313,6 +353,8 @@ func pick_up(id: String, count: int) -> int:
 		SystemLog.post("item_picked", params.merged({"count": result["backpack"]}))
 	if result["left"] > 0:
 		SystemLog.post("too_heavy", params, "warning")
+	if count - int(result["left"]) > 0:
+		EventBus.item_picked.emit(id, count - int(result["left"]))
 	_after_inventory_change()
 	return result["left"]
 
@@ -393,6 +435,7 @@ func to_dict() -> Dictionary:
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus, "save_mode": save_mode,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
+		"quick_slots": Array(quick_slots), "junk_marks": junk_marks.keys(),
 	}
 
 
@@ -430,6 +473,14 @@ func load_dict(data: Dictionary) -> void:
 	save_mode = String(data["save_mode"])
 	var at: Array = data["respawn_position"]
 	respawn_position = Vector3(float(at[0]), float(at[1]), float(at[2]))
+	# Быстрые слоты и хлам — с задачи 15a; в старых сейвах их нет (версия формата та же).
+	quick_slots = ["", "", "", ""]
+	var saved_quick: Array = data.get("quick_slots", [])
+	for i in mini(saved_quick.size(), quick_slots.size()):
+		quick_slots[i] = String(saved_quick[i])
+	junk_marks = {}
+	for id in data.get("junk_marks", []):
+		junk_marks[String(id)] = true
 	skills_changed.emit()
 
 

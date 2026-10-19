@@ -15,6 +15,8 @@ const PANEL_ALPHA := 0.92
 static var _font: Font
 static var _theme: Theme
 static var _panel: StyleBoxFlat
+## В поле ввода (поиск) печатают — герой не ходит от WASD (src/actors/player.gd).
+static var typing := false
 ## Открытые окна, последнее — сверху.
 static var _windows: Array[Node] = []
 

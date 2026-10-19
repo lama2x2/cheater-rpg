@@ -25,6 +25,8 @@ const SenseIndicatorScript := preload("res://src/ui/sense_indicator.gd")
 const MapWatcherScript := preload("res://src/world/map_watcher.gd")
 const MinimapScript := preload("res://src/ui/minimap.gd")
 const MapWindowScript := preload("res://src/ui/map_window.gd")
+const QuickBarScript := preload("res://src/ui/quick_bar.gd")
+const PickupToastsScript := preload("res://src/ui/pickup_toasts.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -70,6 +72,8 @@ func _ready() -> void:
 	add_child(SenseIndicatorScript.new())
 	add_child(MinimapScript.new())
 	add_child(MapWindowScript.new())
+	add_child(QuickBarScript.new())
+	add_child(PickupToastsScript.new())
 	var map_watcher: Node = MapWatcherScript.new()
 	map_watcher.area = area
 	map_watcher.hero = player
@@ -150,6 +154,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##                 ближайшей другой цели)
 ##   --zoom=N      размер ортокамеры N м (обычно 10–40; больше — снять кластер целиком)
 ##   --map=TAB     открыть карту: cluster или region (и --reveal — карты всех кластеров)
+##   --tip=ID      показать подсказку предмета ID (со сравнением с оружием в руках)
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
@@ -215,6 +220,8 @@ func _handle_debug_args() -> void:
 		elif arg == "--reveal":
 			for id in WorldSim.region.ids():
 				WorldSim.reveal_map(id)
+		elif arg.begins_with("--tip="):
+			_debug_tip.call_deferred(arg.trim_prefix("--tip="))
 		elif arg == "--inside":
 			_debug_inside()
 		elif arg == "--gaze":
@@ -273,6 +280,16 @@ func _debug_cast(slot: int) -> void:
 func _debug_map(tab: String) -> void:
 	await get_tree().create_timer(1.5).timeout
 	get_tree().get_first_node_in_group("map_window").open(tab)
+
+
+func _debug_tip(id: String) -> void:
+	await get_tree().create_timer(1.0).timeout
+	var layer := CanvasLayer.new()
+	layer.layer = 30
+	add_child(layer)
+	var tip := ItemTooltip.build(id, maxi(1, PlayerState.inventory.count_of(id)))
+	tip.position = Vector2(560, 140)
+	layer.add_child(tip)
 
 
 func _debug_inside() -> void:
