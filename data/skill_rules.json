@@ -1,9 +1,9 @@
 {
-  "_doc": "Правила умений (docs/spec/05_skills.md, 14.5; D-17, D-18, D-73, D-74). Время: duration_s — реальные секунды, cooldown_s — игровые (86400 = сутки = 48 реальных минут). Пороги свойств — уровни характеристик: на каждом пороге Ментальной силы выбор 1 из группы (choice), свойства без choice и по Граням Таланта открываются сами. Грани 60 и 90 — мана и откат ×0,9 каждый. Слоты: base + по одному на общих уровнях at_general_level, не больше max. Пассив в слоте держит долю маны (reserve_mana). Смена умения в слоте — откат slot_swap_cooldown_s у вставленного. status_caps_s — потолок длительности статуса (иммунитет ≤ 60 с, D-18). quiet_sprint_mult — шум бега под статусом «тихий бег» (Второе дыхание).",
+  "_doc": "Правила умений (docs/spec/05_skills.md, 14.5; D-18, D-73, D-74, D-84, D-86). Время: duration_s — реальные секунды, cooldown_s — игровые (86400 = сутки = 48 реальных минут). Пороги свойств — уровни характеристик: на каждом пороге Ментальной силы выбор 1 из группы (choice), свойства без choice и по Граням Таланта открываются сами. Грани 60 и 90 — мана и откат ×0,9 каждый. Список активных (D-84): лимита нет, первые hotkeys умений — на клавишах 1–8. Пассив в списке держит долю маны (reserve_mana), все вместе — не больше max_mana_reserve. Вносить и убирать можно в любой момент, без отката. areas — области умений (theme) для выбора у знахарки (D-86). status_caps_s — потолок длительности статуса (иммунитет ≤ 60 с, D-18). quiet_sprint_mult — шум бега под статусом «тихий бег» (Второе дыхание).",
   "thresholds": { "mental": [30, 60, 90, 150], "talent_facets": [30] },
   "talent_facets_mults": { "at": [60, 90], "mana_mult": 0.9, "cooldown_mult": 0.9 },
-  "slots": { "base": 1, "at_general_level": [30, 60], "max": 4 },
-  "slot_swap_cooldown_s": 1800,
+  "hotkeys": 8,
+  "max_mana_reserve": 0.9,
   "status_caps_s": { "immunity": 60 },
   "quiet_sprint_mult": 0.7,
   "gifts": {
@@ -13,6 +13,12 @@
     "60": { "offer": [3, 5], "skills": ["danger_sense", "mirror_camo", "absolute_calm", "splitting_shot", "illusion_lure", "mark", "hunger_bait", "companion_bond", "combat_trance", "stretch_aid", "winter_breath", "super_jump", "regen_burst", "false_reload", "telekinesis", "lie_sense"] }
   },
   "offer_bonus": { "_doc": "+1 вариант при уровне Удачи ≥ luck_level (свойство fate_reroll, шортлист).", "luck_level": 60, "value": 1 },
-  "always_for_origin": { "cheater": ["fortune_smile"] },
-  "pearl": { "_doc": "Чёрная жемчужина (skill_chance): случайное умение сразу, без выбора и знахарки (D-79). Пул — по числу уже известных умений: 0 → дар 10, 1 → дар 30, 2+ → дар 60.", "pools_by_skill_count": ["10", "30", "60"] }
+  "pearl": {
+    "_doc": "Чёрная жемчужина (skill_chance, D-86): умение «висит». Вскрыть самому — бесплатно, случайное из пула по числу известных (0 → дар 10, 1 → дар 30, 2+ → дар 60). У знахарки за healer_price споранов (дороже вскрытия дара 25–30) — выбрать область (areas), умение случайное из неё. Само открывается при смертельной опасности (удар оставил бы ≤ danger_health_fraction здоровья или убил) с шансом stress_chance.",
+    "pools_by_skill_count": ["10", "30", "60"],
+    "healer_price": 45,
+    "stress_chance": 0.35,
+    "danger_health_fraction": 0.15
+  },
+  "areas": ["luck", "stealth", "combat", "perception", "control", "mobility", "support", "survival"]
 }

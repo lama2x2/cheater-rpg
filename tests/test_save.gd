@@ -112,7 +112,7 @@ func test_player_and_clock_survive_save_load() -> void:
 	assert_eq(player2.inventory.count_of("sporan"), 40, "споранов")
 	assert_eq(player2.stats.get_level("speed"), 2, "уровень Скорости (27 очков: 10 → ур.2, 17 из 20)")
 	assert_almost(clock2.minutes, 2000.5, "время")
-	assert_eq(player2.skills.slots[0], "fortune_smile", "умение в слоте")
+	assert_eq(player2.skills.hotkey_skill(0), "fortune_smile", "умение в списке активных")
 	assert_true(player2.skills.cooldown_left("fortune_smile", 0.0) > 0.0, "откат пережил сейв")
 	DirAccess.remove_absolute(path)
 	player.free()
@@ -126,6 +126,15 @@ func test_v11_save_gets_empty_skills() -> void:
 	var player: Dictionary = SaveFormatScript.migrate(v11)["sections"]["player"]
 	assert_eq(player["skills"], {}, "умений нет")
 	assert_eq(player["skill_offers"], [], "вариантов дара нет")
+
+
+func test_v12_slots_become_active_list() -> void:
+	var v12 := {"save_version": 12, "meta": {}, "sections": {"player": {"skills": {
+		"learned": {"soft_step": {}, "fortune_smile": {}}, "slots": ["fortune_smile", "", "", ""]}}}}
+	var player: Dictionary = SaveFormatScript.migrate(v12)["sections"]["player"]
+	assert_eq(player["skills"]["active_list"], ["fortune_smile", "soft_step"], "слоты → список активных (D-84)")
+	assert_true(not player["skills"].has("slots"), "слотов больше нет")
+	assert_eq(player["pending_pearl_skills"], 0, "висящих умений нет (D-86)")
 
 
 func test_v8_save_drops_test_area_and_gets_new_world() -> void:

@@ -1,5 +1,5 @@
 {
-  "_doc": "Пуля (пассив, книга 5): когда тварь начинает рывок на героя, мир замедляется вдвое на 0,3 реальной с — успеть отскочить. Не чаще раза в 8 с. Пока снарядов у врагов нет — только рывки. Не дублирует чуйку (17): чуйка — «что-то в слепой зоне», Пуля — «в тебя уже летит». Держит 10% маны. Ментальная сила: каждые 10 — +0,03 с.",
+  "_doc": "Пуля (пассив, книга 5 — браслет; D-85): когда тварь начинает рывок на героя (позже — летит снаряд), тревога: «пуля!» над героем, стрелка на земле в сторону угрозы и «!» над ней. Без замедления мира. Не чаще раза в 8 с. Не дублирует чуйку (17): чуйка — «что-то в слепой зоне», Пуля — «в тебя уже летит». Держит 10% маны. Ментальная сила: каждые 10 — интервал −0,3 с (не меньше 3 с).",
   "id": "danger_sense",
   "kind": "passive",
   "slot": "passive",
@@ -8,16 +8,15 @@
   "cooldown_s": 0,
   "effects": [
     { "type": "reserve_mana", "pct": 0.1 },
-    { "type": "danger_warn", "time_scale": 0.5, "duration_s": 0.3, "min_interval_s": 8, "show_direction": false }
+    { "type": "danger_warn", "min_interval_s": 8, "marker_s": 1.0 }
   ],
   "scaling": [
-    { "stat": "mental", "per": 10, "path": "danger_warn.duration_s", "add": 0.03 }
+    { "stat": "mental", "per": 10, "path": "danger_warn.min_interval_s", "add": -0.3, "min": 3 }
   ],
   "properties": [
-    { "id": "danger_direction", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "danger_warn.show_direction", "set": true } },
-    { "id": "danger_deep_slow", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "danger_warn.time_scale", "set": 0.25 } },
-    { "id": "danger_party", "unlock": { "mental": 60 }, "requires": "party", "effect": { "type": "modify", "path": "danger_warn.party", "set": true } },
-    { "id": "danger_long", "unlock": { "mental": 150 }, "effect": { "type": "modify", "path": "danger_warn.duration_s", "set": 1.0 } }
+    { "id": "danger_quick", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "danger_warn.min_interval_s", "set": 3 } },
+    { "id": "danger_long_mark", "unlock": { "mental": 30 }, "choice": "m30", "effect": { "type": "modify", "path": "danger_warn.marker_s", "set": 2.5 } },
+    { "id": "danger_party", "unlock": { "mental": 60 }, "requires": "party", "effect": { "type": "modify", "path": "danger_warn.party", "set": true } }
   ],
   "blocked_on": ["cluster_disabled", "jammer"]
 }

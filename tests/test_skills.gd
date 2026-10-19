@@ -92,7 +92,7 @@ func test_talent_facets_cut_mana_and_cooldown() -> void:
 
 func test_properties_choice_on_thresholds() -> void:
 	var s := _skills()
-	s.learn("fortune_smile", 1)
+	s.learn("fortune_smile")
 	assert_eq(s.property_choices("fortune_smile", _levels(29)).size(), 0, "до 30 выбора нет")
 	var choices := s.property_choices("fortune_smile", _levels(30))
 	assert_eq(choices.size(), 1, "на 30 — одна группа")
@@ -112,7 +112,7 @@ func test_properties_choice_on_thresholds() -> void:
 
 func test_modify_and_facet_properties() -> void:
 	var s := _skills()
-	s.learn("fortune_smile", 1)
+	s.learn("fortune_smile")
 	s.choose_property("fortune_smile", "fortune_quick", _levels(30))
 	assert_almost(s.cooldown_s("fortune_smile", _levels(30)), 86400.0 - 1800.0 - 3600.0, "откат: рост и свойство")
 	s.choose_property("fortune_smile", "fortune_echo", _levels(90))
@@ -135,7 +135,7 @@ func test_immunity_capped_by_d18() -> void:
 	var rules := _rules()
 	rules["status_caps_s"] = {"immunity": 2.0}
 	var s := SkillRulesScript.new(rules, _defs(), MPS)
-	s.learn("fortune_smile", 1)
+	s.learn("fortune_smile")
 	s.choose_property("fortune_smile", "fortune_immunity", _levels(150))
 	s.choose_property("fortune_smile", "fortune_immunity_long", _levels(150))
 	for e in s.effects("fortune_smile", _levels(150)):
@@ -147,8 +147,8 @@ func test_use_cooldown_mana_and_reset_on_death() -> void:
 	var s := _skills()
 	var levels := _levels()
 	assert_eq(s.can_use("fortune_smile", 0.0, 20.0, levels), "unknown", "не изучено")
-	s.learn("fortune_smile", 1)
-	assert_eq(s.slots[0], "fortune_smile", "встало в первый слот")
+	s.learn("fortune_smile")
+	assert_eq(s.hotkey_skill(0), "fortune_smile", "встало на клавишу 1")
 	assert_eq(s.can_use("fortune_smile", 0.0, 19.0, levels), "mana", "мало маны")
 	var used := s.use("fortune_smile", 100.0, 20.0, levels)
 	assert_eq(String(used["result"]), "ok", "применено")
@@ -161,7 +161,7 @@ func test_use_cooldown_mana_and_reset_on_death() -> void:
 
 func test_blocked_on_disabled_cluster_and_jammer() -> void:
 	var s := _skills()
-	s.learn("fortune_smile", 1)
+	s.learn("fortune_smile")
 	s.set_blocker("cluster_disabled", true)
 	assert_eq(s.can_use("fortune_smile", 0.0, 20.0, _levels()), "blocked", "отключённый кластер")
 	s.set_blocker("cluster_disabled", false)
@@ -172,36 +172,43 @@ func test_blocked_on_disabled_cluster_and_jammer() -> void:
 	assert_eq(s.can_use("fortune_smile", 0.0, 0.0, _levels()), "mana", "при нуле маны — нет")
 
 
-func test_slots_by_general_level() -> void:
+func test_active_list_has_no_limit() -> void:
 	var s := _skills()
-	assert_eq(s.slot_count(1), 1, "на старте 1 слот (D-17)")
-	assert_eq(s.slot_count(30), 2, "30 — второй")
-	assert_eq(s.slot_count(60), 3, "60 — третий")
-	assert_eq(s.slot_count(200, 5), 4, "не больше 4")
+	for id in s.all_ids():
+		s.learn(id)
+	var passives: Array = Array(s.all_ids()).filter(func(id: String) -> bool: return s.is_passive(id))
+	assert_eq(s.active_list.size(), s.all_ids().size(), "лимита нет: в списке все %d умений (D-84)" % s.all_ids().size())
+	assert_true(s.mana_reserve() <= 0.9, "резерв пассивов не выше 90%%: %f" % s.mana_reserve())
+	assert_true(passives.size() >= 6, "пассивов хватает для проверки резерва")
+	assert_eq(s.hotkey_skill(0), s.active_list[0], "клавиша 1 — первое в списке")
+	assert_eq(s.hotkey_skill(7), s.active_list[7], "клавиша 8 — восьмое")
+	assert_eq(s.hotkey_skill(8), "", "девятое — без клавиши")
 
 
-func test_slot_swap_and_cooldown() -> void:
+func test_active_list_order_and_reserve() -> void:
 	var rules := _rules()
+	rules["max_mana_reserve"] = 0.12
 	var defs := _defs()
 	defs.append({"id": "test_passive", "slot": "passive", "mana_cost": 0, "cooldown_s": 0,
 		"effects": [{"type": "reserve_mana", "pct": 0.1}, {"type": "noise_mult_self", "mult": 0.65}]})
 	var s := SkillRulesScript.new(rules, defs, MPS)
-	s.learn("fortune_smile", 30)
-	s.learn("test_passive", 30)
-	assert_eq(s.slotted(30), PackedStringArray(["fortune_smile", "test_passive"]), "два слота заняты")
-	assert_eq(s.slotted(1), PackedStringArray(["fortune_smile"]), "открыт только первый")
-	assert_almost(s.mana_reserve(_levels(1, 1, 30)), 0.1, "пассив держит 10% маны (D-74)")
-	assert_eq(s.passive_effects("noise_mult_self", _levels(1, 1, 30)).size(), 1, "пассив действует из слота")
+	s.learn("fortune_smile")
+	s.learn("test_passive")
+	assert_eq(s.active_list, ["fortune_smile", "test_passive"] as Array[String], "изученное сразу в списке")
+	assert_almost(s.mana_reserve(), 0.1, "пассив держит 10% маны (D-74)")
+	assert_eq(s.passive_effects("noise_mult_self", _levels()).size(), 1, "пассив действует из списка")
 	s.set_blocker("jammer", true)
-	assert_eq(s.passive_effects("noise_mult_self", _levels(1, 1, 30)).size(), 0, "под глушителем пассивы молчат")
+	assert_eq(s.passive_effects("noise_mult_self", _levels()).size(), 0, "под глушителем пассивы молчат")
 	s.set_blocker("jammer", false)
-	assert_true(s.set_slot(0, "test_passive", 10.0, 30), "пассив в первый слот")
-	assert_eq(s.slots[0], "test_passive", "переехал")
-	assert_eq(s.slots[1], "", "старый слот пуст")
-	assert_true(s.set_slot(1, "fortune_smile", 10.0, 30), "Улыбка обратно")
-	assert_eq(s.can_use("fortune_smile", 10.0, 20.0, _levels(1, 1, 30)), "cooldown", "после смены слота — откат смены")
-	assert_eq(s.can_use("fortune_smile", 10.0 + 30.0, 20.0, _levels(1, 1, 30)), "ok", "30 игровых минут спустя готово")
-	assert_eq(s.can_use("test_passive", 0.0, 20.0, _levels(1, 1, 30)), "passive", "пассив не жмётся")
+	s.learn("soft_step")
+	assert_true(s.knows("soft_step") and not s.in_list("soft_step"), "резерв полон (10% + 5% > 12%) — второй пассив изучен, но не в списке")
+	s.move_in_list("test_passive", -1)
+	assert_eq(s.active_list[0], "test_passive", "порядок задаёт игрок")
+	s.remove_from_list("fortune_smile")
+	assert_eq(s.can_use("fortune_smile", 0.0, 20.0, _levels()), "not_listed", "не в списке — не работает")
+	assert_true(s.add_to_list("fortune_smile"), "вернуть в список")
+	assert_eq(s.can_use("fortune_smile", 0.0, 20.0, _levels()), "ok", "без отката смены (D-84)")
+	assert_eq(s.can_use("test_passive", 0.0, 20.0, _levels()), "passive", "пассив не жмётся")
 
 
 func test_gift_offer_and_pearl() -> void:
@@ -216,11 +223,9 @@ func test_gift_offer_and_pearl() -> void:
 	assert_eq(offer.size(), 3, "три варианта")
 	for id in offer:
 		assert_true(_rules()["gifts"]["10"]["skills"].has(id), "%s из пула 10" % id)
-	var forced := s.gift_offer("10", 3, rng, PackedStringArray(["fortune_smile"]))
-	assert_true(forced.has("fortune_smile"), "читеру Улыбка всегда в списке")
 	for id: String in _rules()["gifts"]["10"]["skills"]:
 		if id != "ambusher":
-			s.learn(id, 1)
+			s.learn(id)
 	var rest := s.gift_offer("10", 3, rng)
 	assert_eq(rest.size(), 3, "три варианта")
 	assert_eq(rest[0], "ambusher", "сначала остаток пула 10")
@@ -229,23 +234,26 @@ func test_gift_offer_and_pearl() -> void:
 	var pearl := s.pearl_skill(rng)
 	assert_true(_rules()["gifts"]["60"]["skills"].has(pearl), "жемчужина при 7 умениях — из пула 60: %s" % pearl)
 	for id in s.all_ids():
-		s.learn(id, 1)
+		s.learn(id)
 	assert_eq(s.pearl_skill(rng), "", "всё изучено — жемчужине нечего дать")
 
 
 func test_save_roundtrip() -> void:
 	var s := _skills()
-	s.learn("fortune_smile", 1)
+	s.learn("fortune_smile")
 	s.choose_property("fortune_smile", "fortune_quick", _levels(30))
 	s.use("fortune_smile", 50.0, 99.0, _levels(30))
 	var restored := _skills()
 	restored.load_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
-	assert_eq(restored.slots[0], "fortune_smile", "слот")
+	assert_eq(restored.hotkey_skill(0), "fortune_smile", "в списке")
 	assert_eq(restored.learned["fortune_smile"]["properties"], ["fortune_quick"], "свойство")
 	assert_almost(restored.cooldown_left("fortune_smile", 50.0), s.cooldown_left("fortune_smile", 50.0), "откат")
 	var junk := _skills()
-	junk.load_dict({"learned": {"no_such_skill": {}}, "slots": ["no_such_skill"]})
-	assert_true(junk.learned.is_empty() and junk.slots[0] == "", "неизвестные умения из старого сейва выбрасываются")
+	junk.load_dict({"learned": {"no_such_skill": {}}, "active_list": ["no_such_skill"]})
+	assert_true(junk.learned.is_empty() and junk.active_list.is_empty(), "неизвестные умения из старого сейва выбрасываются")
+	var v12 := _skills()
+	v12.load_dict({"learned": {"soft_step": {}, "fortune_smile": {}, "ambusher": {}}, "slots": ["fortune_smile", "", "", ""]})
+	assert_eq(v12.active_list, ["fortune_smile", "soft_step", "ambusher"] as Array[String], "сейв со слотами: слот первым, остальные следом")
 
 
 func test_jackpot_group_takes_larger() -> void:
@@ -274,7 +282,7 @@ func test_gift_10_pool_is_complete() -> void:
 func test_soft_step_and_quiet_sprint_noise() -> void:
 	var s := _skills()
 	var levels := _levels(1, 1, 30)
-	s.learn("soft_step", 30)
+	s.learn("soft_step")
 	var walk := s.noise_adjust("walk_step", 0.0, levels)
 	assert_almost(float(walk["mult"]), 0.65, "шаги ×0,65")
 	assert_almost(float(s.noise_adjust("pistol", 0.0, levels)["mult"]), 1.0, "выстрел не глушится")
@@ -284,8 +292,8 @@ func test_soft_step_and_quiet_sprint_noise() -> void:
 	var run := s.noise_adjust("sprint_step", 0.0, _levels(60, 1, 30))
 	assert_eq(String(run["source"]), "walk_step", "на 60 бег шумит как шаг")
 	assert_almost(float(s.noise_adjust("door", 0.0, _levels(60, 1, 30))["mult"]), 0.5, "тихие двери")
-	assert_almost(s.mana_reserve(levels), 0.05, "резерв 5%")
-	s.learn("second_wind", 30)
+	assert_almost(s.mana_reserve(), 0.05, "резерв 5%")
+	s.learn("second_wind")
 	s.choose_property("second_wind", "wind_quiet", _levels(30, 1, 30))
 	s.use("second_wind", 0.0, 100.0, _levels(30, 1, 30))
 	assert_true(s.has_status("free_sprint", 6.0), "бег без усталости (10 + 3 с за Ментальную 30)")
@@ -295,7 +303,7 @@ func test_soft_step_and_quiet_sprint_noise() -> void:
 
 func test_second_wind_effects() -> void:
 	var s := _skills()
-	s.learn("second_wind", 1)
+	s.learn("second_wind")
 	s.choose_property("second_wind", "wind_quiet", _levels(30))
 	var list := s.effects("second_wind", _levels(30))
 	var statuses := list.filter(func(e: Dictionary) -> bool: return e["type"] == "status")
@@ -309,7 +317,7 @@ func test_second_wind_effects() -> void:
 
 func test_ambusher_damage() -> void:
 	var s := _skills()
-	s.learn("ambusher", 1)
+	s.learn("ambusher")
 	assert_almost(s.damage_mult(true, false, _levels()), 1.6, "по ничего не подозревающей ×1,6")
 	assert_almost(s.damage_mult(false, false, _levels()), 1.0, "по гонящейся — без бонуса")
 	assert_almost(s.damage_mult(true, true, _levels()), 1.2, "элита ×1,2")
@@ -317,31 +325,31 @@ func test_ambusher_damage() -> void:
 	assert_almost(s.crit_chance(true, _levels(59)), 0.0, "крит — с 60")
 	assert_almost(s.crit_chance(true, _levels(60)), 0.2, "на 60 +20%")
 	assert_almost(s.crit_chance(false, _levels(60)), 0.0, "только по ничего не подозревающей")
-	s.set_slot(0, "", 0.0, 1)
+	s.remove_from_list("ambusher")
 	assert_almost(s.damage_mult(true, false, _levels()), 1.0, "не в слоте — не работает")
 
 
 func test_text_properties_and_flags() -> void:
 	var s := _skills()
-	s.learn("voice_throw", 1)
+	s.learn("voice_throw")
 	assert_eq(String(_effect(s.effects("voice_throw", _levels(59)), "noise_at")["source"]), "voice_throw", "голос")
 	assert_eq(String(_effect(s.effects("voice_throw", _levels(60)), "noise_at")["source"]), "pistol", "на 60 — как выстрел")
 	s.choose_property("voice_throw", "voice_two", _levels(30))
 	assert_eq(int(_effect(s.effects("voice_throw", _levels(30)), "noise_at")["count"]), 2, "два голоса")
-	s.learn("sense_pulse", 1)
+	s.learn("sense_pulse")
 	s.choose_property("sense_pulse", "pulse_perception", _levels(30))
 	assert_true(bool(_effect(s.effects("sense_pulse", _levels(30)), "highlight")["show_level"]), "уровни над тварями")
 	assert_almost(s.cooldown_s("sense_pulse", _levels(150)), 0.0, "на 150 — без отката")
 	assert_almost(s.mana_cost("sense_pulse", _levels(100)), 5.0, "мана не меньше 5")
 	var m60 := s.property_choices("sense_pulse", _levels(60))
 	assert_eq(m60.size(), 1, "на 60 выбор из одного — «вещи скрытых» ждут людей (M2)")
-	s.learn("noise_eater", 1)
+	s.learn("noise_eater")
 	assert_eq(String(_effect(s.effects("noise_eater", _levels(60)), "noise_zone")["anchor"]), "hero", "на 60 сфера идёт за героем")
 
 
 func test_scarecrow_and_brain_flee() -> void:
 	var s := _skills()
-	s.learn("scarecrow", 1)
+	s.learn("scarecrow")
 	var flee := _effect(s.effects("scarecrow", _levels(20)), "enemy_flee")
 	assert_almost(float(flee["radius_m"]), 40.0, "30 + 2×5 м")
 	assert_almost(float(flee["duration_s"]), 70.0, "60 + 2×5 с")
@@ -359,7 +367,7 @@ func test_scarecrow_and_brain_flee() -> void:
 
 func test_heat_vision_toggle_and_upkeep() -> void:
 	var s := _skills()
-	s.learn("heat_vision", 1)
+	s.learn("heat_vision")
 	var used := s.use("heat_vision", 0.0, 50.0, _levels())
 	assert_eq(String(used["result"]), "ok", "включено")
 	assert_true(s.toggled.has("heat_vision"), "переключатель включён")
@@ -383,7 +391,7 @@ func test_heat_vision_toggle_and_upkeep() -> void:
 func test_near_miss_chance() -> void:
 	var s := _skills()
 	assert_almost(s.luck_save_chance(22.0, 200.0, 50.0, 0, false, _levels()), 0.0, "без умения — ничего")
-	s.learn("near_miss", 1)
+	s.learn("near_miss")
 	var smile := s.luck_save_chance(22.0, 200.0, 50.0, 0, false, _levels())
 	assert_almost(smile, 0.25 * 22.0 / 62.0, "смертельный удар под Улыбкой")
 	assert_almost(s.luck_save_chance(22.0, 10.0, 50.0, 0, false, _levels()), 0.0, "не смертельный — не спасает")
@@ -399,7 +407,7 @@ func test_quick_hands_channel() -> void:
 	var s := _skills()
 	var plain := s.channel_mods("spore_sack_open", _levels(), 0.6)
 	assert_almost(float(plain["speed"]), 1.0, "без умения")
-	s.learn("quick_hands", 1)
+	s.learn("quick_hands")
 	var mods := s.channel_mods("spore_sack_open", _levels(), 0.6)
 	assert_almost(float(mods["speed"]), 1.5, "×1,5")
 	assert_almost(float(mods["move_m"]), 1.5, "сдвиг 1,5 м")
@@ -408,7 +416,7 @@ func test_quick_hands_channel() -> void:
 
 func test_spore_burst_and_loan() -> void:
 	var s := _skills()
-	s.learn("spore_burst", 1)
+	s.learn("spore_burst")
 	s.choose_property("spore_burst", "burst_strong", _levels(60))
 	var list := s.effects("spore_burst", _levels(60))
 	var mults := list.filter(func(e: Dictionary) -> bool: return e["type"] == "stat_mult")
@@ -419,7 +427,7 @@ func test_spore_burst_and_loan() -> void:
 	assert_almost(float(mults[1]["value"]), 1.4, "и Сила")
 	assert_almost(float(mults[2]["value"]), 1.3, "Реакция ×1,3")
 	assert_eq(s.can_use("spore_burst", 0.0, 0.0, _levels()), "ok", "маны не нужно")
-	s.learn("balance_loan", 1)
+	s.learn("balance_loan")
 	var loan := s.effects("balance_loan", _levels(20, 30))
 	var main := _effect(loan, "stat_mult")
 	var debt := {}
@@ -433,11 +441,63 @@ func test_spore_burst_and_loan() -> void:
 	assert_almost(float(debt["duration_s"]), 480.0, "10 мин − 2 мин (Грани 30)")
 
 
-func test_danger_sense_numbers() -> void:
+func test_danger_sense_is_alarm_only() -> void:
 	var s := _skills()
-	s.learn("danger_sense", 1)
+	s.learn("danger_sense")
 	var warn := s.passive_effects("danger_warn", _levels(50))[0]
-	assert_almost(float(warn["duration_s"]), 0.45, "0,3 + 5×0,03 с")
-	assert_almost(float(warn["time_scale"]), 0.5, "мир ×0,5")
-	s.choose_property("danger_sense", "danger_deep_slow", _levels(30))
-	assert_almost(float(s.passive_effects("danger_warn", _levels(30))[0]["time_scale"]), 0.25, "глубже")
+	assert_true(not warn.has("time_scale"), "без замедления мира (D-85)")
+	assert_almost(float(warn["min_interval_s"]), 6.5, "8 − 5×0,3 с")
+	assert_almost(float(s.passive_effects("danger_warn", _levels(500))[0]["min_interval_s"]), 3.0, "не чаще раза в 3 с")
+	s.choose_property("danger_sense", "danger_long_mark", _levels(30))
+	assert_almost(float(s.passive_effects("danger_warn", _levels(30))[0]["marker_s"]), 2.5, "долгая стрелка")
+
+
+# --- 13c: висящее умение жемчужины (D-86) -------------------------------------------------------
+
+func test_pearl_areas() -> void:
+	var s := _skills()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9
+	assert_eq(s.areas().size(), 8, "восемь областей")
+	for area in s.areas():
+		for id in s.area_skills(area):
+			assert_eq(String(s.def(id)["theme"]), area, "%s — из области %s" % [id, area])
+	var themes := {}
+	for id in s.all_ids():
+		themes[String(s.def(id)["theme"])] = true
+	for theme: String in themes:
+		assert_true(s.areas().has(theme), "у умений только известные области: %s" % theme)
+	var luck := s.area_skills("luck")
+	assert_eq(luck.size(), 3, "удача: Улыбка, Мимо!, Кредит")
+	var picked := s.area_skill("luck", rng)
+	assert_true(luck.has(picked), "случайное из области")
+	s.learn(picked)
+	assert_eq(s.area_skills("luck").size(), 2, "изученное из области уходит")
+	for id in s.area_skills("luck"):
+		s.learn(id)
+	assert_eq(s.area_skill("luck", rng), "", "область пуста")
+
+
+func test_pearl_hangs_opens_self_and_on_danger() -> void:
+	var player: Node = load("res://src/services/player_state.gd").new()
+	player.setup()
+	player.pending_pearl_skills = 2
+	assert_true(player.open_pearl_self(), "вскрыть самому — бесплатно")
+	assert_eq(player.skills.learned.size(), 1, "одно умение")
+	assert_eq(player.pending_pearl_skills, 1, "одно ещё висит")
+	assert_true(player.open_pearl_area("stealth"), "область — скрытность")
+	var id: String = player.skills.learned.keys().filter(func(k: String) -> bool: return player.skills.def(k)["theme"] == "stealth")[0]
+	assert_eq(String(player.skills.def(id)["theme"]), "stealth", "умение из выбранной области")
+	assert_true(not player.open_pearl_area("stealth"), "больше не висит")
+	player.pending_pearl_skills = 1
+	var opened := 0
+	for i in 60:
+		player.vitals.restore("health", 999.0)
+		var before: int = player.skills.learned.size()
+		player.call("_stress_awaken", player.vitals.value("health") * 0.95)
+		if player.skills.learned.size() > before:
+			opened += 1
+			break
+	assert_eq(opened, 1, "на краю смерти висящее открывается само (шанс 35%)")
+	assert_eq(player.pending_pearl_skills, 0, "и больше не висит")
+	player.free()

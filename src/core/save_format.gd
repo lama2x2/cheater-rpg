@@ -21,13 +21,33 @@ extends RefCounted
 ##   10 — стаб: секция stab (торговец, доска контрактов); player.skill_gifts_opened, pending_skill_choices.
 ##   11 — player.save_mode (режим сохранений партии, D-30); meta.save_mode.
 ##   12 — player.skills (умения: изученные, слоты, откаты, статусы), player.skill_offers.
+##   13 — player.skills.active_list вместо слотов (D-84): внесённые в слоты — первыми, остальные
+##       изученные — следом; player.pending_pearl_skills (висящие умения жемчужины, D-86).
 
-const VERSION := 12
+const VERSION := 13
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9, 9: _v9_to_v10, 10: _v10_to_v11, 11: _v11_to_v12}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9, 9: _v9_to_v10, 10: _v10_to_v11, 11: _v11_to_v12, 12: _v12_to_v13}
+
+
+static func _v12_to_v13(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		var player: Dictionary = data["sections"]["player"]
+		player.merge({"pending_pearl_skills": 0})
+		var skills: Dictionary = player.get("skills", {})
+		if skills.has("slots") and not skills.has("active_list"):
+			var order: Array = []
+			for id in skills["slots"]:
+				if not String(id).is_empty():
+					order.append(String(id))
+			for id: String in skills.get("learned", {}):
+				if not order.has(id):
+					order.append(id)
+			skills["active_list"] = order
+			skills.erase("slots")
+	return data
 
 
 static func _v11_to_v12(data: Dictionary) -> Dictionary:

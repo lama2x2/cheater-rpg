@@ -3,7 +3,7 @@
   "id": "second_wind",
   "kind": "buff",
   "slot": "active",
-  "theme": "mobility",
+  "theme": "survival",
   "mana_cost": 15,
   "cooldown_s": 7200,
   "effects": [

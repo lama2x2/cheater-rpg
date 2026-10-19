@@ -1,6 +1,6 @@
 class_name SkillRules
 extends RefCounted
-## Умения героя: изученные, слоты, откаты, свойства на порогах, мана и рост от характеристик.
+## Умения героя: изученные, список активных (D-84), откаты, свойства на порогах, мана и рост от характеристик.
 ## Чистый класс без Node. Данные — data/skill_rules.json и data/skills/*.json (схема 14.5).
 ## Спецификация: docs/spec/05_skills.md.
 ##
@@ -14,8 +14,8 @@ extends RefCounted
 ## reserve_mana (пассив) и сценовые (highlight, noise_zone, …).
 
 const REQUIRED_KEYS: PackedStringArray = [
-	"thresholds", "talent_facets_mults", "slots", "slot_swap_cooldown_s", "status_caps_s", "gifts",
-	"offer_bonus", "always_for_origin", "pearl",
+	"thresholds", "talent_facets_mults", "hotkeys", "max_mana_reserve", "status_caps_s", "gifts",
+	"offer_bonus", "pearl", "areas",
 ]
 const PASSIVE := "passive"
 ## Возможности движка, которых пока нет: свойства с requires из этого списка не предлагаются.
@@ -26,8 +26,9 @@ var _defs: Dictionary = {}
 var _minutes_per_second: float
 ## Изученные умения: {id: {"properties": [id свойства, выбранные на порогах]}}.
 var learned: Dictionary = {}
-## Слоты по порядку (клавиши 1–4); "" — пусто. Длина — max из правил.
-var slots: Array[String] = []
+## «Список активных» (D-84): умения, которые работают, в порядке игрока; первые hotkeys — на
+## клавишах 1–8. Лимита нет — ограничитель мана: пассивы держат резерв, активные стоят ману.
+var active_list: Array[String] = []
 ## Готово к применению с игровой минуты: {id: minutes}.
 var cooldowns: Dictionary = {}
 ## Статусы от умений до игровой минуты: {"immunity": minutes, "luck_double_roll": minutes}.
@@ -44,8 +45,6 @@ func _init(rules: Dictionary, defs: Array, minutes_per_second: float) -> void:
 	_minutes_per_second = minutes_per_second
 	for def: Dictionary in defs:
 		_defs[String(def["id"])] = def
-	for i in int(rules["slots"]["max"]):
-		slots.append("")
 
 
 # --- Справочник ---------------------------------------------------------------------------------
@@ -70,60 +69,54 @@ func knows(id: String) -> bool:
 	return learned.has(id)
 
 
-# --- Слоты --------------------------------------------------------------------------------------
+# --- Список активных (D-84) --------------------------------------------------------------------
 
-## Сколько слотов открыто (D-17): base + по одному на общих уровнях 30 и 60, не больше max.
-func slot_count(general_level: int, extra: int = 0) -> int:
-	var s: Dictionary = _rules["slots"]
-	var count := int(s["base"]) + extra
-	for at in s["at_general_level"]:
-		if general_level >= int(at):
-			count += 1
-	return mini(count, int(s["max"]))
+func in_list(id: String) -> bool:
+	return active_list.has(id)
 
 
-## Умения в открытых слотах (без пустых).
-func slotted(general_level: int) -> PackedStringArray:
-	var result: PackedStringArray = []
-	for i in slot_count(general_level):
-		if not slots[i].is_empty():
-			result.append(slots[i])
-	return result
+## Умение на клавише index (0 — «1»); "" — нет.
+func hotkey_skill(index: int) -> String:
+	return active_list[index] if index >= 0 and index < mini(active_list.size(), hotkey_count()) else ""
 
 
-func slot_of(id: String) -> int:
-	return slots.find(id)
+func hotkey_count() -> int:
+	return int(_rules["hotkeys"])
 
 
-## Выучить умение: встаёт в первый свободный открытый слот, если он есть.
-func learn(id: String, general_level: int) -> bool:
+## Выучить умение: сразу встаёт в конец списка активных, если хватает резерва маны.
+func learn(id: String) -> bool:
 	if not _defs.has(id) or learned.has(id):
 		return false
 	learned[id] = {"properties": []}
-	for i in slot_count(general_level):
-		if slots[i].is_empty():
-			slots[i] = id
-			break
+	add_to_list(id)
 	return true
 
 
-## Поставить умение в слот (или "" — очистить). Умение из другого слота переезжает; вставленное
-## в слот получает откат смены (slot_swap_cooldown_s), чтобы не менять умения посреди боя.
-func set_slot(index: int, id: String, now: float, general_level: int) -> bool:
-	if index < 0 or index >= slot_count(general_level):
+## Внести в список активных. Пассив — только если резерв маны не превысит max_mana_reserve.
+## Откатов смены нет: внести и убрать можно в любой момент (D-84) — мана всё равно ограничивает.
+func add_to_list(id: String) -> bool:
+	if not learned.has(id) or active_list.has(id):
 		return false
-	if not id.is_empty() and not learned.has(id):
+	if _reserve_of(id) > 0.0 and _reserve_sum(active_list) + _reserve_of(id) > float(_rules["max_mana_reserve"]) + 0.0001:
 		return false
-	if slots[index] == id:
-		return true
-	var old := slot_of(id) if not id.is_empty() else -1
-	if old >= 0:
-		slots[old] = ""
-	slots[index] = id
-	if not id.is_empty() and old < 0:
-		var swap_ready := now + float(_rules["slot_swap_cooldown_s"]) / 60.0
-		cooldowns[id] = maxf(float(cooldowns.get(id, 0.0)), swap_ready)
+	active_list.append(id)
 	return true
+
+
+func remove_from_list(id: String) -> void:
+	active_list.erase(id)
+	toggled.erase(id)
+
+
+## Сдвинуть умение в списке на delta позиций (−1 — выше, к клавише 1).
+func move_in_list(id: String, delta: int) -> void:
+	var i := active_list.find(id)
+	if i < 0:
+		return
+	var j := clampi(i + delta, 0, active_list.size() - 1)
+	active_list.remove_at(i)
+	active_list.insert(j, id)
 
 
 # --- Числа: рост от характеристик и свойства ----------------------------------------------------
@@ -275,14 +268,14 @@ func set_blocker(reason: String, on: bool) -> void:
 		blockers.erase(reason)
 
 
-## Можно ли применить: "ok", "unknown", "not_slotted", "passive", "blocked", "cooldown", "mana".
+## Можно ли применить: "ok", "unknown", "not_listed", "passive", "blocked", "cooldown", "mana".
 func can_use(id: String, now: float, mana: float, levels: Dictionary) -> String:
 	if not learned.has(id):
 		return "unknown"
 	if toggled.has(id):
 		return "ok"
-	if not slotted(int(levels.get("general", 0))).has(id):
-		return "not_slotted"
+	if not active_list.has(id):
+		return "not_listed"
 	if is_passive(id):
 		return "passive"
 	if is_blocked():
@@ -381,12 +374,12 @@ func status_left(status: String, now: float) -> float:
 	return maxf(0.0, float(statuses.get(status, 0.0)) - now)
 
 
-## Эффекты типа type от пассивов в слотах (под глушителем и на отключённом кластере — нет).
+## Эффекты типа type от пассивов в списке активных (под глушителем и на отключённом кластере — нет).
 func passive_effects(type: String, levels: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if is_blocked():
 		return result
-	for id in slotted(int(levels.get("general", 0))):
+	for id in active_list:
 		if not is_passive(id):
 			continue
 		for e in effects(id, levels):
@@ -428,14 +421,24 @@ func crit_chance(unaware: bool, levels: Dictionary) -> float:
 	return total
 
 
-## Доля маны, которую держат пассивы в слотах (D-74; резерв держится и под глушителем).
-func mana_reserve(levels: Dictionary) -> float:
+## Доля маны, которую держат пассивы в списке активных (D-74; резерв держится и под глушителем).
+func mana_reserve() -> float:
+	return clampf(_reserve_sum(active_list), 0.0, float(_rules["max_mana_reserve"]))
+
+
+func _reserve_of(id: String) -> float:
 	var total := 0.0
-	for id in slotted(int(levels.get("general", 0))):
-		for e: Dictionary in _defs[id].get("effects", []):
-			if String(e["type"]) == "reserve_mana":
-				total += float(e["pct"])
-	return clampf(total, 0.0, 0.9)
+	for e: Dictionary in _defs[id].get("effects", []):
+		if String(e["type"]) == "reserve_mana":
+			total += float(e["pct"])
+	return total
+
+
+func _reserve_sum(ids: Array[String]) -> float:
+	var total := 0.0
+	for id in ids:
+		total += _reserve_of(id)
+	return total
 
 
 ## Смерть обнуляет откаты всех умений (D-73). Статусы гаснут, переключатели выключаются.
@@ -448,12 +451,9 @@ func reset_cooldowns() -> void:
 # --- Дары ---------------------------------------------------------------------------------------
 
 ## Варианты дара: count умений из пула, которых герой не знает и которые есть в данных; недобор —
-## из других пулов. always — обязательные (Улыбка для читера), если их ещё нет.
-func gift_offer(pool: String, count: int, rng: RandomNumberGenerator, always: PackedStringArray = []) -> PackedStringArray:
+## из других пулов.
+func gift_offer(pool: String, count: int, rng: RandomNumberGenerator) -> PackedStringArray:
 	var result: PackedStringArray = []
-	for id in always:
-		if _offerable(id) and not result.has(id) and result.size() < count:
-			result.append(id)
 	var order: PackedStringArray = [pool]
 	for other: String in _rules["gifts"]:
 		if other != pool and not other.begins_with("_"):
@@ -489,7 +489,8 @@ func gift_pool(level: int) -> String:
 	return best
 
 
-## Чёрная жемчужина: случайное неизвестное умение из пула по числу известных (D-79). "" — нечего дать.
+## Висящее умение чёрной жемчужины, вскрытое самим (или само при смертельной опасности, D-86):
+## случайное неизвестное из пула по числу известных. "" — нечего дать.
 func pearl_skill(rng: RandomNumberGenerator) -> String:
 	var pools: Array = _rules["pearl"]["pools_by_skill_count"]
 	var pool := String(pools[mini(learned.size(), pools.size() - 1)])
@@ -497,14 +498,31 @@ func pearl_skill(rng: RandomNumberGenerator) -> String:
 	return offer[0] if not offer.is_empty() else ""
 
 
-func always_for_origin(origin: String) -> PackedStringArray:
-	return PackedStringArray(_rules["always_for_origin"].get(origin, []))
+## Области для выбора у знахарки (D-86) — areas из правил, по порядку.
+func areas() -> PackedStringArray:
+	return PackedStringArray(_rules["areas"])
+
+
+## Неизвестные умения области (theme умения), по алфавиту id.
+func area_skills(area: String) -> PackedStringArray:
+	var result: PackedStringArray = []
+	for id: String in _defs:
+		if _offerable(id) and String(_defs[id].get("theme", "")) == area:
+			result.append(id)
+	result.sort()
+	return result
+
+
+## Случайное неизвестное умение из области. "" — в области ничего не осталось.
+func area_skill(area: String, rng: RandomNumberGenerator) -> String:
+	var candidates := area_skills(area)
+	return candidates[rng.randi_range(0, candidates.size() - 1)] if not candidates.is_empty() else ""
 
 
 # --- Сохранение ---------------------------------------------------------------------------------
 
 func to_dict() -> Dictionary:
-	return {"learned": learned.duplicate(true), "slots": Array(slots), "cooldowns": cooldowns.duplicate(),
+	return {"learned": learned.duplicate(true), "active_list": Array(active_list), "cooldowns": cooldowns.duplicate(),
 		"statuses": statuses.duplicate(), "toggled": toggled.keys()}
 
 
@@ -517,10 +535,14 @@ func load_dict(data: Dictionary) -> void:
 			for p in known[id].get("properties", []):
 				props.append(String(p))
 			learned[id] = {"properties": props}
-	var saved: Array = data.get("slots", [])
-	for i in slots.size():
-		var id := String(saved[i]) if i < saved.size() else ""
-		slots[i] = id if learned.has(id) else ""
+	active_list.clear()
+	# Старые сейвы (v12) — слоты: внесённые идут первыми, остальные изученные — следом (D-84).
+	var saved: Array = data.get("active_list", data.get("slots", []))
+	for id in saved:
+		add_to_list(String(id))
+	if not data.has("active_list"):
+		for id: String in learned:
+			add_to_list(id)
 	cooldowns.clear()
 	var cd: Dictionary = data.get("cooldowns", {})
 	for id: String in cd:

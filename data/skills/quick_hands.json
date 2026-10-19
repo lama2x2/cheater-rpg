@@ -3,7 +3,7 @@
   "id": "quick_hands",
   "kind": "passive",
   "slot": "passive",
-  "theme": "economy",
+  "theme": "support",
   "mana_cost": 0,
   "cooldown_s": 0,
   "effects": [
