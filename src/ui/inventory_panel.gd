@@ -30,6 +30,8 @@ var _menu_row: Dictionary = {}
 var _confirm: ConfirmationDialog
 var _confirm_item := ""
 var _dirty := false
+var _left: VBoxContainer
+var _compact := false
 
 
 func _ready() -> void:
@@ -53,6 +55,7 @@ func _ready() -> void:
 	root.add_child(body)
 
 	var left := VBoxContainer.new()
+	_left = left
 	left.custom_minimum_size.x = 300
 	left.add_theme_constant_override("separation", 6)
 	body.add_child(left)
@@ -141,16 +144,39 @@ func _title(text: String, color: Color) -> Label:
 	return label
 
 
-## Ширина — под окно игры (влезает при любом масштабе интерфейса).
+## Ширина — под окно игры (влезает при любом масштабе интерфейса). Открыт контейнер или окно
+## стаба справа — инвентарь компактный: только рюкзак, чтобы окна не налезали друг на друга.
 func _fit() -> void:
 	var view := get_viewport().get_visible_rect().size
-	_panel.offset_right = 16 + minf(1120.0, view.x - 32.0)
+	_compact = _side_window_open()
+	_left.visible = not _compact
+	var width := minf(1120.0, view.x - 32.0)
+	if _compact:
+		width = clampf(view.x - side_width(view.x) - 48.0, 360.0, 700.0)
+	_scroll.custom_minimum_size.x = 340.0 if _compact else 520.0
+	_panel.offset_right = 16 + width
+	_panel.reset_size()
+
+
+## Ширина окна справа (контейнер, стаб) — его же считают окна справа.
+static func side_width(view_x: float) -> float:
+	return clampf(view_x * 0.5, 480.0, 784.0)
+
+
+func _side_window_open() -> bool:
+	for group in ["container_window", "stab_window"]:
+		var w := get_tree().get_first_node_in_group(group)
+		if w and bool(w.get("visible")):
+			return true
+	return false
 
 
 func _process(_delta: float) -> void:
 	if not visible:
 		return
 	# Откаты тикают — раз в секунду перерисовываем; изменения инвентаря — сразу (кадр спустя).
+	if _side_window_open() != _compact:
+		_fit()
 	if _dirty or Engine.get_process_frames() % 60 == 0:
 		_dirty = false
 		_refresh()

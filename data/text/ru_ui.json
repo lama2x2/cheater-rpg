@@ -81,7 +81,18 @@
     "tip_pool_main": "основные",
     "tip_pool_additional": "дополнительные",
     "inv_quick_help": "Перетащите сюда расходник или оружие; ПКМ — очистить.",
-    "tip_compare_other_kind": "В руках — {item}: другой вид оружия, числа предмета без сравнения:"
+    "tip_compare_other_kind": "В руках — {item}: другой вид оружия, числа предмета без сравнения:",
+    "cont_keys": "[E] — взять всё · [Esc]",
+    "cont_there": "Там",
+    "cont_mine": "У меня",
+    "cont_take_all": "Взять всё [E]",
+    "cont_empty": "— пусто —",
+    "cont_left_status": "Не влезло: {items}",
+    "cont_no_room": "{item}: не влезает.",
+    "cont_corpse": "Ваш труп (жизнь {life})",
+    "cont_stash": "Тайник",
+    "trade_junk_row": "Хлам в рюкзаке: {n} шт. — торговец даст {price} спор.",
+    "trade_sell_junk": "Продать весь хлам"
   },
   "log": {
     "inv_no_room_backpack": [
@@ -95,6 +106,15 @@
     ],
     "quick_needs_confirm": [
       "{item}: интервал приёма не соблюдён. Подтвердите в инвентаре — Система не принимает на веру."
+    ],
+    "cont_took_all": [
+      "{what}: забрано всё."
+    ],
+    "cont_left": [
+      "Не влезло, осталось на месте: {items}."
+    ],
+    "junk_sold": [
+      "Продан хлам: {count} шт. за {price} спор. Торговец доволен. Вы — тоже, но меньше."
     ]
   }
 }

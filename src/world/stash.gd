@@ -51,7 +51,45 @@ func interact_text() -> String:
 	return Content.ui("interact_stash" if not contents.is_empty() else "interact_stash_empty")
 
 
-func interact(_hero: Node3D) -> void:
+## E — окно контейнера (12.8), E ещё раз — «Взять всё». Без окна (сценарии) — сразу всё.
+func interact(hero: Node3D) -> void:
+	var window := get_tree().get_first_node_in_group("container_window")
+	if window and not contents.is_empty():
+		window.open_or_take(self)
+		return
+	take_everything(hero)
+
+
+func container_title() -> String:
+	return Content.ui("cont_stash")
+
+
+func container_stacks() -> Array:
+	var result: Array = []
+	for entry: Array in contents:
+		result.append({"id": String(entry[0]), "count": int(entry[1])})
+	return result
+
+
+func container_take(id: String, count: int) -> void:
+	for entry: Array in contents:
+		if String(entry[0]) == id:
+			entry[1] = int(entry[1]) - count
+			if int(entry[1]) <= 0:
+				contents.erase(entry)
+			return
+
+
+func container_put(id: String, count: int) -> int:
+	for entry: Array in contents:
+		if String(entry[0]) == id:
+			entry[1] = int(entry[1]) + count
+			return count
+	contents.append([id, count])
+	return count
+
+
+func take_everything(_hero: Node3D) -> void:
 	if contents.is_empty():
 		SystemLog.post("stash_empty")
 		return

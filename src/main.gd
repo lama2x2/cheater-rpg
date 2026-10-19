@@ -27,6 +27,7 @@ const MinimapScript := preload("res://src/ui/minimap.gd")
 const MapWindowScript := preload("res://src/ui/map_window.gd")
 const QuickBarScript := preload("res://src/ui/quick_bar.gd")
 const PickupToastsScript := preload("res://src/ui/pickup_toasts.gd")
+const ContainerWindowScript := preload("res://src/ui/container_window.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -74,6 +75,7 @@ func _ready() -> void:
 	add_child(MapWindowScript.new())
 	add_child(QuickBarScript.new())
 	add_child(PickupToastsScript.new())
+	add_child(ContainerWindowScript.new())
 	var map_watcher: Node = MapWatcherScript.new()
 	map_watcher.area = area
 	map_watcher.hero = player
@@ -155,6 +157,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --zoom=N      размер ортокамеры N м (обычно 10–40; больше — снять кластер целиком)
 ##   --map=TAB     открыть карту: cluster или region (и --reveal — карты всех кластеров)
 ##   --tip=ID      показать подсказку предмета ID (со сравнением с оружием в руках)
+##   --container=S через S секунд открыть окно ближайшего контейнера (труп героя, тайник)
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
@@ -222,6 +225,8 @@ func _handle_debug_args() -> void:
 				WorldSim.reveal_map(id)
 		elif arg.begins_with("--tip="):
 			_debug_tip.call_deferred(arg.trim_prefix("--tip="))
+		elif arg.begins_with("--container="):
+			_debug_container.call_deferred(float(arg.trim_prefix("--container=")))
 		elif arg == "--inside":
 			_debug_inside()
 		elif arg == "--gaze":
@@ -290,6 +295,19 @@ func _debug_tip(id: String) -> void:
 	var tip := ItemTooltip.build(id, maxi(1, PlayerState.inventory.count_of(id)))
 	tip.position = Vector2(560, 140)
 	layer.add_child(tip)
+
+
+func _debug_container(after: float) -> void:
+	await get_tree().create_timer(after).timeout
+	var hero := get_tree().get_first_node_in_group("hero") as Node3D
+	var best: Node3D = null
+	for group in ["corpses", "stashes"]:
+		for node: Node3D in get_tree().get_nodes_in_group(group):
+			if best == null or node.global_position.distance_to(hero.global_position) < best.global_position.distance_to(hero.global_position):
+				best = node
+	if best:
+		hero.global_position = best.global_position + Vector3(1.0, 0.1, 0.0)
+		get_tree().get_first_node_in_group("container_window").open_or_take(best)
 
 
 func _debug_inside() -> void:

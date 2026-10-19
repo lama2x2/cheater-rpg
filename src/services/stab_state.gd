@@ -156,6 +156,40 @@ func rumor() -> void:
 	_after_deal()
 
 
+## Хлам в рюкзаке, который торговец возьмёт (12.8): {"items": [{"id", "count"}], "total": спораны
+## по нынешним ценам с насыщением}.
+func junk_offer() -> Dictionary:
+	_ensure()
+	var table := Content.item_table()
+	var items: Array = []
+	var total := 0
+	for r in table.junk_to_sell(table.rows(PlayerState.inventory, PlayerState.junk_marks)):
+		var id := String(r["id"])
+		if not trade.buys(id) or trade.sell_price(id) <= 0:
+			continue
+		items.append({"id": id, "count": int(r["count"])})
+		total += trade.sell_price(id) * int(r["count"])
+	return {"items": items, "total": total}
+
+
+## «Продать весь хлам» одной кнопкой.
+func sell_junk() -> void:
+	var offer := junk_offer()
+	if (offer["items"] as Array).is_empty():
+		return
+	var gain := 0
+	var count := 0
+	for s: Dictionary in offer["items"]:
+		var result := trade.sell(String(s["id"]), int(s["count"]), PlayerState.inventory)
+		if result["ok"]:
+			gain += int(result["gain"])
+			count += int(s["count"])
+			if int(result["left"]) > 0:
+				EventBus.items_dropped.emit(TradeRules.CURRENCY, int(result["left"]))
+	SystemLog.post("junk_sold", {"count": count, "price": gain})
+	_after_deal()
+
+
 ## Картограф: карта кластера целиком (раскладка построек) — цена по типу кластера.
 func map_price(id: String) -> int:
 	var prices: Dictionary = Content.stab_config().get("cartographer", {}).get("map_price", {})

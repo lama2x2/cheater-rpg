@@ -26,7 +26,9 @@ func _ready() -> void:
 	_panel.anchor_right = 1.0
 	_panel.offset_left = -760
 	_panel.offset_right = -16
-	_panel.offset_top = 160
+	_panel.offset_top = 90
+	_panel.anchor_bottom = 1.0  # по высоте экрана, содержимое прокручивается (12.8)
+	_panel.offset_bottom = -16
 	add_child(_panel)
 
 	var root := VBoxContainer.new()
@@ -36,13 +38,18 @@ func _ready() -> void:
 	root.add_child(_title)
 	_line = UiKit.label(14, Color(0.8, 0.85, 0.8))
 	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_line.custom_minimum_size.x = 700
+	_line.custom_minimum_size.x = 300
 	root.add_child(_line)
 	_money = UiKit.label(15, Color(0.6, 0.85, 0.6))
 	root.add_child(_money)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root.add_child(scroll)
 	_content = VBoxContainer.new()
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation", 6)
-	root.add_child(_content)
+	scroll.add_child(_content)
 	var close := _button(Content.ui("stab_close"), close_window)
 	root.add_child(close)
 
@@ -59,6 +66,8 @@ func open(npc: Node3D) -> void:
 	var lines: Array = info["lines"]
 	_line.text = "«%s»" % lines[_rng.randi_range(0, lines.size() - 1)] if npc.kind != "board" else String(lines[_rng.randi_range(0, lines.size() - 1)])
 	_gift_price = StabState.gift_price()
+	# Ширина — как у окна контейнера: рядом влезает компактный инвентарь (12.8).
+	_panel.offset_left = -16.0 - preload("res://src/ui/inventory_panel.gd").side_width(get_viewport().get_visible_rect().size.x)
 	visible = true
 	UiKit.window_opened(self)
 	_refresh()
@@ -105,6 +114,12 @@ func _refresh() -> void:
 
 func _trader() -> void:
 	var trade := StabState.trade
+	var junk := StabState.junk_offer()
+	if not (junk["items"] as Array).is_empty():
+		var n := 0
+		for s: Dictionary in junk["items"]:
+			n += int(s["count"])
+		_content.add_child(_row(Content.ui("trade_junk_row", {"n": n, "price": junk["total"]}), [[Content.ui("trade_sell_junk"), StabState.sell_junk]]))
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 24)
 	_content.add_child(columns)
@@ -263,7 +278,8 @@ func _column(parent: Container, title: String) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.add_child(_header(title))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(350, 320)
+	scroll.custom_minimum_size = Vector2(200, 300)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	column.add_child(scroll)
 	var box := VBoxContainer.new()
@@ -284,7 +300,7 @@ func _row(text: String, buttons: Array) -> HBoxContainer:
 	if not text.is_empty():
 		var label := UiKit.label(13, Color(0.9, 0.9, 0.9))
 		label.text = text
-		label.custom_minimum_size.x = 220
+		label.custom_minimum_size.x = 110
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)

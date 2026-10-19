@@ -52,8 +52,45 @@ func interact_text() -> String:
 	return Content.ui("interact_corpse", {"life": life})
 
 
+## E — окно контейнера (12.8): «там / у меня», «Взять всё» (E ещё раз). Без окна — сразу всё.
+func interact(hero: Node3D) -> void:
+	var window := get_tree().get_first_node_in_group("container_window")
+	if window:
+		window.open_or_take(self)
+		return
+	take_everything(hero)
+
+
+func container_title() -> String:
+	return Content.ui("cont_corpse", {"life": life})
+
+
+func container_stacks() -> Array:
+	return _backpack()
+
+
+func container_take(id: String, count: int) -> void:
+	for stack: Dictionary in _backpack():
+		if String(stack["id"]) == id:
+			stack["count"] = int(stack["count"]) - count
+			if int(stack["count"]) <= 0:
+				_backpack().erase(stack)
+			return
+
+
+func container_put(id: String, count: int) -> int:
+	if not contents.has("backpack"):
+		contents["backpack"] = []
+	for stack: Dictionary in _backpack():
+		if String(stack["id"]) == id:
+			stack["count"] = int(stack["count"]) + count
+			return count
+	_backpack().append({"id": id, "count": count})
+	return count
+
+
 ## Забрать своё: всё из рюкзака трупа — в рюкзак героя, что не влезло — остаётся на трупе.
-func interact(_hero: Node3D) -> void:
+func take_everything(_hero: Node3D) -> void:
 	var stacks := _backpack()
 	if stacks.is_empty():
 		SystemLog.post("corpse_empty")
