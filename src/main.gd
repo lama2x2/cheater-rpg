@@ -125,10 +125,11 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --title       показать титульный экран (без аргументов он и так показывается)
 ##   --page=NAME   открыть страницу меню Esc: main, save, load, settings, new_game
 ##   --talk=ID     в стабе: встать у непися ID (trader, healer, barman, board) и открыть его окно
-##   --skills=A,B  выучить умения A, B (первое — в слот 1); --skills=all — все из data/skills
-##   --cast=N      через 1 с применить умение из слота N (1–4), мана — полная
+##   --skills=A,B  выучить умения A, B (в список активных по порядку); --skills=all — все из data/skills
+##   --cast=N      через 1 с применить умение с клавиши N (1–8), мана — полная
 ##   --skills-panel  открыть окно умений
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
+##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
 func _handle_debug_args() -> void:
 	if _debug_args_done:
 		return
@@ -182,6 +183,8 @@ func _handle_debug_args() -> void:
 			_debug_cast.call_deferred(int(arg.trim_prefix("--cast=")))
 		elif arg == "--skills-panel":
 			_debug_skills_panel.call_deferred()
+		elif arg == "--pearl":
+			PlayerState.pending_pearl_skills += 1
 		elif arg == "--gift":
 			PlayerState.skill_gifts_opened.append(10)
 			PlayerState.pending_skill_choices += 1
@@ -230,7 +233,7 @@ func _debug_skills(list: String) -> void:
 func _debug_cast(slot: int) -> void:
 	await get_tree().create_timer(1.0).timeout
 	PlayerState.vitals.restore(Vitals.MANA, PlayerState.vitals.max_value(Vitals.MANA))
-	PlayerState.use_skill_slot(slot - 1)
+	PlayerState.use_hotkey(slot - 1)
 
 
 func _debug_skills_panel() -> void:

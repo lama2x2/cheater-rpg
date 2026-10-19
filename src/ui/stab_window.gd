@@ -149,6 +149,22 @@ func _healer() -> void:
 	if PlayerState.pending_skill_choices > 0:
 		_content.add_child(_row(Content.ui("healer_pending", {"n": PlayerState.pending_skill_choices}), []))
 		_gift_choice()
+	if PlayerState.pending_pearl_skills > 0:
+		_pearl_choice()
+
+
+## Висящее умение жемчужины (D-86): выбрать область за плату; пустые области — без кнопки.
+func _pearl_choice() -> void:
+	_content.add_child(_header(Content.ui("healer_pearl", {"n": PlayerState.pending_pearl_skills, "price": StabState.pearl_price()})))
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 6)
+	row.add_theme_constant_override("v_separation", 6)
+	for area in PlayerState.skills.areas():
+		var count := PlayerState.skills.area_skills(area).size()
+		var button := _button(Content.ui("healer_pearl_area", {"area": Content.texts()["area_names"].get(area, area), "n": count}), StabState.open_pearl_area.bind(area))
+		button.disabled = count == 0
+		row.add_child(button)
+	_content.add_child(row)
 
 
 ## Выбор умения из вариантов дара (задача 13): название, описание, кнопка «Взять».

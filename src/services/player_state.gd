@@ -28,6 +28,8 @@ var skills_awakened: int = 0
 ## (последние pending_skill_choices в skill_gifts_opened).
 var skill_gifts_opened: Array[int] = []
 var pending_skill_choices: int = 0
+## Умения чёрной жемчужины, которые «висят» (D-86): вскрыть самому, у знахарки или само.
+var pending_pearl_skills: int = 0
 var lives: int = 0
 var deaths: int = 0
 ## Что осталось на трупе последней смерти: {"backpack": [...]}. Забирает DeathFlow.
@@ -70,6 +72,7 @@ func setup() -> void:
 	skills_awakened = 0
 	skill_gifts_opened = []
 	pending_skill_choices = 0
+	pending_pearl_skills = 0
 	deaths = 0
 	dropped_on_death = {}
 	deaths_since_region_shift = 0
@@ -241,7 +244,8 @@ func _apply_consume(result: Dictionary) -> void:
 				if effect["success"]:
 					skills_awakened += 1
 					run.add("skills_awakened")
-					_pearl_skill()
+					pending_pearl_skills += 1
+					SystemLog.post("skill_pearl_hanging", {}, "special")
 	for risk in result["risks"]:
 		run.add("risk_" + risk)
 		SystemLog.post("risk_" + risk, {}, "special")
@@ -257,6 +261,7 @@ func hurt(amount: float, source: String, bleed_chance: float = 0.0) -> void:
 		return
 	if _near_miss(amount, source):
 		return
+	_stress_awaken(amount)
 	_last_damage_source = source
 	EventBus.player_hurt.emit(amount, source)
 	if bleed_chance > 0.0 and _rng.randf() < bleed_chance:
@@ -350,7 +355,7 @@ func continue_after_final() -> void:
 func ng_plus_carry() -> Dictionary:
 	var known := skills.to_dict()
 	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"], "save_mode": save_mode,
-		"skills": {"learned": known["learned"], "slots": known["slots"]}}
+		"skills": {"learned": known["learned"], "active_list": known["active_list"]}}
 
 
 ## Применить перенос к только что созданному герою: ячейки, коэффициенты × (1 + бонус × цикл).
@@ -375,6 +380,7 @@ func to_dict() -> Dictionary:
 		"inventory": inventory.to_dict(), "trophies": trophies.to_dict(), "buffs": buffs.to_dict(),
 		"free_points": free_points, "skills_awakened": skills_awakened,
 		"skill_gifts_opened": skill_gifts_opened.duplicate(), "pending_skill_choices": pending_skill_choices,
+		"pending_pearl_skills": pending_pearl_skills,
 		"weapons": weapons.to_dict(), "wounds": wounds.to_dict(), "progress": progress.to_dict(),
 		"skills": skills.to_dict(), "skill_offers": Array(skill_offers),
 		"lives": lives, "deaths": deaths, "deaths_since_region_shift": deaths_since_region_shift,
@@ -402,6 +408,7 @@ func load_dict(data: Dictionary) -> void:
 	for level in data["skill_gifts_opened"]:
 		skill_gifts_opened.append(int(level))
 	pending_skill_choices = int(data["pending_skill_choices"])
+	pending_pearl_skills = int(data["pending_pearl_skills"])
 	weapons.load_dict(data["weapons"])
 	wounds.load_dict(data["wounds"])
 	progress.load_dict(data["progress"])
@@ -458,19 +465,20 @@ func skill_levels() -> Dictionary:
 
 
 func learn_skill(id: String, log_key: String = "skill_learned") -> bool:
-	if not skills.learn(id, stats.general_level()):
+	if not skills.learn(id):
 		return false
 	SystemLog.post(log_key, {"skill": Content.skill_name(id)}, "special")
+	if not skills.in_list(id):
+		SystemLog.post("skill_reserve_full", {"skill": Content.skill_name(id)}, "warning")
 	_update_mana_reserve()
 	skills_changed.emit()
 	return true
 
 
-## Применить умение из слота index (клавиши 1–4). Возвращает результат SkillRules.can_use.
-func use_skill_slot(index: int) -> String:
-	if index < 0 or index >= skills.slot_count(stats.general_level()) or skills.slots[index].is_empty():
-		return "empty"
-	return use_skill(skills.slots[index])
+## Применить умение с клавиши index (0 — «1»): первые восемь умений списка активных (D-84).
+func use_hotkey(index: int) -> String:
+	var id := skills.hotkey_skill(index)
+	return "empty" if id.is_empty() else use_skill(id)
 
 
 func use_skill(id: String) -> String:
@@ -517,15 +525,26 @@ static func cooldown_text(game_minutes: float) -> String:
 	return "%d ч %02d мин" % [floori(game_minutes / 60.0), floori(fmod(game_minutes, 60.0))]
 
 
-func set_skill_slot(index: int, id: String) -> void:
-	var old := skills.slots[index] if index >= 0 and index < skills.slots.size() else ""
-	if skills.set_slot(index, id, GameClock.minutes, stats.general_level()):
-		if not old.is_empty() and skills.slot_of(old) < 0:
-			skills.toggled.erase(old)
-		if not id.is_empty():
-			SystemLog.post("skill_slot_set", {"skill": Content.skill_name(id), "slot": index + 1})
-		_update_mana_reserve()
-		skills_changed.emit()
+## Список активных (D-84): внести, убрать, сдвинуть. Пассив не войдёт, если резерв маны полон.
+func list_add(id: String) -> bool:
+	if not skills.add_to_list(id):
+		if skills.knows(id) and not skills.in_list(id):
+			SystemLog.post("skill_reserve_full", {"skill": Content.skill_name(id)}, "warning")
+		return false
+	_update_mana_reserve()
+	skills_changed.emit()
+	return true
+
+
+func list_remove(id: String) -> void:
+	skills.remove_from_list(id)
+	_update_mana_reserve()
+	skills_changed.emit()
+
+
+func list_move(id: String, delta: int) -> void:
+	skills.move_in_list(id, delta)
+	skills_changed.emit()
 
 
 func choose_skill_property(id: String, property_id: String) -> void:
@@ -550,8 +569,7 @@ func gift_offers() -> PackedStringArray:
 	if skill_offers.is_empty():
 		var pool := skills.gift_pool(level)
 		var count := skills.offer_count(pool, stats.get_level("luck"))
-		var origin_id := String(get("origin")) if "origin" in self else ""
-		skill_offers = skills.gift_offer(pool, count, _rng, skills.always_for_origin(origin_id))
+		skill_offers = skills.gift_offer(pool, count, _rng)
 	return skill_offers
 
 
@@ -642,17 +660,49 @@ func _skills_tick(delta: float) -> void:
 			skills_changed.emit()
 
 
-func _pearl_skill() -> void:
+## Вскрыть висящее умение жемчужины самому: бесплатно, случайное (D-86).
+func open_pearl_self() -> bool:
+	if pending_pearl_skills <= 0:
+		return false
 	var id := skills.pearl_skill(_rng)
 	if id.is_empty():
 		SystemLog.post("skill_pearl_empty", {}, "special")
-	else:
-		learn_skill(id, "skill_learned_pearl")
+		return false
+	pending_pearl_skills -= 1
+	return learn_skill(id, "skill_learned_pearl")
+
+
+## Вскрыть висящее умение у знахарки (плату берёт StabState): случайное из выбранной области.
+func open_pearl_area(area: String) -> bool:
+	if pending_pearl_skills <= 0:
+		return false
+	var id := skills.area_skill(area, _rng)
+	if id.is_empty():
+		return false
+	pending_pearl_skills -= 1
+	return learn_skill(id, "skill_learned_area")
+
+
+## Как в книгах: висящее умение открывается само при смертельной опасности (D-86) — случайное.
+func _stress_awaken(amount: float) -> void:
+	if pending_pearl_skills <= 0:
+		return
+	var pearl: Dictionary = Content.skill_rules_config()["pearl"]
+	var left := vitals.value(Vitals.HEALTH) - amount
+	if left > vitals.max_value(Vitals.HEALTH) * float(pearl["danger_health_fraction"]):
+		return
+	if _rng.randf() >= float(pearl["stress_chance"]):
+		return
+	var id := skills.pearl_skill(_rng)
+	if id.is_empty():
+		return
+	pending_pearl_skills -= 1
+	learn_skill(id, "skill_stress_awaken")
 
 
 func _update_mana_reserve() -> void:
 	if vitals and skills:
-		vitals.set_mana_reserve(skills.mana_reserve(skill_levels()))
+		vitals.set_mana_reserve(skills.mana_reserve())
 
 
 func _on_skill_levels_changed(stat: String, old_level: int, new_level: int) -> void:

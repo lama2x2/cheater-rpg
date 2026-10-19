@@ -1,6 +1,6 @@
 extends CanvasLayer
-## Слоты умений справа над шкалами (клавиши 1–4): название, откат или остаток действия, пассив,
-## «✕» — умения заглушены. Только открытые слоты (D-17). Данные — PlayerState.skills.
+## Список активных умений справа над шкалами (D-84): первые восемь — на клавишах 1–8; название,
+## откат или остаток действия, пассив, «✕» — умения заглушены. Данные — PlayerState.skills.
 
 ## Над полосками шкал (vitals_bars.gd, ~280 px высотой).
 const ABOVE_VITALS := 250.0
@@ -27,16 +27,16 @@ func _ready() -> void:
 	_blocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	root.add_child(_blocked)
 	_box = VBoxContainer.new()
-	_box.add_theme_constant_override("separation", 4)
+	_box.add_theme_constant_override("separation", 2)
 	root.add_child(_box)
-	for i in 4:
+	for i in 8:
 		var panel := PanelContainer.new()
 		var style := StyleBoxFlat.new()
 		style.bg_color = Color(0.05, 0.06, 0.07, 0.75)
-		style.set_content_margin_all(6)
+		style.set_content_margin_all(3)
 		style.set_corner_radius_all(3)
 		panel.add_theme_stylebox_override("panel", style)
-		var label := UiKit.label(13)
+		var label := UiKit.label(12)
 		label.custom_minimum_size.x = 268
 		panel.add_child(label)
 		_box.add_child(panel)
@@ -46,26 +46,23 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var skills := PlayerState.skills
 	var now := GameClock.minutes
-	var open := skills.slot_count(PlayerState.stats.general_level())
-	var any := false
+	var shown := mini(skills.active_list.size(), skills.hotkey_count())
 	for i in _cells.size():
 		var label := _cells[i]
 		var panel := label.get_parent() as Control
-		panel.visible = i < open
-		if i >= open:
+		panel.visible = i < shown
+		if i >= shown:
 			continue
-		var id := skills.slots[i]
-		any = any or not id.is_empty()
+		var id := skills.active_list[i]
 		label.text = _cell_text(i, id, now)
 		label.add_theme_color_override("font_color", _cell_color(id, now))
+	var any := shown > 0
 	_box.visible = any
 	_blocked.text = Content.ui("skills_blocked") if skills.is_blocked() and any else ""
 
 
 func _cell_text(i: int, id: String, now: float) -> String:
 	var params := {"n": i + 1}
-	if id.is_empty():
-		return Content.ui("skill_slot_empty", params)
 	var skills := PlayerState.skills
 	params["name"] = Content.skill_name(id)
 	if skills.is_blocked():
@@ -87,8 +84,6 @@ func _cell_text(i: int, id: String, now: float) -> String:
 
 func _cell_color(id: String, now: float) -> Color:
 	var skills := PlayerState.skills
-	if id.is_empty():
-		return Color(0.5, 0.5, 0.5)
 	if skills.is_blocked():
 		return Color(0.6, 0.4, 0.4)
 	if skills.is_passive(id):

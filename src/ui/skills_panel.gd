@@ -1,7 +1,8 @@
 class_name SkillsPanel
 extends CanvasLayer
-## Окно умений (U): изученные умения с числами (мана, откат, действие), слоты и выбор свойств на
-## порогах Ментальной силы. Игра на паузу не встаёт (D-05). Действия — PlayerState.
+## Окно умений (U): список активных (D-84) — порядок (клавиши 1–8), внести и убрать; изученные
+## умения с числами (мана, откат, действие); выбор свойств на порогах Ментальной силы; висящее
+## умение жемчужины — вскрыть самому (D-86). Игра на паузу не встаёт (D-05). Действия — PlayerState.
 ## Спецификация: docs/spec/05_skills.md.
 
 var _panel: PanelContainer
@@ -57,34 +58,48 @@ func _refresh() -> void:
 		_content.remove_child(child)
 		child.queue_free()
 	var skills := PlayerState.skills
-	var general := PlayerState.stats.general_level()
-	var open := skills.slot_count(general)
-	_slots.text = Content.ui("skills_slots", {"used": skills.slotted(general).size(), "open": open})
+	_slots.text = Content.ui("skills_list", {"n": skills.active_list.size(), "reserve": roundi(skills.mana_reserve() * 100.0)})
+	if PlayerState.pending_pearl_skills > 0:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		row.add_child(_text(Content.ui("skills_pearl", {"n": PlayerState.pending_pearl_skills}), 13, Color(0.95, 0.78, 0.3)))
+		row.add_child(_button(Content.ui("skills_pearl_open"), PlayerState.open_pearl_self))
+		_content.add_child(row)
 	if skills.learned.is_empty():
 		_content.add_child(_text(Content.ui("skills_none"), 13, Color(0.8, 0.8, 0.8)))
 		return
 	var levels := PlayerState.skill_levels()
+	for id in skills.active_list:
+		_content.add_child(_skill_block(id, levels))
 	for id: String in skills.learned:
-		_content.add_child(_skill_block(id, levels, open))
+		if not skills.in_list(id):
+			_content.add_child(_skill_block(id, levels))
 
 
-func _skill_block(id: String, levels: Dictionary, open: int) -> VBoxContainer:
+func _skill_block(id: String, levels: Dictionary) -> VBoxContainer:
 	var skills := PlayerState.skills
 	var block := VBoxContainer.new()
-	var slot := skills.slot_of(id)
-	var name := Content.skill_name(id) + (" [%d]" % (slot + 1) if slot >= 0 and slot < open else "")
-	block.add_child(_text(name, 15, Color(1.0, 0.85, 0.45)))
+	var index := skills.active_list.find(id)
+	var mark := ""
+	if index >= 0:
+		mark = " [%d]" % (index + 1) if index < skills.hotkey_count() else " " + Content.ui("skills_no_key")
+	else:
+		mark = " " + Content.ui("skills_not_listed")
+	block.add_child(_text(Content.skill_name(id) + mark, 15, Color(1.0, 0.85, 0.45) if index >= 0 else Color(0.6, 0.6, 0.6)))
 	block.add_child(_text(skill_description(id, levels), 12, Color(0.85, 0.85, 0.85)))
 	block.add_child(_text(_numbers(id, levels), 12, Color(0.6, 0.75, 0.95)))
 	for p: Dictionary in skills.active_properties(id, levels):
 		block.add_child(_text("• " + _property_name(String(p["id"])), 12, Color(0.75, 0.9, 0.7)))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 6)
-	for i in open:
-		if skills.slots[i] != id:
-			buttons.add_child(_button(Content.ui("skills_to_slot", {"n": i + 1}), PlayerState.set_skill_slot.bind(i, id)))
-	if slot >= 0 and slot < open:
-		buttons.add_child(_button(Content.ui("skills_unslot"), PlayerState.set_skill_slot.bind(slot, "")))
+	if index >= 0:
+		if index > 0:
+			buttons.add_child(_button(Content.ui("skills_up"), PlayerState.list_move.bind(id, -1)))
+		if index < skills.active_list.size() - 1:
+			buttons.add_child(_button(Content.ui("skills_down"), PlayerState.list_move.bind(id, 1)))
+		buttons.add_child(_button(Content.ui("skills_unlist"), PlayerState.list_remove.bind(id)))
+	else:
+		buttons.add_child(_button(Content.ui("skills_to_list"), PlayerState.list_add.bind(id)))
 	block.add_child(buttons)
 	for choice in skills.property_choices(id, levels):
 		block.add_child(_text(Content.ui("skills_choice", {"group": String(choice["group"]).trim_prefix("m")}), 12, Color(0.95, 0.78, 0.3)))
@@ -103,7 +118,7 @@ static func skill_description(id: String, levels: Dictionary) -> String:
 	for e in PlayerState.skills.effects(id, levels):
 		for key: String in e:
 			if e[key] is float or e[key] is int:
-				params["%s.%s" % [e["type"], key]] = _num(float(e[key]) * 100.0) + "%" if key == "pct" else _num(float(e[key]))
+				params["%s.%s" % [e.get("key", e["type"]), key]] = _num(float(e[key]) * 100.0) + "%" if key == "pct" else _num(float(e[key]))
 	return text.format(params)
 
 

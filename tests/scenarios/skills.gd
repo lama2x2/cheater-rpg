@@ -28,15 +28,15 @@ func _run() -> void:
 	var offers: PackedStringArray = ps.gift_offers()
 	print("gift 10 offers: ", offers, " (again: ", ps.gift_offers(), ")")
 	ps.choose_gift("fortune_smile" if offers.has("fortune_smile") else offers[0])
-	print("learned: ", ps.skills.learned.keys(), " slots: ", ps.skills.slots, " pending: ", ps.pending_skill_choices)
+	print("learned: ", ps.skills.learned.keys(), " list: ", ps.skills.active_list, " pending: ", ps.pending_skill_choices)
 	for id: String in ps.skills.all_ids():
 		ps.learn_skill(id)
-	ps.skills.slots[0] = "fortune_smile"
+	_only(ps, "fortune_smile")
 
 	var luck_before: float = ps.effective("luck")
 	ps.vitals.restore("mana", 999.0)
 	var mana_before: float = ps.vitals.value("mana")
-	print("use slot 1: ", ps.use_skill_slot(0), "; again: ", ps.use_skill_slot(0))
+	print("use key 1: ", ps.use_hotkey(0), "; again: ", ps.use_hotkey(0))
 	print("luck %.1f -> %.1f, mana %.0f -> %.0f, cooldown %s" % [luck_before, ps.effective("luck"), mana_before,
 		ps.vitals.value("mana"), ps.cooldown_text(ps.skills.cooldown_left("fortune_smile", clock.minutes))])
 	var model: LuckModel = root.get_node("Content").luck_model()
@@ -71,9 +71,10 @@ func _run() -> void:
 	ps.setup()
 	save.load_game("debug")
 	await create_timer(1.0).timeout
-	print("after load: learned %s, slot1 %s, cooldown %.0f ≈ %.0f min" % [ps.skills.learned.keys(), ps.skills.slots[0], ps.skills.cooldown_left("fortune_smile", clock.minutes), cd])
+	print("after load: learned %s, key 1 %s, cooldown %.0f ≈ %.0f min" % [ps.skills.learned.keys(), ps.skills.hotkey_skill(0), ps.skills.cooldown_left("fortune_smile", clock.minutes), cd])
 	await _batch_1(ps, clock)
 	await _batch_2(ps, clock)
+	_pearl(ps)
 	var log_tail: Array = root.get_node("SystemLog").history.filter(func(e: Dictionary) -> bool: return not String(e["text"]).contains("зафиксировано")) \
 		.slice(-20).map(func(e: Dictionary) -> String: return e["text"])
 	for line in log_tail:
@@ -93,7 +94,7 @@ func _batch_1(ps: Node, clock: Node) -> void:
 	await process_frame
 	for id: String in ["sense_pulse", "voice_throw", "scarecrow", "noise_eater", "second_wind"]:
 		ps.skills.reset_cooldowns()
-		ps.skills.slots[0] = id
+		_only(ps, id)
 		ps.vitals.restore("mana", 999.0)
 		if id == "second_wind":
 			ps.vitals.spend_stamina(999.0)
@@ -102,7 +103,7 @@ func _batch_1(ps: Node, clock: Node) -> void:
 			hero.visible = false  # твари не видят героя — проверяем только слух
 			target.brain.state = "wander"
 			await create_timer(0.3).timeout
-		var result: String = ps.use_skill_slot(0)
+		var result: String = ps.use_hotkey(0)
 		await process_frame
 		await process_frame
 		match id:
@@ -122,12 +123,12 @@ func _batch_1(ps: Node, clock: Node) -> void:
 			"second_wind":
 				print("second_wind: %s, stamina %.0f, free sprint %s, spore %.0f" % [result, ps.vitals.value("stamina"),
 					ps.skills.has_status("free_sprint", clock.minutes), ps.vitals.value("spore_balance")])
-	ps.skills.slots[0] = "soft_step"
+	_only(ps, "soft_step")
 	ps.call("_update_mana_reserve")
 	var levels: Dictionary = ps.skill_levels()
 	print("soft_step: walk noise ×%.2f, mana max %.1f (reserve %.0f%%)" % [ps.skills.noise_adjust("walk_step", clock.minutes, levels)["mult"],
 		ps.vitals.max_value("mana"), ps.vitals.mana_reserve() * 100.0])
-	ps.skills.slots[0] = "ambusher"
+	_only(ps, "ambusher")
 	print("ambusher: unaware ×%.2f, alert ×%.2f, target unaware=%s" % [ps.skills.damage_mult(true, false, levels),
 		ps.skills.damage_mult(false, false, levels), target.is_unaware() if is_instance_valid(target) else "?"])
 
@@ -138,18 +139,18 @@ func _batch_2(ps: Node, clock: Node) -> void:
 	var hero := get_first_node_in_group("hero") as Node3D
 	var infected := get_nodes_in_group("infected")
 	ps.skills.reset_cooldowns()
-	ps.skills.slots[0] = "heat_vision"
+	_only(ps, "heat_vision")
 	ps.vitals.restore("mana", 999.0)
 	var mana0: float = ps.vitals.value("mana")
-	print("heat_vision on: ", ps.use_skill_slot(0))
+	print("heat_vision on: ", ps.use_hotkey(0))
 	await create_timer(2.0).timeout
 	var heat := 0
 	for node in infected:
 		if is_instance_valid(node):
 			heat += node.get_children().filter(func(c: Node) -> bool: return c is Label3D and String(c.text).begins_with("◉")).size()
-	print("heat marks %d, mana %.2f -> %.2f (10 + ~0.2 upkeep), off: %s" % [heat, mana0, ps.vitals.value("mana"), ps.use_skill_slot(0)])
+	print("heat marks %d, mana %.2f -> %.2f (10 + ~0.2 upkeep), off: %s" % [heat, mana0, ps.vitals.value("mana"), ps.use_hotkey(0)])
 
-	ps.skills.slots[0] = "trophy_nose"
+	_only(ps, "trophy_nose")
 	for node in infected:
 		if is_instance_valid(node):
 			node.sniffed = false
@@ -162,7 +163,7 @@ func _batch_2(ps: Node, clock: Node) -> void:
 	if target:
 		var loot: Dictionary = target.sack_loot
 		print("trophy_nose: sniffed %s, sack %s, glow %s" % [target.enemy_id, loot, target.get_meta("nose_show", false)])
-		ps.skills.slots[0] = "quick_hands"
+		_only(ps, "quick_hands")
 		ps.pick_up("knife", 1)
 		target.take_damage(9999.0)
 		await process_frame
@@ -177,7 +178,7 @@ func _batch_2(ps: Node, clock: Node) -> void:
 			print("quick_hands: opening takes %.1f s (knife ×2, hands ×1.5)" % (hero.channel._duration))
 			hero.channel.cancel()
 
-	ps.skills.slots[0] = "near_miss"
+	_only(ps, "near_miss")
 	ps.stats.set_coefficient("luck", 200.0)
 	var saved := 0
 	for i in 200:
@@ -194,19 +195,44 @@ func _batch_2(ps: Node, clock: Node) -> void:
 	ps.vitals.restore("health", 999.0)
 
 	ps.skills.reset_cooldowns()
-	ps.skills.slots[0] = "spore_burst"
+	_only(ps, "spore_burst")
 	var spore: float = ps.vitals.value("spore_balance")
-	print("spore_burst: %s, spore %.0f -> %.0f, speed ×%.2f, strength ×%.2f" % [ps.use_skill_slot(0), spore, ps.vitals.value("spore_balance"),
+	print("spore_burst: %s, spore %.0f -> %.0f, speed ×%.2f, strength ×%.2f" % [ps.use_hotkey(0), spore, ps.vitals.value("spore_balance"),
 		ps.buffs.multiplier("speed", clock.minutes), ps.buffs.multiplier("strength", clock.minutes)])
-	ps.skills.slots[0] = "balance_loan"
+	_only(ps, "balance_loan")
 	ps.vitals.restore("mana", 999.0)
-	var loan: String = ps.use_skill_slot(0)
+	var loan: String = ps.use_hotkey(0)
 	var ends: float = clock.minutes + ps.buffs.left("skill:balance_loan", clock.minutes)
 	print("balance_loan: %s, luck ×%.1f now (если Улыбка ещё идёт — берётся больший), ×%.1f at loan end, ×%.2f in debt" % [loan,
 		ps.buffs.multiplier("luck", clock.minutes), ps.buffs.multiplier("luck", ends - 1.0), ps.buffs.multiplier("luck", ends + 1.0)])
-	ps.skills.slots[0] = "danger_sense"
+	_only(ps, "danger_sense")
 	ps.danger_warn(hero.global_position + Vector3(5, 0, 0))
 	await process_frame
 	var scale := Engine.time_scale
 	await create_timer(0.6, true, false, true).timeout
-	print("danger_sense: time scale %.2f -> %.2f" % [scale, Engine.time_scale])
+	print("danger_sense: time scale %.2f -> %.2f (без замедления, D-85)" % [scale, Engine.time_scale])
+
+
+## Оставить в списке активных одно умение — на клавише 1.
+func _only(ps: Node, id: String) -> void:
+	ps.skills.active_list.clear()
+	ps.skills.active_list.append(id)
+	ps.call("_update_mana_reserve")
+
+
+## 13c: висящее умение жемчужины (D-86) и список активных (D-84).
+func _pearl(ps: Node) -> void:
+	print("\n-- 13c")
+	ps.skills.learned.clear()
+	ps.skills.active_list.clear()
+	ps.pending_pearl_skills = 2
+	print("pearl self: %s -> %s" % [ps.open_pearl_self(), ps.skills.learned.keys()])
+	ps.inventory.add("sporan", 60)
+	var stab: Node = root.get_node("StabState")
+	var money: int = stab.money()
+	stab.open_pearl_area("luck")
+	print("pearl at healer (luck, %d sp): %s, money %d -> %d, pending %d" % [stab.pearl_price(), ps.skills.learned.keys(), money, stab.money(), ps.pending_pearl_skills])
+	for id: String in ps.skills.all_ids():
+		ps.learn_skill(id)
+	print("active list (no limit): %d of %d learned, reserve %.0f%%, key 1..8: %s" % [ps.skills.active_list.size(), ps.skills.learned.size(),
+		ps.skills.mana_reserve() * 100.0, ps.skills.active_list.slice(0, 8)])

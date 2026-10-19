@@ -101,6 +101,20 @@ func open_gift(price: int) -> void:
 	_after_deal()
 
 
+func pearl_price() -> int:
+	return int(Content.skill_rules_config()["pearl"]["healer_price"])
+
+
+## Висящее умение жемчужины у знахарки (D-86): за плату — выбранная область, умение случайное из неё.
+func open_pearl_area(area: String) -> void:
+	if PlayerState.pending_pearl_skills <= 0 or PlayerState.skills.area_skills(area).is_empty():
+		return
+	if not _pay(pearl_price()):
+		return
+	PlayerState.open_pearl_area(area)
+	_after_deal()
+
+
 func can_sleep() -> bool:
 	return StabRules.can_sleep(PlayerState.vitals.value(Vitals.SPORE),
 		float(Content.vitals_config()[Vitals.SPORE]["decay_per_game_hour"]), Content.stab_config()["bar"])

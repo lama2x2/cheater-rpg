@@ -1,12 +1,13 @@
 extends Node3D
-## Умения героя в сцене: клавиши 1–4 — слоты, золотое сияние под Улыбкой Фортуны, всплывающие
+## Умения героя в сцене: клавиши 1–8 — первые умения списка активных (D-84), золотое сияние под Улыбкой Фортуны, всплывающие
 ## надписи удачи («мимо!», «удача!») и иммунитета. Правила — SkillRules (src/core), применение
 ## чисел — PlayerState; сценовые эффекты (EventBus.skill_used) — здесь: highlight (Вспышка),
 ## noise_at (Чревовещатель), enemy_flee (Пугач), noise_zone (Гаситель); раз в SENSE_TICK — тепло
-## (Тепловое зрение) и нюх на мешок; Пуля — замедление мира по EventBus.danger_warned.
+## (Тепловое зрение) и нюх на мешок; Пуля — тревога и стрелка к угрозе по EventBus.danger_warned
+## (без замедления, D-85).
 ## Спецификация: docs/spec/05_skills.md.
 
-const SLOT_ACTIONS: PackedStringArray = ["skill_1", "skill_2", "skill_3", "skill_4"]
+const SLOT_ACTIONS: PackedStringArray = ["skill_1", "skill_2", "skill_3", "skill_4", "skill_5", "skill_6", "skill_7", "skill_8"]
 const SENSE_TICK := 0.4
 const LAYER_WORLD := 1
 const FLOAT_TEXT := {
@@ -68,7 +69,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	for i in SLOT_ACTIONS.size():
 		if event.is_action_pressed(SLOT_ACTIONS[i]):
-			PlayerState.use_skill_slot(i)
+			PlayerState.use_hotkey(i)
 			get_viewport().set_input_as_handled()
 			return
 
@@ -248,21 +249,37 @@ static func _valuable(loot: Dictionary, min_price: float) -> bool:
 
 # --- Пуля --------------------------------------------------------------------------------------
 
-## Мир замедляется на duration_s реальных секунд (Engine.time_scale; герой — вместе с миром, пока
-## нет отдельного «времени героя»), над угрозой — «!».
+## Тревога, как браслет в книге (D-85): «пуля!» над героем, «!» над угрозой и красная стрелка у ног
+## в её сторону на marker_s секунд. Мир не замедляется — это только у Боевого транса (M2).
 func _on_danger(from: Vector3, warn: Dictionary) -> void:
 	if not is_inside_tree():
 		return
+	var seconds := float(warn["marker_s"])
 	float_text(get_tree().current_scene, hero.global_position + Vector3.UP * 2.4, Content.ui("danger_float"), Color(1.0, 0.35, 0.3))
-	if bool(warn.get("show_direction", false)):
-		float_text(get_tree().current_scene, from + Vector3.UP * 2.6, "!", Color(1.0, 0.25, 0.2))
-	Engine.time_scale = float(warn["time_scale"])
-	await get_tree().create_timer(float(warn["duration_s"]), true, false, true).timeout
-	Engine.time_scale = 1.0
-
-
-func _exit_tree() -> void:
-	Engine.time_scale = 1.0
+	float_text(get_tree().current_scene, from + Vector3.UP * 2.6, "!", Color(1.0, 0.25, 0.2))
+	var to := from - hero.global_position
+	to.y = 0.0
+	if to.length() < 0.1:
+		return
+	# Стрелка на земле у ног героя — в сторону угрозы.
+	var prism := PrismMesh.new()
+	prism.size = Vector3(0.6, 0.9, 0.05)
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.no_depth_test = true
+	material.albedo_color = Color(1.0, 0.25, 0.2, 0.9)
+	var arrow := MeshInstance3D.new()
+	arrow.mesh = prism
+	arrow.material_override = material
+	arrow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(arrow)
+	arrow.global_position = hero.global_position + to.normalized() * 1.4 + Vector3.UP * 0.1
+	arrow.look_at(arrow.global_position + Vector3.UP, to.normalized())
+	var tween := arrow.create_tween()
+	tween.tween_interval(maxf(0.0, seconds - 0.4))
+	tween.tween_property(material, "albedo_color:a", 0.0, 0.4)
+	tween.tween_callback(arrow.queue_free)
 
 
 # --- Чревовещатель -----------------------------------------------------------------------------
