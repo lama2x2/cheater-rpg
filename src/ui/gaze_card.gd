@@ -100,10 +100,16 @@ func _pick() -> Node3D:
 			var px := camera.unproject_position(target.global_position + Vector3.UP * 0.8).distance_to(mouse)
 			if target == _target:
 				px *= 0.5
-			if px < best_px and _in_sight(hero, target):
+			if px < best_px and _in_sight(hero, target) and _vision_sees(target):
 				best = target
 				best_px = px
 	return best
+
+
+## Зрение героя (14a): цель вне конуса или за стеной не осмотреть.
+func _vision_sees(target: Node3D) -> bool:
+	var vision := get_tree().get_first_node_in_group("hero_vision")
+	return vision == null or vision.is_seen(target)
 
 
 func _in_sight(hero: Node3D, target: Node3D) -> bool:

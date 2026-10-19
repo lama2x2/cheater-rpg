@@ -196,6 +196,7 @@ func _heat_tick() -> void:
 				label.outline_size = 8
 				label.modulate = Color(1.0, 0.5, 0.15, 0.9)
 				label.position = Vector3.UP * 2.3
+				label.add_to_group("skill_marks")  # видна и вне взгляда героя (src/world/hero_vision.gd)
 				node.add_child(label)
 				_heat_marks[node] = label
 			_heat_marks[node].text = "◉ %d" % int(node.level) if bool(e["show_level"]) else "◉"

@@ -27,6 +27,7 @@ const SKILLS_DIR := "res://data/skills"
 const LUCK_PATH := "res://data/luck.json"
 const TEXTS_DIR := "res://data/text"
 const GAZE_PATH := "res://data/gaze.json"
+const VISION_PATH := "res://data/vision.json"
 
 var _cache: Dictionary = {}
 
@@ -121,6 +122,12 @@ func luck_model() -> LuckModel:
 	if not _cache.has(LUCK_PATH):
 		_cache[LUCK_PATH] = LuckModel.new(JsonData.load_dict(LUCK_PATH, LuckModel.REQUIRED_KEYS))
 	return _cache[LUCK_PATH]
+
+
+func vision_rules() -> VisionRules:
+	if not _cache.has(VISION_PATH):
+		_cache[VISION_PATH] = VisionRules.new(JsonData.load_dict(VISION_PATH, VisionRules.REQUIRED_KEYS))
+	return _cache[VISION_PATH]
 
 
 func gaze_rules() -> GazeRules:

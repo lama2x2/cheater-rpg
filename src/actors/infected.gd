@@ -144,6 +144,7 @@ func set_trophy_glow(on: bool, bright: bool = false) -> void:
 		_glow.pixel_size = 0.012
 		_glow.outline_size = 6
 		_glow.text = "✧"
+		_glow.add_to_group("skill_marks")  # подсвеченное умением видно и вне взгляда героя
 		_glow.position = Vector3.UP * (float(_data["body"]["height"]) + 0.3)
 		add_child(_glow)
 	_glow.visible = on
@@ -170,6 +171,12 @@ func gaze_info() -> Dictionary:
 		"health": hp / maxf(Content.enemy_db().max_hp(enemy_id, level), 1.0), "state": brain.state,
 		"armor": armor, "traits": Array(traits), "hunger": brain.hunger,
 	}
+
+
+## Для чуйки героя (17.2): Скрытность, уровень, гонится ли, гашение чуйки (элиты).
+func sense_info() -> Dictionary:
+	return {"stealth": float(_data["senses"].get("stealth", 0.0)), "level": level,
+		"alert": brain.is_alert(), "hush": float(_data["senses"].get("sense_hush", 0.0))}
 
 
 ## Тварь не гонится за героем и не атакует — для умения «Из тени».

@@ -13,6 +13,8 @@ var skills: Node3D
 ## Ближайший объект для E (группа "interactable"), или null.
 var current_interactable: Node3D
 var sneaking := false
+## Бежит в этом кадре (зрение: в беге конус уже, 17.1).
+var is_sprinting := false
 
 var _tuning: Dictionary
 var _sprint_meters: float = 0.0
@@ -61,6 +63,7 @@ func _physics_process(delta: float) -> void:
 		direction = Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera.global_rotation.y)
 	var vitals := PlayerState.vitals
 	var sprinting := Input.is_action_pressed("sprint") and direction.length() > 0.1 and vitals.can_sprint()
+	is_sprinting = sprinting
 	if sprinting and sneaking:
 		_set_sneaking(false)
 	var inventory := PlayerState.inventory

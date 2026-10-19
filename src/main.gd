@@ -20,6 +20,8 @@ const GameMenuScript := preload("res://src/ui/game_menu.gd")
 const SkillsBarScript := preload("res://src/ui/skills_bar.gd")
 const SkillsPanelScript := preload("res://src/ui/skills_panel.gd")
 const GazeCardScript := preload("res://src/ui/gaze_card.gd")
+const HeroVisionScript := preload("res://src/world/hero_vision.gd")
+const SenseIndicatorScript := preload("res://src/ui/sense_indicator.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -48,6 +50,9 @@ func _ready() -> void:
 	camera.target = player
 	add_child(camera)
 	player.camera = camera
+	var vision: Node3D = HeroVisionScript.new()
+	vision.hero = player
+	add_child(vision)
 
 	add_child(DebugHudScript.new())
 	add_child(VitalsBarsScript.new())
@@ -58,6 +63,7 @@ func _ready() -> void:
 	add_child(SkillsBarScript.new())
 	add_child(SkillsPanelScript.new())
 	add_child(GazeCardScript.new())
+	add_child(SenseIndicatorScript.new())
 	var menu: CanvasLayer = GameMenuScript.new()
 	add_child(menu)
 
@@ -132,6 +138,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --skills-panel  открыть окно умений
 ##   --gaze        через 1,5 с показать карточку Пристального взгляда ближайшей твари (нет тварей —
 ##                 ближайшей другой цели)
+##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
 func _handle_debug_args() -> void:
@@ -189,6 +196,8 @@ func _handle_debug_args() -> void:
 			_debug_skills_panel.call_deferred()
 		elif arg == "--pearl":
 			PlayerState.pending_pearl_skills += 1
+		elif arg == "--inside":
+			_debug_inside()
 		elif arg == "--gaze":
 			_debug_gaze.call_deferred()
 		elif arg == "--gift":
@@ -240,6 +249,16 @@ func _debug_cast(slot: int) -> void:
 	await get_tree().create_timer(1.0).timeout
 	PlayerState.vitals.restore(Vitals.MANA, PlayerState.vitals.max_value(Vitals.MANA))
 	PlayerState.use_hotkey(slot - 1)
+
+
+func _debug_inside() -> void:
+	var area := get_node("Area")
+	var best: Dictionary = {}
+	for building: Dictionary in area.layout["buildings"]:
+		if best.is_empty() or (building["center"] as Vector2).length() < (best["center"] as Vector2).length():
+			best = building
+	if not best.is_empty():
+		get_tree().get_first_node_in_group("hero").position = Vector3(best["center"].x, 0.1, best["center"].y)
 
 
 func _debug_gaze() -> void:
