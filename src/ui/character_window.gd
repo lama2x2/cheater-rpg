@@ -30,7 +30,7 @@ func _ready() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 6)
 	_panel.add_child(root)
-	root.add_child(UiKit.header(Content.ui("char_title"), Content.ui("char_keys"), close))
+	root.add_child(UiKit.header(Content.ui("char_title"), Content.ui("char_keys", {"key": InputSetup.key_label("character")}), close))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

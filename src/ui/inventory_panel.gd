@@ -47,7 +47,7 @@ func _ready() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 8)
 	_panel.add_child(root)
-	root.add_child(UiKit.header(Content.ui("inv_window_title"), Content.ui("inv_window_keys"), close))
+	root.add_child(UiKit.header(Content.ui("inv_window_title"), Content.ui("inv_window_keys", {"key": InputSetup.key_label("inventory")}), close))
 
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 18)

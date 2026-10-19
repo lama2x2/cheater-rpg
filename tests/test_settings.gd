@@ -68,3 +68,15 @@ func test_ui_scale_options() -> void:
 	assert_almost(float(m.next_option("ui_scale")), 1.75, "следующий шаг")
 	m.set_value("ui_scale", 2.0)
 	assert_almost(float(m.next_option("ui_scale")), 1.0, "по кругу")
+
+
+func test_ui_options_15a() -> void:
+	var m := _model()
+	assert_eq(m.get_value("minimap"), true, "миникарта включена")
+	assert_eq(m.get_value("contrast"), false, "контраст выключен")
+	assert_true(m.set_value("log_font", 20), "шрифт лога 20")
+	assert_true(not m.set_value("log_font", 19), "19 — нет в вариантах")
+	assert_true(m.set_value("hud_opacity", 0.85), "непрозрачность 85%")
+	assert_almost(float(m.next_option("hud_opacity")), 0.7, "после 0,85 — 0,7")
+	assert_true(m.set_value("keys", {"map": 77}), "клавиши — словарь")
+	assert_true(not m.set_value("keys", "M"), "строка — нет")

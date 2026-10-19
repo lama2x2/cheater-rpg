@@ -59,3 +59,31 @@ static func ensure_actions() -> void:
 		var click := InputEventMouseButton.new()
 		click.button_index = MOUSE_ACTIONS[action]
 		InputMap.action_add_event(action, click)
+
+
+## Переназначения игрока (KeyBindings, настройка keys) — поверх умолчаний: события клавиатуры
+## действия заменяются его клавишами; мышь не трогается.
+static func apply_bindings(saved: Dictionary) -> KeyBindings:
+	var bindings := KeyBindings.new(ACTIONS, saved)
+	for action: String in ACTIONS:
+		if not InputMap.has_action(action):
+			continue
+		for event in InputMap.action_get_events(action):
+			if event is InputEventKey:
+				InputMap.action_erase_event(action, event)
+		for keycode in bindings.keys(action):
+			var key := InputEventKey.new()
+			key.physical_keycode = keycode as Key
+			InputMap.action_add_event(action, key)
+	return bindings
+
+
+## Подпись клавиши действия для подсказок интерфейса: «Tab», «M», «F1».
+static func key_label(action: String) -> String:
+	if not InputMap.has_action(action):
+		return "?"
+	for event in InputMap.action_get_events(action):
+		if event is InputEventKey:
+			# Физическая клавиша — подпись по латинской раскладке (WASD и на русской).
+			return OS.get_keycode_string((event as InputEventKey).physical_keycode)
+	return "?"

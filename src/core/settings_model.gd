@@ -52,7 +52,8 @@ func to_dict() -> Dictionary:
 
 ## Следующий вариант по кругу (режим сохранений, размер окна) — для кнопок меню.
 func next_option(key: String) -> Variant:
-	var options: Array = _config[{"save_mode": "save_modes", "window_size": "window_sizes", "ui_scale": "ui_scales"}[key]]
+	var options: Array = _config[{"save_mode": "save_modes", "window_size": "window_sizes", "ui_scale": "ui_scales",
+		"log_font": "log_fonts", "hud_opacity": "hud_opacities"}[key]]
 	var index := options.find(values[key])
 	return options[(index + 1) % options.size()]
 
@@ -69,6 +70,15 @@ func _validate(key: String, value: Variant) -> Variant:
 			return bool(value) if value is bool else null
 		"volume":
 			return snappedf(clampf(float(value), 0.0, 1.0), 0.01) if value is float or value is int else null
+		"log_font", "hud_opacity":
+			if not (value is float or value is int):
+				return null
+			for option in _config["log_fonts" if key == "log_font" else "hud_opacities"]:
+				if is_equal_approx(float(option), float(value)):
+					return option
+			return null
+		"keys":
+			return (value as Dictionary).duplicate() if value is Dictionary else null
 		"ui_scale":
 			if not (value is float or value is int):
 				return null

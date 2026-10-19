@@ -40,6 +40,7 @@ static var _title_done := false
 
 func _ready() -> void:
 	InputSetup.ensure_actions()
+	InputSetup.apply_bindings(Settings.value("keys"))
 	get_tree().root.theme = UiKit.theme()
 	_build_environment()
 	var area: NavigationRegion3D = ClusterAreaScript.new()
@@ -62,17 +63,17 @@ func _ready() -> void:
 	vision.hero = player
 	add_child(vision)
 
-	add_child(DebugHudScript.new())
-	add_child(VitalsBarsScript.new())
+	add_child(_hud(DebugHudScript.new()))
+	add_child(_hud(VitalsBarsScript.new()))
 	var prompt: CanvasLayer = InteractPromptScript.new()
 	prompt.hero = player
 	add_child(prompt)
 	add_child(InventoryPanelScript.new())
-	add_child(SkillsBarScript.new())
+	add_child(_hud(SkillsBarScript.new()))
 	add_child(SkillsPanelScript.new())
 	add_child(GazeCardScript.new())
 	add_child(SenseIndicatorScript.new())
-	add_child(MinimapScript.new())
+	add_child(_hud(MinimapScript.new()))
 	add_child(MapWindowScript.new())
 	add_child(QuickBarScript.new())
 	add_child(PickupToastsScript.new())
@@ -118,6 +119,13 @@ func _ready() -> void:
 		menu.open_title()
 	_title_done = true
 	_handle_debug_args()
+	UiKit.apply_hud_opacity.call_deferred(get_tree(), float(Settings.value("hud_opacity")))
+
+
+## Слой HUD — для настройки «Прозрачность HUD» (12.8).
+func _hud(layer: CanvasLayer) -> CanvasLayer:
+	layer.add_to_group("hud_layers")
+	return layer
 
 
 func _unhandled_input(event: InputEvent) -> void:

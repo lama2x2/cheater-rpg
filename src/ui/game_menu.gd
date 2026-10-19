@@ -11,6 +11,9 @@ var _on_confirm: Callable
 var _title_mode := false
 ## Выбор на экране новой игры.
 var _new_save_mode := ""
+## Страница «Клавиши»: ждём нажатия для этого действия ("" — не ждём).
+var _waiting_action := ""
+var _bindings: KeyBindings
 
 
 func _ready() -> void:
@@ -82,6 +85,7 @@ func _main_page() -> void:
 	save.disabled = not can_save
 	_button(Content.ui("menu_load"), _load_page)
 	_button(Content.ui("menu_settings"), _settings_page)
+	_button(Content.ui("menu_keys"), _keys_page)
 	_button(Content.ui("menu_new"), func() -> void: _ask(Content.ui("menu_confirm_new"), _open_new_game))
 	_button(Content.ui("menu_quit"), func() -> void: get_tree().quit())
 
@@ -95,6 +99,7 @@ func _title_page() -> void:
 	_button(Content.ui("menu_new"), _open_new_game)
 	_button(Content.ui("menu_load"), _load_page)
 	_button(Content.ui("menu_settings"), _settings_page)
+	_button(Content.ui("menu_keys"), _keys_page)
 	_button(Content.ui("menu_quit"), func() -> void: get_tree().quit())
 
 
@@ -141,6 +146,13 @@ func _settings_page() -> void:
 	_button(Content.ui("settings_contrast", {"value": _on_off(Settings.value("contrast"))}), func() -> void:
 		Settings.change("contrast", not bool(Settings.value("contrast")))
 		_settings_page())
+	_button(Content.ui("settings_log_font", {"value": int(Settings.value("log_font"))}), func() -> void:
+		Settings.change("log_font", Settings.model.next_option("log_font"))
+		_settings_page())
+	_button(Content.ui("settings_hud_opacity", {"value": roundi(float(Settings.value("hud_opacity")) * 100.0)}), func() -> void:
+		Settings.change("hud_opacity", Settings.model.next_option("hud_opacity"))
+		_settings_page())
+	_button(Content.ui("menu_keys"), _keys_page)
 	var step := Settings.model.volume_step()
 	var volume := float(Settings.value("volume"))
 	_button(Content.ui("settings_volume", {"value": roundi(volume * 100.0)}), func() -> void:
@@ -157,6 +169,84 @@ func _settings_page() -> void:
 		Settings.change("window_size", Settings.model.next_option("window_size"))
 		_settings_page())
 	_button(Content.ui("menu_back"), _main_page)
+
+
+## Клавиши (12.7, 12.8): справка и переназначение. Клик по клавише — «нажмите новую», Esc — отмена;
+## конфликт (одна клавиша у двух действий) — красным; «Сброс» — умолчания.
+func _keys_page() -> void:
+	_bindings = KeyBindings.new(InputSetup.ACTIONS, Settings.value("keys"))
+	_clear(Content.ui("keys_title"))
+	_text(Content.ui("keys_hint"), 14, Color(0.7, 0.72, 0.7))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(640, clampf(get_viewport().get_visible_rect().size.y - 330.0, 160.0, 470.0))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_box.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 3)
+	scroll.add_child(list)
+	var clashes := _bindings.conflicts()
+	for action in _bindings.actions():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var label := UiKit.label(15, UiKit.TEXT)
+		label.text = Content.ui("key_action_" + action)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		var keys: PackedStringArray = []
+		var clash := false
+		for code in _bindings.keys(action):
+			keys.append(OS.get_keycode_string(code))
+			clash = clash or clashes.has(code)
+		var key := Button.new()
+		key.text = Content.ui("keys_press") if _waiting_action == action else " / ".join(keys)
+		key.custom_minimum_size.x = 190
+		key.add_theme_font_size_override("font_size", 15)
+		if clash:
+			key.add_theme_color_override("font_color", UiKit.BAD)
+			key.tooltip_text = Content.ui("keys_conflict")
+		key.pressed.connect(func() -> void:
+			_waiting_action = action
+			_keys_page())
+		row.add_child(key)
+		list.add_child(row)
+	for fixed in [["key_action_attack", "ЛКМ"], ["key_action_menu", "Esc"], ["key_action_zoom", Content.ui("keys_wheel")]]:
+		var row := HBoxContainer.new()
+		var label := UiKit.label(15, UiKit.TEXT_DIM)
+		label.text = Content.ui(fixed[0])
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		var key := UiKit.label(15, UiKit.TEXT_DIM)
+		key.text = fixed[1]
+		key.custom_minimum_size.x = 190
+		row.add_child(key)
+		list.add_child(row)
+	if not clashes.is_empty():
+		_text(Content.ui("keys_conflicts", {"n": clashes.size()}), 14, UiKit.BAD)
+	_button(Content.ui("keys_reset"), func() -> void:
+		_bindings.reset()
+		_save_bindings()
+		_keys_page())
+	_button(Content.ui("menu_back"), _main_page)
+
+
+func _save_bindings() -> void:
+	Settings.change("keys", _bindings.to_dict())
+	InputSetup.apply_bindings(_bindings.to_dict())
+
+
+func _input(event: InputEvent) -> void:
+	if _waiting_action.is_empty() or not visible:
+		return
+	var key := event as InputEventKey
+	if key == null or not key.pressed or key.echo:
+		return
+	get_viewport().set_input_as_handled()
+	if key.physical_keycode != KEY_ESCAPE:
+		_bindings.bind(_waiting_action, key.physical_keycode)
+		_save_bindings()
+	_waiting_action = ""
+	_keys_page()
 
 
 func _on_off(value: Variant) -> String:
@@ -263,5 +353,8 @@ func _button(text: String, action: Callable) -> Button:
 	var first := _box.get_children().all(func(n: Node) -> bool: return not n is Button)
 	_box.add_child(button)
 	if first:
-		button.grab_focus.call_deferred()
+		# Страницу могли тут же перерисовать (кнопка уже не в дереве) — фокус только живой.
+		(func() -> void:
+			if is_instance_valid(button) and button.is_inside_tree():
+				button.grab_focus()).call_deferred()
 	return button

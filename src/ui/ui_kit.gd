@@ -184,6 +184,16 @@ static func button(text: String, action: Callable, size: int = 13) -> Button:
 	return b
 
 
+## Непрозрачность HUD (настройка): слои группы hud_layers — их верхние элементы.
+static func apply_hud_opacity(tree: SceneTree, value: float) -> void:
+	if tree == null:
+		return
+	for layer in tree.get_nodes_in_group("hud_layers"):
+		for child in layer.get_children():
+			if child is CanvasItem:
+				(child as CanvasItem).modulate.a = value
+
+
 # --- Стек окон ---------------------------------------------------------------------------------
 
 ## Окно открылось — наверх стека. У окна должен быть метод close().

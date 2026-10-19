@@ -51,6 +51,7 @@ func apply() -> void:
 	# Масштаб интерфейса: весь 2D (HUD, панели, меню) крупнее, 3D-мир не меняется.
 	get_tree().root.content_scale_factor = float(model.get_value("ui_scale"))
 	UiKit.set_contrast(bool(model.get_value("contrast")))
+	UiKit.apply_hud_opacity(get_tree(), float(model.get_value("hud_opacity")))
 	if DisplayServer.get_name() == "headless":
 		return
 	var fullscreen := bool(model.get_value("fullscreen"))
