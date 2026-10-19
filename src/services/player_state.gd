@@ -5,6 +5,8 @@ extends Node
 signal inventory_changed
 ## Умения изменились: выучено, слот, свойство, применено (окно умений и HUD перерисовываются).
 signal skills_changed
+## Уровень характеристики изменился или потрачены свободные очки (экран персонажа).
+signal stats_changed
 
 var stats: StatBlock
 var vitals: Vitals
@@ -335,6 +337,17 @@ func use_quick_slot(index: int) -> String:
 	return result
 
 
+## Свободное очко (золотая звезда) → +1 уровень характеристики (экран персонажа, D-44, D-92).
+func spend_free_point(stat: String) -> bool:
+	if free_points <= 0 or not stats.has_stat(stat) or stat in ["talent_facets", "stix_care"]:
+		return false
+	free_points -= 1
+	stats.add_levels(stat, 1)
+	SystemLog.post("free_point_spent", {"stat": Content.stat_name(stat), "left": free_points}, "progress")
+	stats_changed.emit()
+	return true
+
+
 func toggle_junk(id: String) -> void:
 	if junk_marks.has(id):
 		junk_marks.erase(id)
@@ -504,6 +517,7 @@ func _on_stat_level_changed(stat: String, old_level: int, new_level: int) -> voi
 		inventory.strength_level = new_level
 	if skills:
 		_on_skill_levels_changed(stat, old_level, new_level)
+	stats_changed.emit()
 	var params := {"stat": Content.stat_name(stat), "level": new_level}
 	if new_level < old_level:
 		SystemLog.post("stat_level_lost", params, "warning")

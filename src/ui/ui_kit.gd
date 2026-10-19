@@ -120,7 +120,10 @@ static func theme() -> Theme:
 		t.set_stylebox("grabber", bar, _box(Color(0.4, 0.45, 0.42, 0.8), 2, 3))
 		t.set_stylebox("grabber_highlight", bar, _box(Color(0.75, 0.68, 0.4, 0.9), 2, 3))
 		t.set_stylebox("grabber_pressed", bar, _box(ACCENT, 2, 3))
-	t.set_stylebox("background", "ProgressBar", _box(Color(0.1, 0.11, 0.12, 0.9), 0, 2))
+	var bar_bg := _box(Color(0.2, 0.22, 0.22, 0.95), 0, 2)
+	bar_bg.set_border_width_all(1)
+	bar_bg.border_color = Color(0.5, 0.55, 0.5, 0.6)
+	t.set_stylebox("background", "ProgressBar", bar_bg)
 	t.set_stylebox("fill", "ProgressBar", _box(Color(0.55, 0.7, 0.5, 0.95), 0, 2))
 	t.set_color("font_color", "Label", TEXT)
 	_theme = t
@@ -154,6 +157,21 @@ static func header(title: String, key_hint: String, on_close: Callable) -> HBoxC
 	close.pressed.connect(on_close)
 	row.add_child(close)
 	return row
+
+
+## Полоса «сколько из скольких» (прогресс, шкала): рисуется кодом, цвет заполнения — color.
+static func bar(value: float, max_value: float, color: Color, size: Vector2 = Vector2(200, 12)) -> Control:
+	var c := Control.new()
+	c.custom_minimum_size = size
+	c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	c.mouse_filter = Control.MOUSE_FILTER_PASS
+	c.draw.connect(func() -> void:
+		var r := Rect2(Vector2.ZERO, c.size)
+		c.draw_rect(r, Color(0.2, 0.22, 0.22, 0.95))
+		var ratio := clampf(value / maxf(max_value, 0.0001), 0.0, 1.0)
+		c.draw_rect(Rect2(Vector2.ZERO, Vector2(c.size.x * ratio, c.size.y)), color)
+		c.draw_rect(r, Color(0.5, 0.55, 0.5, 0.6), false, 1.0))
+	return c
 
 
 ## Кнопка с подписью и действием (шрифт и стиль — из темы).
