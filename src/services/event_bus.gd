@@ -39,3 +39,7 @@ signal danger_warned(from: Vector3, warn: Dictionary)
 ## Мешок твари брошен заранее (Нюх на мешок): ближайший труп в точке at получит этот лут.
 @warning_ignore("unused_signal")
 signal sack_prerolled(at: Vector3, loot: Dictionary)
+## Знание карты изменилось (посещение, увиденная постройка, купленная карта, отметка) —
+## карта и миникарта перерисовываются.
+@warning_ignore("unused_signal")
+signal map_changed

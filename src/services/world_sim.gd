@@ -26,6 +26,8 @@ var snapshots: Dictionary = {}
 var arrival: Dictionary = {}
 ## Переход только что случился — сцена показывает короткую «загрузку».
 var just_traveled := false
+## Знание карты героя (12.6): посещённые соты, увиденные постройки, купленные карты, отметки.
+var knowledge := MapKnowledge.new()
 
 var _scene_sections: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
@@ -50,6 +52,7 @@ func new_world(seed_value: int = 0) -> void:
 	_rng.seed = world_seed
 	clusters.clear()
 	snapshots.clear()
+	knowledge = MapKnowledge.new()
 	arrival = {}
 	just_traveled = false
 	current = String(region.region["start"])
@@ -234,6 +237,28 @@ func travel(to: String, entry: Dictionary = {}) -> void:
 	get_tree().reload_current_scene.call_deferred()
 
 
+## Карта кластера целиком (картограф, находка). true — что-то новое.
+func reveal_map(id: String) -> bool:
+	return knowledge.reveal(id)
+
+
+## Найденная карта: случайный кластер региона без полной карты (сначала — соседи известных).
+## "" — всё уже на карте.
+func reveal_random_map(rng: RandomNumberGenerator) -> String:
+	var candidates := knowledge.unmapped(region.ids())
+	if candidates.is_empty():
+		return ""
+	var near: PackedStringArray = []
+	for id in candidates:
+		if knowledge.region_state(region, id) != MapKnowledge.UNKNOWN:
+			near.append(id)
+	var pool := near if not near.is_empty() else candidates
+	pool.sort()
+	var id := pool[rng.randi_range(0, pool.size() - 1)]
+	knowledge.reveal(id)
+	return id
+
+
 func _on_infected_killed(id: String, _level: int, _at: Vector3) -> void:
 	var ratio := float(state()["ratio"])
 	if ratio > 0.0:
@@ -242,7 +267,8 @@ func _on_infected_killed(id: String, _level: int, _at: Vector3) -> void:
 
 func to_dict() -> Dictionary:
 	capture()
-	return {"seed": world_seed, "current": current, "clusters": clusters.duplicate(true), "snapshots": snapshots.duplicate(true)}
+	return {"seed": world_seed, "current": current, "clusters": clusters.duplicate(true), "snapshots": snapshots.duplicate(true),
+		"knowledge": knowledge.to_dict()}
 
 
 ## Пустой словарь — сохранение до кластеров (миграция v9): мир создаётся заново.
@@ -256,6 +282,12 @@ func load_dict(data: Dictionary) -> void:
 	current = String(data["current"])
 	clusters = data["clusters"].duplicate(true)
 	snapshots = data["snapshots"].duplicate(true)
+	# Знание карты появилось в задаче 15; в старых сейвах его нет — соты открываются по visited.
+	knowledge = MapKnowledge.new()
+	knowledge.load_dict(data.get("knowledge", {}))
+	for id: String in clusters:
+		if bool(clusters[id].get("visited", false)):
+			knowledge.visit(id)
 	arrival = {}
 	just_traveled = false
 	# Числа из JSON приходят float — счётчики приводим обратно.

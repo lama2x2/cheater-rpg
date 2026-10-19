@@ -30,6 +30,7 @@ var _stashes: Array[Node3D] = []
 
 
 func _ready() -> void:
+	add_to_group("cluster_area")
 	cluster_id = WorldSim.current
 	template = WorldSim.template()
 	var size := float(template["size"])

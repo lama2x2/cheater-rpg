@@ -131,6 +131,9 @@ func _settings_page() -> void:
 	_button(Content.ui("settings_noise_ring", {"value": _on_off(Settings.value("noise_ring"))}), func() -> void:
 		Settings.change("noise_ring", not bool(Settings.value("noise_ring")))
 		_settings_page())
+	_button(Content.ui("settings_minimap", {"value": _on_off(Settings.value("minimap"))}), func() -> void:
+		Settings.change("minimap", not bool(Settings.value("minimap")))
+		_settings_page())
 	var step := Settings.model.volume_step()
 	var volume := float(Settings.value("volume"))
 	_button(Content.ui("settings_volume", {"value": roundi(volume * 100.0)}), func() -> void:

@@ -84,6 +84,13 @@ func is_seen(node: Node) -> bool:
 	return bool(_seen.get(node.get_instance_id(), not _tracked(node)))
 
 
+## Точка в конусе взгляда и в дальности (без проверки стен) — для знания карты.
+func sees_point(point: Vector3) -> bool:
+	if hero == null:
+		return false
+	return _rules.in_view(hero.global_position, view_dir, point, _cone, _reach)
+
+
 func _process(delta: float) -> void:
 	if hero == null or not is_instance_valid(hero):
 		return

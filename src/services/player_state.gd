@@ -237,6 +237,13 @@ func _apply_consume(result: Dictionary) -> void:
 				if wounds.is_bleeding():
 					wounds.stop_bleeding()
 					SystemLog.post("bleeding_stopped")
+			"map_reveal":
+				var cluster := WorldSim.reveal_random_map(_rng)
+				if cluster.is_empty():
+					SystemLog.post("map_nothing_new")
+				else:
+					SystemLog.post("map_found", {"name": WorldSim.cluster_name(cluster)}, "progress")
+					EventBus.map_changed.emit()
 			"free_points":
 				free_points += int(effect["value"])
 				SystemLog.post("free_points", {"value": effect["value"], "total": free_points}, "progress")

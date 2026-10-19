@@ -22,6 +22,9 @@ func test_item_data_is_valid_and_named() -> void:
 	var db := _db()
 	assert_eq(db.errors(), PackedStringArray(), "схема предметов")
 	var names: Dictionary = JsonDataScript.load_dict("res://data/text/ru.json")["item_names"]
+	for file in DirAccess.get_files_at("res://data/text"):  # дополнения ru_*.json (как Content.texts)
+		if file.begins_with("ru_") and file.ends_with(".json"):
+			names.merge(JsonDataScript.load_dict("res://data/text/" + file).get("item_names", {}), true)
 	for id in db.ids():
 		assert_true(names.has(id), "нет имени для «%s»" % id)
 

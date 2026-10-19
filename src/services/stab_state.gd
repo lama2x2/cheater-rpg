@@ -156,6 +156,36 @@ func rumor() -> void:
 	_after_deal()
 
 
+## Картограф: карта кластера целиком (раскладка построек) — цена по типу кластера.
+func map_price(id: String) -> int:
+	var prices: Dictionary = Content.stab_config().get("cartographer", {}).get("map_price", {})
+	return int(prices.get(WorldSim.cluster_type_id(id), 10))
+
+
+func buy_map(id: String) -> void:
+	if WorldSim.knowledge.is_mapped(id) or not _pay(map_price(id)):
+		return
+	WorldSim.reveal_map(id)
+	SystemLog.post("map_bought", {"name": WorldSim.cluster_name(id)})
+	EventBus.map_changed.emit()
+	_after_deal()
+
+
+func timer_price() -> int:
+	return int(Content.stab_config().get("cartographer", {}).get("timer_price", 7))
+
+
+## Пометка таймера на карте: картограф знает, когда кластер перезагрузится.
+func buy_timer(id: String) -> void:
+	var s: Dictionary = WorldSim.clusters[id]
+	if bool(s["known_timer"]) or not ClusterLifecycle.reloads(s["timer"]) or not _pay(timer_price()):
+		return
+	s["known_timer"] = true
+	SystemLog.post("timer_bought", {"name": WorldSim.cluster_name(id), "timer": WorldSim.timer_text(id)}, "special")
+	EventBus.map_changed.emit()
+	_after_deal()
+
+
 func take_contract(index: int) -> void:
 	if board.take(index):
 		SystemLog.post("contract_taken", {"text": contract_text(board.active[-1])})

@@ -22,6 +22,9 @@ const SkillsPanelScript := preload("res://src/ui/skills_panel.gd")
 const GazeCardScript := preload("res://src/ui/gaze_card.gd")
 const HeroVisionScript := preload("res://src/world/hero_vision.gd")
 const SenseIndicatorScript := preload("res://src/ui/sense_indicator.gd")
+const MapWatcherScript := preload("res://src/world/map_watcher.gd")
+const MinimapScript := preload("res://src/ui/minimap.gd")
+const MapWindowScript := preload("res://src/ui/map_window.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -64,6 +67,12 @@ func _ready() -> void:
 	add_child(SkillsPanelScript.new())
 	add_child(GazeCardScript.new())
 	add_child(SenseIndicatorScript.new())
+	add_child(MinimapScript.new())
+	add_child(MapWindowScript.new())
+	var map_watcher: Node = MapWatcherScript.new()
+	map_watcher.area = area
+	map_watcher.hero = player
+	add_child(map_watcher)
 	var menu: CanvasLayer = GameMenuScript.new()
 	add_child(menu)
 
@@ -139,6 +148,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --gaze        через 1,5 с показать карточку Пристального взгляда ближайшей твари (нет тварей —
 ##                 ближайшей другой цели)
 ##   --zoom=N      размер ортокамеры N м (обычно 10–40; больше — снять кластер целиком)
+##   --map=TAB     открыть карту: cluster или region (и --reveal — карты всех кластеров)
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
@@ -199,6 +209,11 @@ func _handle_debug_args() -> void:
 			PlayerState.pending_pearl_skills += 1
 		elif arg.begins_with("--zoom="):
 			get_viewport().get_camera_3d().size = float(arg.trim_prefix("--zoom="))
+		elif arg.begins_with("--map="):
+			_debug_map.call_deferred(arg.trim_prefix("--map="))
+		elif arg == "--reveal":
+			for id in WorldSim.region.ids():
+				WorldSim.reveal_map(id)
 		elif arg == "--inside":
 			_debug_inside()
 		elif arg == "--gaze":
@@ -252,6 +267,11 @@ func _debug_cast(slot: int) -> void:
 	await get_tree().create_timer(1.0).timeout
 	PlayerState.vitals.restore(Vitals.MANA, PlayerState.vitals.max_value(Vitals.MANA))
 	PlayerState.use_hotkey(slot - 1)
+
+
+func _debug_map(tab: String) -> void:
+	await get_tree().create_timer(1.5).timeout
+	get_tree().get_first_node_in_group("map_window").open(tab)
 
 
 func _debug_inside() -> void:

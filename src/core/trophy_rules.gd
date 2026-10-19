@@ -105,6 +105,8 @@ func _roll_effect(effect: Dictionary, mult: float, rng: RandomNumberGenerator, c
 			out.append({"type": "vital_restore", "vital": effect["vital"], "value": float(effect["value"]) * mult})
 		"stop_bleeding":
 			out.append({"type": "stop_bleeding"})
+		"map_reveal":
+			out.append({"type": "map_reveal"})
 		"free_points":
 			out.append({"type": "free_points", "value": _scaled_int(effect["value"], mult, rng)})
 		"skill_chance":

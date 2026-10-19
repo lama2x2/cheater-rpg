@@ -1,5 +1,5 @@
 {
-  "_doc": "Стаб среза (docs/spec/10_stabs_economy.md): кто где стоит, цены и услуги. Позиции npcs [x, z] — от центра площади стаба. Цены в споранах. trade: торговец покупает у героя по base_price × sell_mult × насыщение (каждая проданная штука вида снижает цену на saturation_per_unit, не ниже saturation_min; за игровые сутки насыщение спадает на recover_per_day), продаёт по base_price × buy_mult (не меньше 1). stock — что есть в продаже, пополняется раз в сутки. not_sold — что торговец не берёт. healer: лечение — heal_per_spore здоровья за споран, остановить кровотечение — bleed_price; дары уровней (05: умение на 10/30/60) — gift_price. bar: сон sleep_hours за sleep_price (прокрутка времени, шкалы по игровому времени, бодрость полная, автосейв), отказ, если споровый баланс после сна упадёт ниже sleep_min_spore; слух за rumor_price открывает таймер случайного кластера. board — доска контрактов: board_size предложений, обновляются каждые сутки, активных — не больше max_active. gaze у неписи — что видно Пристальным взглядом (12.3): level, humanity (гуманность, 3.4), stealth (против Наблюдательности героя), equipment (id предметов), morok — ложные поля, пока взгляд не пробьёт морок.",
+  "_doc": "Стаб среза (docs/spec/10_stabs_economy.md): кто где стоит, цены и услуги. Позиции npcs [x, z] — от центра площади стаба. Цены в споранах. trade: торговец покупает у героя по base_price × sell_mult × насыщение (каждая проданная штука вида снижает цену на saturation_per_unit, не ниже saturation_min; за игровые сутки насыщение спадает на recover_per_day), продаёт по base_price × buy_mult (не меньше 1). stock — что есть в продаже, пополняется раз в сутки. not_sold — что торговец не берёт. healer: лечение — heal_per_spore здоровья за споран, остановить кровотечение — bleed_price; дары уровней (05: умение на 10/30/60) — gift_price. bar: сон sleep_hours за sleep_price (прокрутка времени, шкалы по игровому времени, бодрость полная, автосейв), отказ, если споровый баланс после сна упадёт ниже sleep_min_spore; слух за rumor_price открывает таймер случайного кластера. board — доска контрактов: board_size предложений, обновляются каждые сутки, активных — не больше max_active. gaze у неписи — что видно Пристальным взглядом (12.3). cartographer — картограф (12.6): карта кластера целиком (раскладка) — map_price по типу кластера, пометка таймера — timer_price: level, humanity (гуманность, 3.4), stealth (против Наблюдательности героя), equipment (id предметов), morok — ложные поля, пока взгляд не пробьёт морок.",
   "cluster": "c_stab",
   "npcs": [
     { "id": "trader", "kind": "trader", "at": [-5, 3], "color": [0.55, 0.45, 0.3],
@@ -8,6 +8,8 @@
       "gaze": { "level": 45, "humanity": 1800, "stealth": 9, "equipment": ["knife"] } },
     { "id": "barman", "kind": "bar", "at": [0, -5], "color": [0.4, 0.3, 0.45],
       "gaze": { "level": 41, "humanity": 120, "stealth": 2, "equipment": ["pistol", "axe"], "morok": { "level": 3, "equipment": [] } } },
+    { "id": "cartographer", "kind": "cartographer", "at": [-6, -3], "color": [0.35, 0.45, 0.5],
+      "gaze": { "level": 19, "humanity": 600, "stealth": 4, "equipment": ["bow", "knife"] } },
     { "id": "board", "kind": "board", "at": [0, 6] }
   ],
   "trade": {
@@ -24,6 +26,10 @@
     "bleed_price": 3,
     "gift_levels": [10, 30, 60],
     "gift_price": [25, 30]
+  },
+  "cartographer": {
+    "map_price": { "fast": 4, "normal": 10, "black": 6, "stab": 3 },
+    "timer_price": 7
   },
   "bar": {
     "sleep_hours": 8,

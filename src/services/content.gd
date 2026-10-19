@@ -28,6 +28,7 @@ const LUCK_PATH := "res://data/luck.json"
 const TEXTS_DIR := "res://data/text"
 const GAZE_PATH := "res://data/gaze.json"
 const VISION_PATH := "res://data/vision.json"
+const MAP_PATH := "res://data/map.json"
 
 var _cache: Dictionary = {}
 
@@ -122,6 +123,10 @@ func luck_model() -> LuckModel:
 	if not _cache.has(LUCK_PATH):
 		_cache[LUCK_PATH] = LuckModel.new(JsonData.load_dict(LUCK_PATH, LuckModel.REQUIRED_KEYS))
 	return _cache[LUCK_PATH]
+
+
+func map_config() -> Dictionary:
+	return _cached(MAP_PATH, ["seen_check_s", "type_colors", "minimap", "mark_radius_m", "map_item"])
 
 
 func vision_rules() -> VisionRules:

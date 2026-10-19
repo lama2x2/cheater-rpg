@@ -97,6 +97,8 @@ func _refresh() -> void:
 			_bar()
 		"board":
 			_board()
+		"cartographer":
+			_cartographer()
 
 
 func _trader() -> void:
@@ -192,6 +194,34 @@ func _bar() -> void:
 	else:
 		_content.add_child(_row(Content.ui("bar_sleep_no"), []))
 	_content.add_child(_row("", [[Content.ui("bar_rumor", {"price": bar["rumor_price"]}), StabState.rumor]]))
+
+
+## Картограф: карты кластеров (раскладка целиком) и пометки таймеров.
+func _cartographer() -> void:
+	var ids := WorldSim.region.ids()
+	ids.sort()
+	_content.add_child(_header(Content.ui("carto_maps")))
+	var any := false
+	for id in ids:
+		if WorldSim.knowledge.is_mapped(id):
+			continue
+		any = true
+		var text := Content.ui("carto_map_row", {"name": WorldSim.cluster_name(id),
+			"type": Content.ui("cluster_type_" + WorldSim.cluster_type_id(id)), "price": StabState.map_price(id)})
+		_content.add_child(_row(text, [[Content.ui("trade_buy"), StabState.buy_map.bind(id)]]))
+	if not any:
+		_content.add_child(_row(Content.ui("carto_all_mapped"), []))
+	_content.add_child(_header(Content.ui("carto_timers")))
+	any = false
+	for id in ids:
+		var s: Dictionary = WorldSim.clusters[id]
+		if bool(s["known_timer"]) or not ClusterLifecycle.reloads(s["timer"]):
+			continue
+		any = true
+		var text := Content.ui("carto_timer_row", {"name": WorldSim.cluster_name(id), "price": StabState.timer_price()})
+		_content.add_child(_row(text, [[Content.ui("trade_buy"), StabState.buy_timer.bind(id)]]))
+	if not any:
+		_content.add_child(_row(Content.ui("carto_all_timers"), []))
 
 
 func _board() -> void:

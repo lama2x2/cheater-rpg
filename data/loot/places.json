@@ -9,7 +9,8 @@
       { "item": "vodka", "count": [1, 1], "chance": 0.2 },
       { "item": "vinegar", "count": [1, 1], "chance": 0.12 },
       { "item": "knife", "count": [1, 1], "chance": 0.08 },
-      { "item": "gold_ring", "count": [1, 1], "chance": 0.05 }
+      { "item": "gold_ring", "count": [1, 1], "chance": 0.05 },
+      { "item": "cluster_map", "count": [1, 1], "chance": 0.04 }
     ] },
     { "id": "spot_shop", "rolls": [
       { "item": "canned_food", "count": [2, 4], "chance": 0.9 },
@@ -23,7 +24,8 @@
       { "item": "ammo_9mm", "count": [8, 24], "chance": 0.9 },
       { "item": "shotgun", "count": [1, 1], "chance": 0.25 },
       { "item": "ammo_12g", "count": [4, 10], "chance": 0.5 },
-      { "item": "bandage", "count": [1, 2], "chance": 0.4 }
+      { "item": "bandage", "count": [1, 2], "chance": 0.4 },
+      { "item": "cluster_map", "count": [1, 1], "chance": 0.12 }
     ] },
     { "id": "spot_hunter", "rolls": [
       { "item": "bow", "count": [1, 1], "chance": 0.5 },
@@ -63,7 +65,8 @@
       { "item": "vodka", "count": [1, 1], "chance": 0.3 },
       { "item": "ammo_9mm", "count": [4, 10], "chance": 0.3 },
       { "item": "pea_yellow", "count": [1, 1], "chance": 0.2 },
-      { "item": "zhivchik", "count": [1, 1], "chance": 0.2 }
+      { "item": "zhivchik", "count": [1, 1], "chance": 0.2 },
+      { "item": "cluster_map", "count": [1, 1], "chance": 0.15 }
     ] },
     { "id": "stash_rich", "rolls": [
       { "item": "sporan", "count": [6, 15], "chance": 1.0 },
