@@ -173,22 +173,41 @@ func remove(id: String, count: int) -> bool:
 	return true
 
 
-## Переложить ячейку в рюкзак целиком (если влезает). false — не влезло, ничего не тронуто.
-func move_slot_to_backpack(slot_index: int) -> bool:
+## Переложить ячейку в рюкзак — целиком или count штук (деление кучи, 12.8), если влезает.
+## false — не влезло, ничего не тронуто.
+func move_slot_to_backpack(slot_index: int, count: int = -1) -> bool:
 	var slot: Dictionary = primary[slot_index]
-	if slot.is_empty() or backpack_room(slot["id"]) < int(slot["count"]):
+	if slot.is_empty():
 		return false
-	add_backpack(slot["id"], int(slot["count"]))
-	slot.clear()
+	var moving := int(slot["count"]) if count < 0 else mini(count, int(slot["count"]))
+	if moving <= 0 or backpack_room(slot["id"]) < moving:
+		return false
+	add_backpack(slot["id"], moving)
+	slot["count"] = int(slot["count"]) - moving
+	if int(slot["count"]) == 0:
+		slot.clear()
 	return true
 
 
-## Переложить из рюкзака в ячейки сколько влезет. Возвращает, сколько переложено.
-func move_backpack_to_primary(id: String) -> int:
+## Поменять местами две ячейки Системы (перетаскивание).
+func swap_slots(a: int, b: int) -> void:
+	if a == b or a < 0 or b < 0 or a >= primary.size() or b >= primary.size():
+		return
+	var copy := primary[a].duplicate()
+	primary[a].clear()
+	primary[a].merge(primary[b])
+	primary[b].clear()
+	primary[b].merge(copy)
+
+
+## Переложить из рюкзака в ячейки сколько влезет (или не больше count). Возвращает, сколько
+## переложено.
+func move_backpack_to_primary(id: String, count: int = -1) -> int:
 	var stack := _find_stack(id)
 	if stack.is_empty():
 		return 0
-	var moving := mini(int(stack["count"]), primary_room(id))
+	var want := int(stack["count"]) if count < 0 else mini(count, int(stack["count"]))
+	var moving := mini(want, primary_room(id))
 	if moving > 0:
 		add_primary(id, moving)
 		remove_from_backpack(id, moving)

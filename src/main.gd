@@ -36,6 +36,7 @@ static var _title_done := false
 
 func _ready() -> void:
 	InputSetup.ensure_actions()
+	get_tree().root.theme = UiKit.theme()
 	_build_environment()
 	var area: NavigationRegion3D = ClusterAreaScript.new()
 	area.name = "Area"

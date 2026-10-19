@@ -21,11 +21,7 @@ func _ready() -> void:
 	add_to_group("stab_window")
 	_rng.randomize()
 	_panel = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.06, 0.07, 0.92)
-	style.set_content_margin_all(16)
-	style.set_corner_radius_all(4)
-	_panel.add_theme_stylebox_override("panel", style)
+	_panel.add_theme_stylebox_override("panel", UiKit.panel_style())  # общий фон окон (контрастный режим)
 	_panel.anchor_left = 1.0
 	_panel.anchor_right = 1.0
 	_panel.offset_left = -760
@@ -64,12 +60,18 @@ func open(npc: Node3D) -> void:
 	_line.text = "«%s»" % lines[_rng.randi_range(0, lines.size() - 1)] if npc.kind != "board" else String(lines[_rng.randi_range(0, lines.size() - 1)])
 	_gift_price = StabState.gift_price()
 	visible = true
+	UiKit.window_opened(self)
 	_refresh()
 
 
 func close_window() -> void:
 	visible = false
 	_npc = null
+	UiKit.window_closed(self)
+
+
+func close() -> void:
+	close_window()
 
 
 func _process(_delta: float) -> void:

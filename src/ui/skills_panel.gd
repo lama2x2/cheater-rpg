@@ -15,11 +15,7 @@ func _ready() -> void:
 	visible = false
 	add_to_group("skills_panel")
 	_panel = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.06, 0.07, 0.92)
-	style.set_content_margin_all(16)
-	style.set_corner_radius_all(4)
-	_panel.add_theme_stylebox_override("panel", style)
+	_panel.add_theme_stylebox_override("panel", UiKit.panel_style())  # общий фон окон (контрастный режим)
 	_panel.position = Vector2(16, 120)
 	add_child(_panel)
 	var root := VBoxContainer.new()
@@ -48,7 +44,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func toggle() -> void:
 	visible = not visible
+	if visible:
+		UiKit.window_opened(self)  # Esc закрывает верхнее окно (12.8)
+	else:
+		UiKit.window_closed(self)
 	_refresh()
+
+
+func close() -> void:
+	if visible:
+		toggle()
 
 
 func _refresh() -> void:

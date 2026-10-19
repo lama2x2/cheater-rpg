@@ -22,11 +22,7 @@ func _ready() -> void:
 	visible = false
 	add_to_group("map_window")
 	_panel = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.04, 0.05, 0.06, 0.93)
-	style.set_content_margin_all(14)
-	style.set_corner_radius_all(4)
-	_panel.add_theme_stylebox_override("panel", style)
+	_panel.add_theme_stylebox_override("panel", UiKit.panel_style())  # общий фон окон (контрастный режим)
 	# Тянется под окно с полями — влезает при любом масштабе интерфейса (12.6a).
 	_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
@@ -74,11 +70,13 @@ func toggle() -> void:
 
 func open(which: String = CLUSTER) -> void:
 	visible = true
+	UiKit.window_opened(self)
 	_select(which)
 
 
 func close() -> void:
 	visible = false
+	UiKit.window_closed(self)
 
 
 func _select(which: String) -> void:

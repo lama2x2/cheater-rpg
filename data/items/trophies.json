@@ -1,7 +1,7 @@
 {
   "_doc": "Трофеи тварей (docs/spec/06_trophies_items.md, 6.2; схема — 14.4). weight_g — вес одной штуки. Значения [a, b] — случайно в диапазоне. Правила приёма — src/core/trophy_rules.gd.",
   "items": [
-    { "id": "sporan", "category": "trophy", "weight_g": 1, "primary_inventory": true, "base_price": 1 },
+    { "id": "sporan", "category": "trophy", "icon": "spore", "weight_g": 1, "primary_inventory": true, "base_price": 1 },
     {
       "id": "pea_yellow", "category": "trophy", "weight_g": 0.5, "primary_inventory": true, "base_price": 11,
       "consume": {
@@ -44,21 +44,21 @@
       }
     },
     {
-      "id": "star_black", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 25,
+      "id": "star_black", "category": "trophy", "icon": "star", "weight_g": 3, "primary_inventory": true, "base_price": 25,
       "consume": {
         "verb": "swallow",
         "effects": [ { "type": "vital_max_add", "pool": "one", "value": [1, 5] } ]
       }
     },
     {
-      "id": "star_white", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 140,
+      "id": "star_white", "category": "trophy", "icon": "star", "weight_g": 3, "primary_inventory": true, "base_price": 140,
       "consume": {
         "verb": "swallow",
         "effects": [ { "type": "vital_max_add", "pool": "two", "value": [3, 8] } ]
       }
     },
     {
-      "id": "star_gold", "category": "trophy", "weight_g": 3, "primary_inventory": true, "base_price": 200,
+      "id": "star_gold", "category": "trophy", "icon": "star", "weight_g": 3, "primary_inventory": true, "base_price": 200,
       "consume": {
         "verb": "swallow",
         "effects": [
@@ -68,7 +68,7 @@
       }
     },
     {
-      "id": "pearl_black", "category": "trophy", "weight_g": 2, "primary_inventory": true, "base_price": 2500,
+      "id": "pearl_black", "category": "trophy", "icon": "pearl", "weight_g": 2, "primary_inventory": true, "base_price": 2500,
       "consume": {
         "verb": "swallow",
         "cooldown_group": "pearl", "cooldown_h": 36, "violation_effect_mult": 1.0,

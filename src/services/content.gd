@@ -29,6 +29,7 @@ const TEXTS_DIR := "res://data/text"
 const GAZE_PATH := "res://data/gaze.json"
 const VISION_PATH := "res://data/vision.json"
 const MAP_PATH := "res://data/map.json"
+const UI_PATH := "res://data/ui.json"
 
 var _cache: Dictionary = {}
 
@@ -123,6 +124,12 @@ func luck_model() -> LuckModel:
 	if not _cache.has(LUCK_PATH):
 		_cache[LUCK_PATH] = LuckModel.new(JsonData.load_dict(LUCK_PATH, LuckModel.REQUIRED_KEYS))
 	return _cache[LUCK_PATH]
+
+
+func item_table() -> ItemTable:
+	if not _cache.has(UI_PATH):
+		_cache[UI_PATH] = ItemTable.new(JsonData.load_dict(UI_PATH, ItemTable.REQUIRED_KEYS), item_db())
+	return _cache[UI_PATH]
 
 
 func map_config() -> Dictionary:

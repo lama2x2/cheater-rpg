@@ -35,6 +35,10 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu"):
+		# Esc сначала закрывает верхнее открытое окно (12.8), меню — только если окон нет.
+		if not visible and UiKit.close_top():
+			get_viewport().set_input_as_handled()
+			return
 		if _title_mode:
 			_main_page()
 		elif visible:
@@ -133,6 +137,9 @@ func _settings_page() -> void:
 		_settings_page())
 	_button(Content.ui("settings_minimap", {"value": _on_off(Settings.value("minimap"))}), func() -> void:
 		Settings.change("minimap", not bool(Settings.value("minimap")))
+		_settings_page())
+	_button(Content.ui("settings_contrast", {"value": _on_off(Settings.value("contrast"))}), func() -> void:
+		Settings.change("contrast", not bool(Settings.value("contrast")))
 		_settings_page())
 	var step := Settings.model.volume_step()
 	var volume := float(Settings.value("volume"))

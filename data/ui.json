@@ -1,0 +1,38 @@
+{
+  "_doc": "Удобный интерфейс (docs/spec/12_ui_ux.md, 12.8; D-82). tabs — вкладки-фильтры инвентаря: категории предметов (пусто — всё); вкладка с marked_junk показывает и помеченное игроком как хлам. junk_categories — что считается хламом без пометки. columns — столбцы таблицы (сортировка кликом по заголовку). rarity — порог базовой цены за штуку → редкость (цвет иконки), по убыванию. icons — силуэт по категории, если у предмета нет поля icon. quick_slots — быстрые слоты расходников F1–F4. tooltip_delay_s — задержка подсказки. compare — что сравнивать у оружия с надетым: путь в data/weapons.json и что лучше (high — больше, low — меньше); noise — радиус шума из data/noise.json.",
+  "tabs": [
+    { "id": "all", "categories": [] },
+    { "id": "weapons", "categories": ["weapon", "ammo"] },
+    { "id": "food", "categories": ["consumable"] },
+    { "id": "medical", "categories": ["medical"] },
+    { "id": "trophies", "categories": ["trophy"] },
+    { "id": "valuables", "categories": ["valuable"] },
+    { "id": "junk", "categories": ["junk"], "marked_junk": true }
+  ],
+  "junk_categories": ["junk"],
+  "columns": ["name", "count", "weight", "price", "price_kg"],
+  "rarity": [[200, "epic"], [40, "rare"], [12, "good"], [0, "common"]],
+  "rarity_colors": {
+    "common": [0.75, 0.78, 0.75],
+    "good": [0.45, 0.8, 0.45],
+    "rare": [0.4, 0.65, 1.0],
+    "epic": [0.85, 0.55, 1.0]
+  },
+  "icons": {
+    "consumable": "can", "medical": "cross", "trophy": "orb", "weapon": "blade", "ammo": "ammo",
+    "valuable": "ring", "junk": "brick"
+  },
+  "quick_slots": 4,
+  "tooltip_delay_s": 0.3,
+  "compare": {
+    "melee": [
+      ["damage", "light.damage", "high"], ["heavy", "heavy.damage", "high"], ["cooldown", "light.cooldown", "low"],
+      ["range", "light.range", "high"], ["penetration", "penetration", "high"], ["noise", "noise", "low"]
+    ],
+    "ranged": [
+      ["damage", "damage", "high"], ["pellets", "pellets", "high"], ["cooldown", "cooldown", "low"],
+      ["range", "range", "high"], ["spread", "spread_deg", "low"], ["magazine", "magazine", "high"],
+      ["penetration", "penetration", "high"], ["noise", "noise", "low"]
+    ]
+  }
+}

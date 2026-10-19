@@ -65,7 +65,7 @@ func _validate(key: String, value: Variant) -> Variant:
 	match key:
 		"save_mode":
 			return String(value) if value is String and _config["save_modes"].has(value) else null
-		"noise_ring", "fullscreen", "minimap":
+		"noise_ring", "fullscreen", "minimap", "contrast":
 			return bool(value) if value is bool else null
 		"volume":
 			return snappedf(clampf(float(value), 0.0, 1.0), 0.01) if value is float or value is int else null

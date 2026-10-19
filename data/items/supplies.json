@@ -2,28 +2,28 @@
   "_doc": "Припасы и мелочь. primary_inventory=false — только в рюкзак. consume — как у трофеев (14.4).",
   "items": [
     {
-      "id": "cluster_map", "category": "consumable", "weight_g": 30, "primary_inventory": false, "base_price": 6,
+      "id": "cluster_map", "category": "consumable", "icon": "paper", "weight_g": 30, "primary_inventory": false, "base_price": 6,
       "consume": { "verb": "read", "effects": [{ "type": "map_reveal" }] }
     },
     {
-      "id": "zhivchik", "category": "consumable", "weight_g": 200, "primary_inventory": false, "base_price": 2,
+      "id": "zhivchik", "category": "consumable", "icon": "bottle", "weight_g": 200, "primary_inventory": false, "base_price": 2,
       "consume": { "verb": "drink", "effects": [ { "type": "vital_restore", "vital": "spore_balance", "value": 40 } ] }
     },
-    { "id": "vodka", "category": "consumable", "weight_g": 700, "primary_inventory": false, "base_price": 1 },
-    { "id": "vinegar", "category": "consumable", "weight_g": 100, "primary_inventory": false, "base_price": 1 },
+    { "id": "vodka", "category": "consumable", "icon": "bottle", "weight_g": 700, "primary_inventory": false, "base_price": 1 },
+    { "id": "vinegar", "category": "consumable", "icon": "bottle", "weight_g": 100, "primary_inventory": false, "base_price": 1 },
     {
-      "id": "canned_food", "category": "consumable", "weight_g": 400, "primary_inventory": false, "base_price": 1,
+      "id": "canned_food", "category": "consumable", "icon": "can", "weight_g": 400, "primary_inventory": false, "base_price": 1,
       "consume": { "verb": "eat", "effects": [ { "type": "vital_restore", "vital": "stamina", "value": 40 }, { "type": "vital_restore", "vital": "health", "value": 5 } ] }
     },
     {
-      "id": "water_bottle", "category": "consumable", "weight_g": 1000, "primary_inventory": false, "base_price": 1,
+      "id": "water_bottle", "category": "consumable", "icon": "bottle", "weight_g": 1000, "primary_inventory": false, "base_price": 1,
       "consume": { "verb": "drink", "effects": [ { "type": "vital_restore", "vital": "stamina", "value": 20 } ] }
     },
     {
-      "id": "bandage", "category": "medical", "weight_g": 50, "primary_inventory": false, "base_price": 1,
+      "id": "bandage", "category": "medical", "icon": "cross", "weight_g": 50, "primary_inventory": false, "base_price": 1,
       "consume": { "verb": "apply", "effects": [ { "type": "stop_bleeding" }, { "type": "vital_restore", "vital": "health", "value": 15 } ] }
     },
-    { "id": "gold_ring", "category": "valuable", "weight_g": 5, "primary_inventory": true, "base_price": 15 },
-    { "id": "brick", "category": "junk", "weight_g": 3500, "primary_inventory": false, "base_price": 0 }
+    { "id": "gold_ring", "category": "valuable", "icon": "ring", "weight_g": 5, "primary_inventory": true, "base_price": 15 },
+    { "id": "brick", "category": "junk", "icon": "brick", "weight_g": 3500, "primary_inventory": false, "base_price": 0 }
   ]
 }
