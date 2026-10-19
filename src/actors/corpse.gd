@@ -38,6 +38,14 @@ func _ready() -> void:
 	add_child(label)
 
 
+## Пристальный взгляд (12.3): свой труп.
+func gaze_info() -> Dictionary:
+	var count := 0
+	for stack: Dictionary in _backpack():
+		count += int(stack["count"])
+	return {"kind": "item", "category": "thing", "name": Content.ui("gaze_own_corpse", {"life": life}), "count": count}
+
+
 func interact_text() -> String:
 	if _backpack().is_empty():
 		return Content.ui("interact_corpse_empty", {"life": life})

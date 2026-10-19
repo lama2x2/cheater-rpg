@@ -9,7 +9,8 @@
     "ranged_hard_hit": { "stat": "accuracy", "points": 1.0, "farm_cap": 10 },
     "wounded": { "stat": "endurance", "points": 0.05, "farm_cap": 8 },
     "sneak_pass": { "stat": "stealth", "points": 1.5, "farm_cap": 10 },
-    "stash_found": { "stat": "perception", "points": 4.0, "farm_cap": 20 }
+    "stash_found": { "stat": "perception", "points": 4.0, "farm_cap": 20 },
+    "gaze_new": { "stat": "perception", "points": 0.3, "farm_cap": 3 }
   },
   "target_level": {
     "_doc": "Твари слабее героя дают меньше: каждый уровень ниже (общий уровень героя − grace) режет на penalty_per_level, не ниже min_mult. Много сильнее (на strong_above уровней) — ×strong_mult.",

@@ -1,5 +1,5 @@
 {
-  "_doc": "Заражённые, стадии 0–5 (docs/spec/07_enemies.md, 7.1; схема — 14.2). Скорости в м/с (герой: шаг 4, бег 7). Время — реальные секунды. ai — пороги мозга (src/core/infected_brain.gd). armor — броня по зонам (бронепластины топтуна), attack.bleed_chance — шанс кровотечения у героя. spore_sack — есть ли мешок, loot — таблица из data/loot, sack_open_s — базовое время вскрытия; делится на sack_open_mult лучшего клинка в инвентаре (нож ×2 → 2–6 с, топор ×1,5).",
+  "_doc": "Заражённые, стадии 0–5 (docs/spec/07_enemies.md, 7.1; схема — 14.2). Скорости в м/с (герой: шаг 4, бег 7). Время — реальные секунды. senses.stealth — Скрытность твари против Наблюдательности героя (Пристальный взгляд 12.3, чуйка 17). ai — пороги мозга (src/core/infected_brain.gd). armor — броня по зонам (бронепластины топтуна), attack.bleed_chance — шанс кровотечения у героя. spore_sack — есть ли мешок, loot — таблица из data/loot, sack_open_s — базовое время вскрытия; делится на sack_open_mult лучшего клинка в инвентаре (нож ×2 → 2–6 с, топор ×1,5).",
   "enemies": [
     {
       "id": "crawler",
@@ -34,7 +34,8 @@
         "sight": 8,
         "fov_deg": 120,
         "hearing": 0.6,
-        "notice_close": 1.5
+        "notice_close": 1.5,
+        "stealth": 0
       },
       "can_open_doors": false,
       "spore_sack": false,
@@ -87,7 +88,8 @@
         "sight": 14,
         "fov_deg": 140,
         "hearing": 1.0,
-        "notice_close": 2.0
+        "notice_close": 2.0,
+        "stealth": 0
       },
       "can_open_doors": false,
       "spore_sack": true,
@@ -151,7 +153,8 @@
         "sight": 18,
         "fov_deg": 150,
         "hearing": 1.1,
-        "notice_close": 2.5
+        "notice_close": 2.5,
+        "stealth": 1
       },
       "can_open_doors": true,
       "spore_sack": true,
@@ -215,7 +218,8 @@
         "sight": 26,
         "fov_deg": 160,
         "hearing": 1.2,
-        "notice_close": 3.0
+        "notice_close": 3.0,
+        "stealth": 2
       },
       "can_open_doors": true,
       "spore_sack": true,
@@ -279,7 +283,8 @@
         "sight": 28,
         "fov_deg": 170,
         "hearing": 1.3,
-        "notice_close": 3.5
+        "notice_close": 3.5,
+        "stealth": 4
       },
       "can_open_doors": true,
       "spore_sack": true,
@@ -334,7 +339,8 @@
         "sight": 24,
         "fov_deg": 150,
         "hearing": 1.3,
-        "notice_close": 4.0
+        "notice_close": 4.0,
+        "stealth": 3
       },
       "can_open_doors": true,
       "spore_sack": true,

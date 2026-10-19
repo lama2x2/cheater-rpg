@@ -33,6 +33,13 @@ func _ready() -> void:
 	add_child(instance)
 
 
+## Пристальный взгляд (12.3): предмет — название, количество, вес, цена.
+func gaze_info() -> Dictionary:
+	var db := Content.item_db()
+	return {"kind": "item", "category": "thing", "name": Content.item_name(item_id), "count": count,
+		"weight": db.weight_g(item_id) * count, "price": int(db.item(item_id).get("base_price", 0))}
+
+
 func interact_text() -> String:
 	return Content.ui("interact_pickup", {"item": Content.item_name(item_id), "count": count})
 

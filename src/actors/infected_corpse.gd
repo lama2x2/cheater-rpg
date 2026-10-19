@@ -36,6 +36,15 @@ func _ready() -> void:
 	add_child(instance)
 
 
+## Пристальный взгляд (12.3): труп — предмет, видно всё.
+func gaze_info() -> Dictionary:
+	var sack := "sack_none"
+	if _has_sack():
+		sack = "sack_opened" if sack_opened else "sack_closed"
+	return {"kind": "item", "category": "thing", "name": Content.ui("gaze_corpse_of", {"enemy": Content.enemy_name(enemy_id)}),
+		"level": level, "sack": sack}
+
+
 func interact_text() -> String:
 	var hero := get_tree().get_first_node_in_group("hero")
 	if hero and hero.channel.is_active():

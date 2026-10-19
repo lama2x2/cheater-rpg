@@ -24,6 +24,7 @@ const ACTIONS := {
 	"skill_7": [KEY_7],
 	"skill_8": [KEY_8],
 	"skills": [KEY_U],
+	"gaze": [KEY_ALT],
 	"debug_die": [KEY_K],
 	"debug_save": [KEY_F5],
 	"debug_load": [KEY_F9],

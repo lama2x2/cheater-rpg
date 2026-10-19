@@ -145,7 +145,9 @@ static func migrate(data: Dictionary, migration_table: Variant = null, target: i
 		return {}
 	var version := int(data["save_version"])
 	if version > target:
-		push_error("Сохранение из более новой версии игры (%d > %d)" % [version, target])
+		# Предупреждение, а не ошибка: сейв от новой версии (другая ветка, откат игры) — штатная
+		# ситуация, ячейка просто не загружается.
+		push_warning("Сохранение из более новой версии игры (%d > %d)" % [version, target])
 		return {}
 	var result := data.duplicate(true)
 	while version < target:

@@ -150,6 +150,28 @@ func set_trophy_glow(on: bool, bright: bool = false) -> void:
 	_glow.modulate = Color(1.0, 1.0, 1.0, 0.95) if bright else Color(1.0, 0.85, 0.35, 0.7)
 
 
+## Пристальный взгляд (12.3): описание цели для GazeRules.card.
+func gaze_info() -> Dictionary:
+	var traits: PackedStringArray = []
+	if (_data["move"] as Dictionary).has("lunge"):
+		traits.append("trait_lunge")
+	if bool(_data["can_open_doors"]):
+		traits.append("trait_doors")
+	if bool(_data.get("spore_sack", false)):
+		traits.append("trait_sack")
+	var armor := {}
+	for zone: String in _data["armor"]:
+		if float(_data["armor"][zone]) > 0.0:
+			armor[zone] = float(_data["armor"][zone])
+	return {
+		"kind": "infected", "category": "object", "name": Content.enemy_name(enemy_id),
+		"stealth": float(_data["senses"].get("stealth", 0.0)), "level": level,
+		"level_range": [int(_data["level"][0]), int(_data["level"][1])], "threat": String(_data["threat"]),
+		"health": hp / maxf(Content.enemy_db().max_hp(enemy_id, level), 1.0), "state": brain.state,
+		"armor": armor, "traits": Array(traits), "hunger": brain.hunger,
+	}
+
+
 ## Тварь не гонится за героем и не атакует — для умения «Из тени».
 func is_unaware() -> bool:
 	return not brain.is_alert()

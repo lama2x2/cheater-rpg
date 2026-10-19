@@ -102,6 +102,7 @@ func _build_stab() -> void:
 		var npc: Node3D = StabNpcScript.new()
 		npc.npc_id = String(entry["id"])
 		npc.kind = String(entry["kind"])
+		npc.gaze = entry.get("gaze", {})
 		if entry.has("color"):
 			npc.color = Color(float(entry["color"][0]), float(entry["color"][1]), float(entry["color"][2]))
 		npc.position = center + Vector3(float(entry["at"][0]), 0.0, float(entry["at"][1]))

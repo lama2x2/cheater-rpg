@@ -6,6 +6,8 @@ extends Node3D
 var npc_id: String = ""
 var kind: String = ""
 var color := Color(0.6, 0.6, 0.6)
+## Что видно Пристальным взглядом (data/stab.json → npcs[].gaze).
+var gaze: Dictionary = {}
 
 
 func _ready() -> void:
@@ -26,6 +28,20 @@ func _ready() -> void:
 
 func info() -> Dictionary:
 	return Content.texts()["npc"][npc_id]
+
+
+## Пристальный взгляд (12.3): описание цели для GazeRules.card.
+func gaze_info() -> Dictionary:
+	if kind == "board":
+		return {"kind": "item", "category": "thing", "name": info()["name"], "role": info()["role"]}
+	var subject := {"kind": "npc", "category": "immune", "name": info()["name"], "role": info()["role"],
+		"stealth": float(gaze.get("stealth", 0.0))}
+	for key in ["level", "humanity", "equipment", "morok"]:
+		if gaze.has(key):
+			subject[key] = gaze[key]
+	if subject.has("level"):
+		subject["level"] = int(subject["level"])
+	return subject
 
 
 func interact_text() -> String:

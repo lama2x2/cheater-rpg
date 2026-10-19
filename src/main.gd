@@ -19,6 +19,7 @@ const ProgressWatcherScript := preload("res://src/world/progress_watcher.gd")
 const GameMenuScript := preload("res://src/ui/game_menu.gd")
 const SkillsBarScript := preload("res://src/ui/skills_bar.gd")
 const SkillsPanelScript := preload("res://src/ui/skills_panel.gd")
+const GazeCardScript := preload("res://src/ui/gaze_card.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -56,6 +57,7 @@ func _ready() -> void:
 	add_child(InventoryPanelScript.new())
 	add_child(SkillsBarScript.new())
 	add_child(SkillsPanelScript.new())
+	add_child(GazeCardScript.new())
 	var menu: CanvasLayer = GameMenuScript.new()
 	add_child(menu)
 
@@ -128,6 +130,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --skills=A,B  выучить умения A, B (в список активных по порядку); --skills=all — все из data/skills
 ##   --cast=N      через 1 с применить умение с клавиши N (1–8), мана — полная
 ##   --skills-panel  открыть окно умений
+##   --gaze        через 1,5 с показать карточку Пристального взгляда ближайшей твари (нет тварей —
+##                 ближайшей другой цели)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
 func _handle_debug_args() -> void:
@@ -185,6 +189,8 @@ func _handle_debug_args() -> void:
 			_debug_skills_panel.call_deferred()
 		elif arg == "--pearl":
 			PlayerState.pending_pearl_skills += 1
+		elif arg == "--gaze":
+			_debug_gaze.call_deferred()
 		elif arg == "--gift":
 			PlayerState.skill_gifts_opened.append(10)
 			PlayerState.pending_skill_choices += 1
@@ -234,6 +240,21 @@ func _debug_cast(slot: int) -> void:
 	await get_tree().create_timer(1.0).timeout
 	PlayerState.vitals.restore(Vitals.MANA, PlayerState.vitals.max_value(Vitals.MANA))
 	PlayerState.use_hotkey(slot - 1)
+
+
+func _debug_gaze() -> void:
+	await get_tree().create_timer(1.5).timeout
+	var hero := get_tree().get_first_node_in_group("hero") as Node3D
+	var best: Node3D = null
+	for group in ["infected", "interactable", "infected_corpses"]:
+		if best:
+			break  # твари — в первую очередь
+		for node: Node3D in get_tree().get_nodes_in_group(group):
+			if node.has_method("gaze_info") and (best == null or
+					node.global_position.distance_to(hero.global_position) < best.global_position.distance_to(hero.global_position)):
+				best = node
+	if best:
+		get_tree().get_first_node_in_group("gaze_card").show_target(best)
 
 
 func _debug_skills_panel() -> void:
