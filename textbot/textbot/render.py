@@ -2,28 +2,41 @@
 from __future__ import annotations
 
 from html import escape
+from itertools import groupby
 
 from .engine import Meta, RunState, Screen, getter
 from .model import Campaign
 
 
+def _groups(screen: Screen):
+    """Подряд идущие строки одного вида — вместе (строки Системы — одной цитатой)."""
+    for kind, items in groupby(screen.parts, key=lambda p: p[0]):
+        yield kind, [t for _, t in items]
+
+
 def html(screen: Screen) -> str:
     parts = []
-    if screen.system:
-        parts.append("<blockquote>" + "\n".join("▌ " + escape(s) for s in screen.system) + "</blockquote>")
-    if screen.ending_title:
-        parts.append(f"<b>{escape(screen.ending_title.upper())}</b>")
-    parts += [escape(t) for t in screen.text]
+    for kind, lines in _groups(screen):
+        if kind == "system":
+            parts.append("<blockquote>" + "\n".join("▌ " + escape(s) for s in lines) + "</blockquote>")
+        elif kind == "title":
+            parts += [f"<b>{escape(t.upper())}</b>" for t in lines]
+        else:
+            parts += [escape(t) for t in lines]
     if screen.status:
         parts.append(f"<i>{escape(screen.status)}</i>")
     return "\n\n".join(parts)[:4000]
 
 
 def plain(screen: Screen) -> str:
-    parts = ["\n".join("▌ " + s for s in screen.system)] if screen.system else []
-    if screen.ending_title:
-        parts.append(f"=== {screen.ending_title.upper()} ===")
-    parts += screen.text
+    parts = []
+    for kind, lines in _groups(screen):
+        if kind == "system":
+            parts.append("\n".join("▌ " + s for s in lines))
+        elif kind == "title":
+            parts += [f"=== {t.upper()} ===" for t in lines]
+        else:
+            parts += lines
     if screen.status:
         parts.append(f"[{screen.status}]")
     for ch in screen.choices:

@@ -11,6 +11,8 @@ from .model import Campaign, Goto, compile_effects, load_campaign, parse_expr
 
 LOCK = "scene_ids.lock"  # id сцен прошлой версии: python -m textbot.lint <папка> --lock
 TEXT_LIMIT = 3500
+AGAIN_LIMIT = 200  # again — связка при возврате, а не второй текст сцены
+REPEAT_MIN = 80    # абзацы короче — связки («Вы снова у двери»): их повтор не глюк
 DEATH_MARK = "☠"  # запас под шапку и строки Системы до лимита Telegram 4096
 
 
@@ -52,6 +54,44 @@ def _walk(effects: list[tuple], reads: set, writes: set, gotos: list, flags: dic
     return dies
 
 
+def _writes(effects: list) -> tuple[set[str], bool]:
+    """Что меняют эффекты и может ли в них быть смерть."""
+    out: set[str] = set()
+    dies = _walk(compile_effects(effects, "check"), set(), out, [], {})
+    return out, dies
+
+
+def _stay_checks(sid: str, i: int, ch, r: Report) -> None:
+    """Выбор, после которого игрок остаётся в сцене: экран не пустой и ответ не повторяется."""
+    where = f"{sid}.choices[{i}] «{ch.label}»"
+    outcomes = [(ch.text, ch.goto, [])]
+    if ch.roll:
+        outcomes = [(ch.text or b.text, b.goto or ch.goto, b.effects) for b in (ch.roll.success, ch.roll.fail)]
+    cond = expr.names_in(parse_expr(ch.if_)) if ch.if_ else set()
+    for text, goto, effects in outcomes:
+        (w1, d1), (w2, d2) = _writes(ch.effects), _writes(effects)
+        if goto or d1 or d2:  # ушли в другую сцену или погибли
+            continue
+        if not text:
+            r.warnings.append(f"{where}: после выбора остаёмся в сцене, а текста-итога нет — экран будет пустым")
+        if len(text or "") >= REPEAT_MIN and not cond & (w1 | w2):
+            r.warnings.append(f"{where}: после выбора остаёмся в сцене, а выбор не исчезает — "
+                              f"можно выбрать снова и получить тот же ответ (добавьте if с флагом)")
+            return
+
+
+def _hubs(edges: dict[str, set[str]], once: set[tuple[str, str]]) -> dict[str, str]:
+    """Хабы: сцена с несколькими выходами, из которой можно сходить в соседнюю и вернуться
+    назад; once — переходы, которые закрываются после первого раза (их if гасит сам выбор или вход
+    в сцену). Сцена → откуда возвращаются. (Остальные повторы ловит автоигрок по факту.)"""
+    out: dict[str, str] = {}
+    for sid, targets in edges.items():
+        back = sorted(t for t in targets if t != sid and sid in edges[t] and (t, sid) not in once)
+        if back and len(targets - {sid}) >= 2:
+            out[sid] = back[0]
+    return out
+
+
 def lint(c: Campaign, mode: str | None = None) -> Report:
     mode = mode or c.mode
     r = Report()
@@ -61,6 +101,7 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
     flags: dict[str, list[int]] = {}
     edges: dict[str, set[str]] = {sid: set() for sid in scenes}
     dying: set[str] = set()
+    once: set[tuple[str, str]] = set()  # переходы «только один раз»
 
     def need(sid: str | None, where: str) -> None:
         if sid and sid not in scenes:
@@ -109,6 +150,12 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
                             reads |= expr.names_in(parse_expr(g.if_))
                     if goto and goto[-1].if_:
                         r.warnings.append(f"{where}: у условного goto нет варианта по умолчанию")
+            _stay_checks(sid, i, ch, r)
+            if ch.if_:
+                cond = expr.names_in(parse_expr(ch.if_))
+                for t in _targets(ch.goto):
+                    if t in scenes and cond & (_writes(ch.effects)[0] | _writes(scenes[t].on_enter)[0]):
+                        once.add((sid, t))
             if lethal and DEATH_MARK not in ch.label:
                 r.warnings.append(f"{where}: выбор может убить, но в подписи нет {DEATH_MARK} — "
                                   f"смертельный риск должен быть виден заранее")
@@ -125,6 +172,9 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
         size = len(s.text) + sum(len(v.text) for v in s.extra)
         if size > TEXT_LIMIT:
             r.errors.append(f"{sid}: текст {size} знаков, больше {TEXT_LIMIT}")
+        if s.again and len(s.again) > AGAIN_LIMIT:
+            r.warnings.append(f"{sid}: again {len(s.again)} знаков — это связка при возврате, "
+                              f"держите её короче {AGAIN_LIMIT}")
 
     # имена
     for name in sorted(reads | writes):
@@ -141,6 +191,12 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
             r.errors.append(f"флаг «{name}» читается, но нигде не ставится")
         if set_n and not read_n:
             r.warnings.append(f"флаг «{name}» ставится, но нигде не читается")
+
+    # хабы: без again текст сцены при возврате повторится целиком
+    for sid, back in sorted(_hubs(edges, once).items()):
+        if not scenes[sid].again:
+            r.warnings.append(f"{sid}: в сцену возвращаются (из «{back}»), а again не задан — "
+                              f"при возврате её текст повторится целиком")
 
     # переходы по правилам: смерть, лимит времени
     death_targets = ([d.respawn, d.final] if mode == "system"

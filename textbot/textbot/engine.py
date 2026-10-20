@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from . import expr
 from .model import Campaign, Choice, Goto, compile_effects, parse_expr
@@ -43,8 +43,31 @@ class RunState(BaseModel):
     chapters: list[dict] = []            # главы: {scene, title, state} — снимок при первом входе в каждую контрольную точку
     campaign_version: int = 1
     ended: str | None = None
-    shown_text: list[str] = []    # итог прошлого выбора — над текстом сцены
-    shown_system: list[str] = []  # строки Системы к этому экрану
+    shown: list[list[str]] = []   # итог прошлого хода по порядку: [вид, строка]; вид — text | system | entry
+    screen_mode: str = "full"     # как показать сцену: full — целиком; stay — выбор оставил в ней (только
+                                  # итог и новые extra); again — повторный вход (короткий again + новые extra)
+    seen: dict[str, list[int]] = {}   # сцены, чей текст уже показан, → номера показанных extra
+    seen_extra: list[int] = []        # extra текущей сцены, показанные до этого экрана
+    shown_status: str | None = None   # шапка на прошлом экране: повторяем, только когда изменилась
+
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy_shown(cls, data: Any) -> Any:
+        """Сейвы старого формата: итог хода хранился двумя списками (Система — над текстом)."""
+        if isinstance(data, dict) and ("shown_text" in data or "shown_system" in data):
+            data = dict(data)
+            old = [["system", x] for x in data.pop("shown_system", None) or []]
+            old += [["text", x] for x in data.pop("shown_text", None) or []]
+            data.setdefault("shown", old)
+        return data
+
+    @property
+    def shown_text(self) -> list[str]:
+        return [t for k, t in self.shown if k == "text"]
+
+    @property
+    def shown_system(self) -> list[str]:
+        return [t for k, t in self.shown if k != "text"]
 
 
 @dataclass
@@ -57,12 +80,19 @@ class ChoiceView:
 
 @dataclass
 class Screen:
-    text: list[str]
-    system: list[str]
+    parts: list[tuple[str, str]]   # по порядку: ("text", абзац) | ("system", строка Системы) | ("title", концовка)
     status: str | None
     choices: list[ChoiceView]
     ending: str | None = None
     ending_title: str | None = None
+
+    @property
+    def text(self) -> list[str]:
+        return [t for k, t in self.parts if k == "text"]
+
+    @property
+    def system(self) -> list[str]:
+        return [t for k, t in self.parts if k == "system"]
 
 
 @dataclass
@@ -76,7 +106,8 @@ class GameError(Exception):
 
 # ---------- начало и чтение ----------
 
-def new_run(c: Campaign, seed: int | None = None, run: int = 1, mode: str | None = None) -> RunState:
+def new_run(c: Campaign, seed: int | None = None, run: int = 1, mode: str | None = None,
+            meta: Meta | None = None) -> RunState:
     mode = mode or c.mode
     st = RunState(
         campaign=c.id, mode=mode, scene=c.start, run=run,
@@ -87,7 +118,8 @@ def new_run(c: Campaign, seed: int | None = None, run: int = 1, mode: str | None
         campaign_version=c.version,
     )
     if not st.awaiting_name:
-        _enter(c, st, c.start, Result(), Meta())
+        _enter(c, st, c.start, Result(), meta or Meta())
+        _settle(c, st, meta or Meta(), "enter")
     return st
 
 
@@ -96,6 +128,7 @@ def set_name(c: Campaign, st: RunState, name: str, meta: Meta) -> Result:
     st.awaiting_name = False
     res = Result()
     _enter(c, st, st.scene, res, meta)
+    _settle(c, st, meta, "enter")
     return res
 
 
@@ -145,27 +178,43 @@ def fill(text: str, st: RunState, meta: Meta, extra: dict | None = None) -> str:
     return re.sub(r"\{([a-z_][a-z0-9_.]*)\}", sub, text)
 
 
-def view(c: Campaign, st: RunState, meta: Meta) -> Screen:
+def view(c: Campaign, st: RunState, meta: Meta, full: bool = False) -> Screen:
+    """Экран после хода. full — показать сцену целиком (повторный показ после паузы, /start)."""
     scene = c.scenes[st.scene]
-    body = [fill(scene.text.strip(), st, meta)]
-    body += [fill(v.text.strip(), st, meta) for v in scene.extra if check(v.if_, st, meta)]
+    extras = [(i, v.text) for i, v in enumerate(scene.extra) if check(v.if_, st, meta)]
+
+    def body(mode: str) -> list[str]:
+        if mode == "full":
+            return [scene.text] + [t for _, t in extras]
+        fresh = [t for i, t in extras if i not in st.seen_extra]
+        return ([scene.again] if mode == "again" and scene.again else []) + fresh
+
+    system = st.mode == "system"
+    before = [(k, t) for k, t in st.shown if k == "text" or (system and k == "system")]
+    after = [("system", t) for k, t in st.shown if system and k == "entry"]
+    mode = "full" if full else st.screen_mode
+    text = body(mode)
+    if not before and not text and not after:  # выбор без итога — хоть что-то показать
+        text = body("again" if scene.again else "full")
+    title = [("title", scene.ending.title)] if scene.ending else []
+    parts = before + title + [("text", fill(t.strip(), st, meta)) for t in text] + after
     choices = []
     if not st.ended:
         for i, ch in enumerate(scene.choices):
             ok = check(ch.if_, st, meta)
             if ok or ch.locked:
                 choices.append(ChoiceView(i, fill(ch.label, st, meta), ok, None if ok else ch.locked))
-    system = st.shown_system if st.mode == "system" else []
-    return Screen(
-        text=st.shown_text + body, system=system, status=status_line(c, st, meta), choices=choices,
-        ending=st.ended, ending_title=scene.ending.title if scene.ending else None,
-    )
+    status = status_line(c, st, meta)
+    if not full and status == st.shown_status:
+        status = None  # не изменилась — не повторяем на каждом экране
+    return Screen(parts=parts, status=status, choices=choices,
+                  ending=st.ended, ending_title=scene.ending.title if scene.ending else None)
 
 
 def status_line(c: Campaign, st: RunState, meta: Meta) -> str | None:
     parts = []
     if st.mode == "system":
-        parts.append(f"☥ {st.lives}")
+        parts.append(f"☥ жизней: {st.lives}")
     if c.time:
         parts.append(fill(c.time.label, st, meta, {"limit": c.time.limit or "∞"}))
     return " · ".join(parts) or None
@@ -184,7 +233,9 @@ def choose(c: Campaign, st: RunState, index: int, meta: Meta) -> Result:
         raise GameError("выбор недоступен")
 
     res = Result()
-    st.shown_text, st.shown_system = [], []
+    st.shown_status = status_line(c, st, meta)
+    st.shown = []
+    prev, time_before = st.scene, st.time
     ctx = _Ctx()
     _say(st, meta, ctx, ch.text, ch.system)
     _apply(c, st, meta, compile_effects(ch.effects, "choice"), ctx)
@@ -204,13 +255,41 @@ def choose(c: Campaign, st: RunState, index: int, meta: Meta) -> Result:
         target = _due(c, st, meta, ctx) or target
         if ctx.death is not None:
             target = _die(c, st, meta, ctx.death, res)
-    if c.time and c.time.limit is not None and c.time.on_limit and st.time >= c.time.limit \
-            and target != REWIND:
+    if _time_ran_out(c, st, time_before) and target != REWIND:
         if not (target and target in c.scenes and c.scenes[target].ending):
             target = c.time.on_limit
     if target:  # без перехода — остаёмся в сцене, вход не повторяем
         _enter(c, st, target, res, meta, ctx)
+        on_limit = c.time.on_limit if c.time else None
+        if target not in (REWIND, on_limit) and not st.ended and _time_ran_out(c, st, time_before):
+            target = on_limit  # время кончилось уже при входе в сцену (её on_enter)
+            _enter(c, st, target, res, meta, ctx)
+    died = any(e[0] == "death" for e in res.events)
+    if target == REWIND:
+        _settle(c, st, meta, "full")
+    elif target is None or (target == prev and not died):
+        _settle(c, st, meta, "stay")
+    else:
+        _settle(c, st, meta, "enter")
     return res
+
+
+def _time_ran_out(c: Campaign, st: RunState, time_before: int) -> bool:
+    """Время перешло лимит именно этим ходом (уже после лимита игра идёт своим чередом)."""
+    t = c.time
+    return bool(t and t.limit is not None and t.on_limit and time_before < t.limit <= st.time)
+
+
+def _settle(c: Campaign, st: RunState, meta: Meta, mode: str) -> None:
+    """Запомнить, как показать экран после хода: целиком, только итог (stay) или кратко (again)."""
+    scene = c.scenes[st.scene]
+    prev = st.seen.get(st.scene)
+    if mode == "enter":
+        mode = "again" if prev is not None and scene.again else "full"
+    st.screen_mode = mode
+    st.seen_extra = list(prev or [])
+    shown = {i for i, v in enumerate(scene.extra) if check(v.if_, st, meta)}
+    st.seen[st.scene] = sorted(set(prev or []) | shown)
 
 
 @dataclass
@@ -218,11 +297,11 @@ class _Ctx:
     death: str | None = None
 
 
-def _say(st, meta, ctx, text, system):
+def _say(st, meta, ctx, text, system, kind="system"):
     if text:
-        st.shown_text.append(fill(text.strip(), st, meta))
+        st.shown.append(["text", fill(text.strip(), st, meta)])
     if system:
-        st.shown_system.append(fill(system.strip(), st, meta))
+        st.shown.append([kind, fill(system.strip(), st, meta)])
 
 
 def _goto(goto: Goto | None, st: RunState, meta: Meta) -> str | None:
@@ -311,7 +390,8 @@ def _die(c: Campaign, st: RunState, meta: Meta, cause: str, res: Result) -> str:
             _shift_pending(snap, st.steps - snap.steps)
             snap.steps, snap.deaths, snap.checkpoint = st.steps, st.deaths, st.checkpoint
             snap.chapters = st.chapters
-            snap.shown_text, snap.shown_system = st.shown_text + [d.rewind_text], []
+            snap.shown = [x for x in st.shown if x[0] == "text"] + [["text", d.rewind_text]]
+            snap.shown_status = None
             st.__dict__.update(snap.__dict__)
             return REWIND
         return d.real_final or c.start
@@ -320,7 +400,7 @@ def _die(c: Campaign, st: RunState, meta: Meta, cause: str, res: Result) -> str:
     for item_id, item in c.items.items():
         if not item.keep_on_death:
             st.items.pop(item_id, None)
-    st.shown_system.append(fill(d.message, st, Meta(), {"cause": cause}))
+    st.shown.append(["system", fill(d.message, st, Meta(), {"cause": cause})])
     if st.lives <= 0:
         return d.final or c.start
     return d.respawn or c.start
@@ -335,7 +415,7 @@ def _enter(c: Campaign, st: RunState, target: str, res: Result, meta: Meta, ctx:
             raise GameError(f"нет сцены «{target}»")
         st.scene = target
         scene = c.scenes[target]
-        _say(st, meta, ctx, None, scene.system)
+        _say(st, meta, ctx, None, scene.system, "entry")  # строка Системы при входе — под текстом сцены
         ctx.death = None
         _apply(c, st, meta, compile_effects(scene.on_enter, target), ctx)
         if ctx.death is not None:
@@ -384,8 +464,8 @@ def restore_chapter(c: Campaign, st: RunState, index: int) -> None:
     new.checkpoint = dict(ch["state"])
     new.last_checkpoint = ch["scene"]
     new.ended, new.awaiting_name = None, False
-    new.shown_system = []
-    new.shown_text = [f"Вы вернулись к началу главы «{chapter_title(c, ch, index + 1)}»."]
+    new.shown = [["text", f"Вы вернулись к началу главы «{chapter_title(c, ch, index + 1)}»."]]
+    new.screen_mode, new.shown_status = "full", None
     st.__dict__.update(new.__dict__)
 
 
@@ -413,6 +493,7 @@ def migrate(c: Campaign, st: RunState) -> bool:
                     p["goto"] = None
         for key, var in c.vars.items():
             s.vars.setdefault(key, var.start)
+        s.seen = {k: v for k, v in ((resolve(k), v) for k, v in s.seen.items()) if k in c.scenes}
         s.campaign_version = c.version
 
     def fix_snap(snap: dict | None) -> dict | None:
@@ -422,7 +503,10 @@ def migrate(c: Campaign, st: RunState) -> bool:
         fix(s)
         return snapshot(s) if s.scene in c.scenes else None  # сцены больше нет — снимок выбрасываем
 
+    scene_before = st.scene
     fix(st)
+    if st.scene != scene_before:
+        st.screen_mode = "full"
     st.checkpoint = fix_snap(st.checkpoint)
     chapters = []
     for ch in st.chapters:
@@ -434,10 +518,10 @@ def migrate(c: Campaign, st: RunState) -> bool:
         target = st.last_checkpoint or c.start
         st.scene = target
         chapter = c.scenes[target].chapter
+        st.screen_mode = "full"
         if not st.ended:
-            st.shown_system = []
-            st.shown_text = [f"Кампания обновлена — вы на начале главы «{chapter}»." if chapter
-                             else "Кампания обновлена — вы на последней контрольной точке."]
+            st.shown = [["text", f"Кампания обновлена — вы на начале главы «{chapter}»." if chapter
+                         else "Кампания обновлена — вы на последней контрольной точке."]]
     return st.model_dump_json() != before
 
 

@@ -52,7 +52,9 @@ def test_restart_continues_same_screen(tmp_path):
 
     g2 = game(db)  # «рестарт контейнера»
     after = g2.start(UID).outs[-1]
-    assert after.html == before.html and after.keyboard == before.keyboard
+    assert after.keyboard == before.keyboard
+    # после паузы сцена показывается целиком: всё, что было на экране, — на месте
+    assert all(p in after.html for p in before.html.split("\n\n") if not p.startswith("<i>"))
     assert g2.db.load(UID, "demo", 1) == st_before
 
 

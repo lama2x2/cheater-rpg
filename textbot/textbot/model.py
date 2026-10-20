@@ -61,6 +61,7 @@ class Scene(_M):
     id: str
     chapter: str | None = None   # название главы — для сообщения «вы на начале главы …»
     text: str
+    again: str | None = None     # короткий текст при возврате в сцену (вместо text); без него — text целиком
     extra: list[TextVariant] = []
     system: str | None = None
     on_enter: list[Any] = []

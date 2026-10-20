@@ -117,7 +117,7 @@ class Game:
 
     # ---------- экраны ----------
 
-    def screen(self, uid: int, slot: int, st: engine.RunState) -> Out:
+    def screen(self, uid: int, slot: int, st: engine.RunState, full: bool = False) -> Out:
         c = self.campaigns.get(st.campaign)
         if c is None:
             return Out("Этой истории больше нет в сборнике.", [[("📚 Истории", "m:menu")]])
@@ -126,7 +126,7 @@ class Game:
             return Out(escape(c.ask_name or "Как вас зовут?"),
                        [[(f"Пусть будет «{c.default_name}»", f"n:{cid}:{slot}")]])
         meta = self.db.meta(uid, cid)
-        scr = engine.view(c, st, meta)
+        scr = engine.view(c, st, meta, full)
         kb: Keyboard = []
         for ch in scr.choices:
             if ch.enabled:
@@ -143,7 +143,7 @@ class Game:
         st = self._load(uid, cid, slot) if cid in self.campaigns else None
         if st is None:
             return self.menu(uid)
-        return Reply([self.screen(uid, slot, st)])
+        return Reply([self.screen(uid, slot, st, full=True)])  # после паузы — сцена целиком
 
     def new_run(self, uid: int, cid: str, slot: int) -> Reply:
         c = self.campaigns.get(cid)
@@ -151,7 +151,7 @@ class Game:
             return self.menu(uid)
         meta = self.db.meta(uid, cid)
         meta.runs += 1
-        st = engine.new_run(c, run=meta.runs)
+        st = engine.new_run(c, run=meta.runs, meta=meta)
         self.db.set_active(uid, cid, slot)
         self.db.save(uid, slot, st, meta)
         return Reply([self.screen(uid, slot, st)])
