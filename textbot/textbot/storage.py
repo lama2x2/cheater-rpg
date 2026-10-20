@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS saves (
     updated REAL NOT NULL,
     PRIMARY KEY (tg_id, campaign, slot)
 );
+CREATE TABLE IF NOT EXISTS active_slots (     -- активный слот у каждой истории
+    tg_id INTEGER NOT NULL,
+    campaign TEXT NOT NULL,
+    slot INTEGER NOT NULL,
+    PRIMARY KEY (tg_id, campaign)
+);
 CREATE TABLE IF NOT EXISTS meta (
     tg_id INTEGER NOT NULL,
     campaign TEXT NOT NULL,
@@ -53,6 +59,23 @@ class Storage:
         cols = {r[1] for r in self.db.execute("PRAGMA table_info(players)")}
         if "active_campaign" not in cols:  # база первой версии
             self.db.execute("ALTER TABLE players ADD COLUMN active_campaign TEXT")
+        self._migrate_slots()
+
+    def _migrate_slots(self) -> None:
+        """Первая версия: таблица slots (tg_id, slot) — три слота на всё. Переносим в saves без потерь,
+        старую таблицу оставляем как slots_legacy."""
+        if not self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='slots'").fetchone():
+            return
+        with self._tx():
+            self.db.execute("INSERT OR IGNORE INTO saves (tg_id, campaign, slot, state, updated) "
+                            "SELECT tg_id, campaign, slot, state, updated FROM slots")
+            for tg_id, slot, campaign in self.db.execute(
+                    "SELECT s.tg_id, s.slot, s.campaign FROM slots s JOIN players p "
+                    "ON p.tg_id = s.tg_id AND p.active_slot = s.slot").fetchall():
+                self.db.execute("UPDATE players SET active_campaign = ? WHERE tg_id = ?", (campaign, tg_id))
+                self.db.execute("INSERT OR REPLACE INTO active_slots (tg_id, campaign, slot) VALUES (?, ?, ?)",
+                                (tg_id, campaign, slot))
+            self.db.execute("ALTER TABLE slots RENAME TO slots_legacy")
 
     def close(self) -> None:
         self.db.close()
@@ -94,9 +117,19 @@ class Storage:
         return row[0], row[1]
 
     def set_active(self, tg_id: int, campaign: str | None, slot: int) -> None:
+        """Последняя игранная история и её активный слот."""
         self.active(tg_id)
         self.db.execute("UPDATE players SET active_campaign = ?, active_slot = ? WHERE tg_id = ?",
                         (campaign, slot, tg_id))
+        if campaign:
+            self.db.execute("INSERT OR REPLACE INTO active_slots (tg_id, campaign, slot) VALUES (?, ?, ?)",
+                            (tg_id, campaign, slot))
+
+    def campaign_slot(self, tg_id: int, campaign: str) -> int:
+        """Активный слот истории (по умолчанию 1)."""
+        row = self.db.execute("SELECT slot FROM active_slots WHERE tg_id = ? AND campaign = ?",
+                              (tg_id, campaign)).fetchone()
+        return row[0] if row else 1
 
     def load(self, tg_id: int, campaign: str, slot: int) -> RunState | None:
         row = self.db.execute("SELECT state FROM saves WHERE tg_id = ? AND campaign = ? AND slot = ?",

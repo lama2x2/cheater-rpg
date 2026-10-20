@@ -38,8 +38,9 @@ class RunState(BaseModel):
     lives: int = 1
     deaths: int = 0
     pending: list[dict] = []
-    checkpoint: dict | None = None
+    checkpoint: dict | None = None       # снимок последней контрольной точки (откат в режиме real)
     last_checkpoint: str | None = None   # id последней пройденной сцены с checkpoint: true
+    chapters: list[dict] = []            # главы: {scene, title, state} — снимок при первом входе в каждую контрольную точку
     campaign_version: int = 1
     ended: str | None = None
     shown_text: list[str] = []    # итог прошлого выбора — над текстом сцены
@@ -307,7 +308,9 @@ def _die(c: Campaign, st: RunState, meta: Meta, cause: str, res: Result) -> str:
     if st.mode == "real":
         if d.real == "rewind" and st.checkpoint:
             snap = RunState.model_validate(st.checkpoint)
+            _shift_pending(snap, st.steps - snap.steps)
             snap.steps, snap.deaths, snap.checkpoint = st.steps, st.deaths, st.checkpoint
+            snap.chapters = st.chapters
             snap.shown_text, snap.shown_system = st.shown_text + [d.rewind_text], []
             st.__dict__.update(snap.__dict__)
             return REWIND
@@ -342,9 +345,9 @@ def _enter(c: Campaign, st: RunState, target: str, res: Result, meta: Meta, ctx:
             continue
         if scene.checkpoint:
             st.last_checkpoint = target
-            snap = st.model_dump()
-            snap["checkpoint"] = None
-            st.checkpoint = snap
+            st.checkpoint = snapshot(st)
+            if not any(ch["scene"] == target for ch in st.chapters):
+                st.chapters.append({"scene": target, "title": scene.chapter or "", "state": snapshot(st)})
         if scene.ending:
             st.ended = scene.ending.id
             res.events.append(("ending", scene.ending.id))
@@ -352,8 +355,43 @@ def _enter(c: Campaign, st: RunState, target: str, res: Result, meta: Meta, ctx:
     raise GameError("слишком много переходов подряд")
 
 
+def snapshot(st: RunState) -> dict:
+    """Снимок состояния без вложенных снимков (главы и откат хранятся отдельно)."""
+    return st.model_dump(exclude={"chapters", "checkpoint"})
+
+
+def _shift_pending(st: RunState, delta: int) -> None:
+    for p in st.pending:
+        if p.get("unit") == "steps":
+            p["due"] += delta
+
+
+def chapter_title(c: Campaign, ch: dict, number: int) -> str:
+    scene = c.scenes.get(ch["scene"])
+    return (scene.chapter if scene and scene.chapter else ch.get("title")) or f"Глава {number}"
+
+
+def restore_chapter(c: Campaign, st: RunState, index: int) -> None:
+    """Вернуть прохождение к началу главы index; главы после неё отбрасываются.
+    Номер шага растёт дальше (на нём держится защита от старых кнопок)."""
+    if not 0 <= index < len(st.chapters):
+        raise GameError("нет такой главы")
+    ch = st.chapters[index]
+    new = RunState.model_validate(ch["state"])
+    _shift_pending(new, st.steps + 1 - new.steps)
+    new.steps = st.steps + 1
+    new.chapters = [dict(x) for x in st.chapters[: index + 1]]
+    new.checkpoint = dict(ch["state"])
+    new.last_checkpoint = ch["scene"]
+    new.ended, new.awaiting_name = None, False
+    new.shown_system = []
+    new.shown_text = [f"Вы вернулись к началу главы «{chapter_title(c, ch, index + 1)}»."]
+    st.__dict__.update(new.__dict__)
+
+
 def migrate(c: Campaign, st: RunState) -> bool:
-    """Подогнать старый сейв под новую версию кампании. True — состояние изменилось (сохранить)."""
+    """Подогнать старый сейв (и снимки его глав) под новую версию кампании.
+    True — состояние изменилось (надо сохранить)."""
     before = st.model_dump_json()
 
     def resolve(sid: str | None) -> str | None:
@@ -363,21 +401,35 @@ def migrate(c: Campaign, st: RunState) -> bool:
             sid = c.renamed[sid]
         return sid
 
-    st.scene = resolve(st.scene)
-    st.last_checkpoint = resolve(st.last_checkpoint)
-    if st.last_checkpoint not in c.scenes:
-        st.last_checkpoint = None
-    for p in st.pending:
-        if p.get("goto"):
-            p["goto"] = resolve(p["goto"])
-            if p["goto"] not in c.scenes:
-                p["goto"] = None
-    if st.checkpoint:
-        st.checkpoint["scene"] = resolve(st.checkpoint["scene"])
-        if st.checkpoint["scene"] not in c.scenes:
-            st.checkpoint = None
-    for key, var in c.vars.items():
-        st.vars.setdefault(key, var.start)
+    def fix(s: RunState) -> None:
+        s.scene = resolve(s.scene)
+        s.last_checkpoint = resolve(s.last_checkpoint)
+        if s.last_checkpoint not in c.scenes:
+            s.last_checkpoint = None
+        for p in s.pending:
+            if p.get("goto"):
+                p["goto"] = resolve(p["goto"])
+                if p["goto"] not in c.scenes:
+                    p["goto"] = None
+        for key, var in c.vars.items():
+            s.vars.setdefault(key, var.start)
+        s.campaign_version = c.version
+
+    def fix_snap(snap: dict | None) -> dict | None:
+        if not snap:
+            return None
+        s = RunState.model_validate(snap)
+        fix(s)
+        return snapshot(s) if s.scene in c.scenes else None  # сцены больше нет — снимок выбрасываем
+
+    fix(st)
+    st.checkpoint = fix_snap(st.checkpoint)
+    chapters = []
+    for ch in st.chapters:
+        snap = fix_snap(ch["state"])
+        if snap:
+            chapters.append({**ch, "scene": snap["scene"], "state": snap})
+    st.chapters = chapters
     if st.scene not in c.scenes:
         target = st.last_checkpoint or c.start
         st.scene = target
@@ -386,7 +438,6 @@ def migrate(c: Campaign, st: RunState) -> bool:
             st.shown_system = []
             st.shown_text = [f"Кампания обновлена — вы на начале главы «{chapter}»." if chapter
                              else "Кампания обновлена — вы на последней контрольной точке."]
-    st.campaign_version = c.version
     return st.model_dump_json() != before
 
 

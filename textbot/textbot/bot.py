@@ -99,7 +99,8 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
         fn = game.approve_cmd if cmd.startswith("/approve") else game.revoke
         await send(msg, await run(msg.from_user.id, fn, int(arg.strip())))
 
-    commands = {"start": Game.start, "menu": Game.menu, "status": Game.status, "memento": Game.memento}
+    commands = {"start": Game.start, "menu": Game.menu, "status": Game.status, "memento": Game.memento,
+                "chapters": Game.chapters_cmd}
 
     for name, method in commands.items():
         async def handler(msg: Message, method=method) -> None:
@@ -140,6 +141,7 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
             BotCommand(command="start", description="Продолжить игру"),
             BotCommand(command="menu", description="Истории и сохранения"),
             BotCommand(command="status", description="Состояние героя"),
+            BotCommand(command="chapters", description="Главы: вернуться или копия в слот"),
             BotCommand(command="memento", description="Концовки и смерти"),
             BotCommand(command="about", description="Об игре"),
         ]
