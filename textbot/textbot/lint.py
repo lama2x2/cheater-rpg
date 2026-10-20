@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import expr
-from .model import Campaign, Goto, compile_effects, load_campaign, parse_expr
+from .model import Campaign, Goto, compile_effects, iter_conditions, load_campaign, parse_expr
 
 LOCK = "scene_ids.lock"  # id сцен прошлой версии: python -m textbot.lint <папка> --lock
 TEXT_LIMIT = 3500
@@ -21,6 +22,7 @@ class Report:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     endings: set[str] = field(default_factory=set)  # концовки, достижимые в режиме
+    joins: list[str] = field(default_factory=list)  # сцены с несколькими входами — вычитать склейки (--entries)
 
 
 def _targets(goto: Goto | None) -> list[str]:
@@ -99,6 +101,49 @@ def _order_checks(sid: str, i: int, ch, r: Report) -> None:
                               f"опишите, что случилось")
 
 
+def _from_refs(node: tuple) -> list[str]:
+    """Сцены, с которыми условие сравнивает from: from == 'id'."""
+    out = []
+    if node[0] in ("==", "!="):
+        for x, y in ((node[1], node[2]), (node[2], node[1])):
+            if x == ("name", "from") and y[0] == "str":
+                out.append(y[1])
+    for part in node[1:]:
+        if isinstance(part, tuple):
+            out += _from_refs(part)
+    return out
+
+
+def entries(c: Campaign) -> dict[str, list[tuple[str, str, str | None]]]:
+    """Входы в сцены по выборам: сцена → [(откуда, подпись выбора, текст-итог)]."""
+    out: dict[str, list[tuple[str, str, str | None]]] = defaultdict(list)
+    for s in c.scenes.values():
+        for ch in s.choices:
+            outs = [(ch.text, ch.goto)]
+            if ch.roll:
+                outs = [(b.text or ch.text, b.goto or ch.goto) for b in (ch.roll.success, ch.roll.fail)]
+            for text, goto in outs:
+                for t in _targets(goto):
+                    if t != s.id:
+                        out[t].append((s.id, ch.label, text))
+    return out
+
+
+def print_entries(c: Campaign) -> None:
+    """Для вычитки склеек: каждый вход в сцену и начало сцены, которое игрок увидит следом."""
+    for sid, ins in entries(c).items():
+        if len(ins) < 2:
+            continue
+        s = c.scenes[sid]
+        print(f"\n### {sid} — входов {len(ins)}")
+        for v in s.intro:
+            print(f"   вступление [{v.if_}]: {v.text}")
+        first = " ".join(s.text.strip().split("\n\n")[0].split())
+        print(f"   начало: {first}")
+        for src, label, text in ins:
+            print(f"   ← {src} «{label}»: {text or '—'}")
+
+
 def _hubs(edges: dict[str, set[str]], once: set[tuple[str, str]]) -> dict[str, str]:
     """Хабы: сцена с несколькими выходами, из которой можно сходить в соседнюю и вернуться
     назад; once — переходы, которые закрываются после первого раза (их if гасит сам выбор или вход
@@ -127,6 +172,9 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
             r.errors.append(f"{where}: нет сцены «{sid}»")
 
     need(c.start, "start")
+    for where, src in iter_conditions(c):
+        for sid in _from_refs(parse_expr(src)):
+            need(sid, f"{where} (from)")
     for old, new in c.renamed.items():
         if old in scenes:
             r.errors.append(f"renamed: «{old}» всё ещё есть среди сцен")
@@ -147,7 +195,7 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
         gotos: list[str] = []
         if _walk(compile_effects(s.on_enter, sid), reads, writes, gotos, flags):
             dying.add(sid)
-        for v in s.extra:
+        for v in s.extra + s.intro:
             reads |= expr.names_in(parse_expr(v.if_))
         for i, ch in enumerate(s.choices):
             where = f"{sid}.choices[{i}]"
@@ -212,6 +260,11 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
         if set_n and not read_n:
             r.warnings.append(f"флаг «{name}» ставится, но нигде не читается")
 
+    # склейки: начало сцены с несколькими входами должно подходить к каждому — напоминание
+    for sid, ins in entries(c).items():
+        if len({(src, label) for src, label, _ in ins}) >= 2 and not scenes[sid].intro:
+            r.joins.append(sid)
+
     # хабы: без again текст сцены при возврате повторится целиком
     for sid, back in sorted(_hubs(edges, once).items()):
         if not scenes[sid].again:
@@ -251,6 +304,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("folder")
     ap.add_argument("--mode", choices=["system", "real"])
     ap.add_argument("--lock", action="store_true", help="записать текущие id сцен как «прошлую версию»")
+    ap.add_argument("--entries", action="store_true", help="показать все входы в сцены с несколькими входами")
     a = ap.parse_args(argv)
     try:
         c = load_campaign(a.folder)
@@ -258,12 +312,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ОШИБКА загрузки: {e}")
         return 1
     rep = lint(c, a.mode)
+    if a.entries:
+        print_entries(c)
     for w in rep.warnings:
         print(f"предупреждение: {w}")
     for e in rep.errors:
         print(f"ОШИБКА: {e}")
     print(f"{c.id} ({a.mode or c.mode}): сцен {len(c.scenes)}, концовки: {', '.join(sorted(rep.endings)) or '—'}; "
           f"ошибок {len(rep.errors)}, предупреждений {len(rep.warnings)}")
+    if rep.joins and not a.entries:
+        print(f"напоминание: сцен с несколькими входами без intro — {len(rep.joins)}; начало каждой должно "
+              f"подходить ко всем входам — вычитайте: python -m textbot.lint {a.folder} --entries")
     if a.lock and not rep.errors:
         (Path(a.folder) / LOCK).write_text("\n".join(sorted(c.scenes)) + "\n", encoding="utf-8")
         print(f"записано {LOCK}")

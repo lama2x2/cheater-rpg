@@ -5,7 +5,7 @@
           | die 'причина' | system 'строка Системы' | note 'строка для всех режимов'
 
 Имена: flag.<id> (bool), var.<id>, item.<id> (int), time, steps, lives, deaths,
-mode ('system' | 'real'), meta.runs, meta.ending.<id> (bool).
+mode ('system' | 'real'), meta.runs, meta.ending.<id> (bool), from (id сцены, откуда пришли).
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ TOKEN = re.compile(
     r"|(?P<op>==|!=|<=|>=|\+=|-=|[<>=+\-*()]))"
 )
 KEYWORDS = {"and", "or", "not", "true", "false"}
-ROOTS = {"flag", "var", "item", "time", "steps", "lives", "deaths", "mode", "meta"}
+ROOTS = {"flag", "var", "item", "time", "steps", "lives", "deaths", "mode", "meta", "from"}
 ASSIGNABLE = {"var", "item", "time", "lives"}
 
 

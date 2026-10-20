@@ -49,6 +49,7 @@ class RunState(BaseModel):
     seen: dict[str, list[int]] = {}   # сцены, чей текст уже показан, → номера показанных extra
     seen_extra: list[int] = []        # extra текущей сцены, показанные до этого экрана
     shown_status: str | None = None   # шапка на прошлом экране: повторяем, только когда изменилась
+    came_from: str | None = None      # сцена, из которой пришли в текущую (from в условиях)
 
     @model_validator(mode="before")
     @classmethod
@@ -151,6 +152,8 @@ def getter(st: RunState, meta: Meta):
             raise GameError(f"неизвестное имя {name}")
         if root == "mode":
             return st.mode
+        if root == "from":
+            return st.came_from or ""
         return getattr(st, root)
     return get
 
@@ -183,11 +186,13 @@ def view(c: Campaign, st: RunState, meta: Meta, full: bool = False) -> Screen:
     scene = c.scenes[st.scene]
     extras = [(i, v.text) for i, v in enumerate(scene.extra) if check(v.if_, st, meta)]
 
+    intro = next(([v.text] for v in scene.intro if check(v.if_, st, meta)), [])
+
     def body(mode: str) -> list[str]:
         if mode == "full":
-            return [scene.text] + [t for _, t in extras]
+            return intro + [scene.text] + [t for _, t in extras]
         fresh = [t for i, t in extras if i not in st.seen_extra]
-        return ([scene.again] if mode == "again" and scene.again else []) + fresh
+        return (intro + [scene.again] if mode == "again" and scene.again else []) + fresh
 
     system = st.mode == "system"
     before = [(k, t) for k, t in st.shown if k == "text" or (system and k == "system")]
@@ -267,6 +272,8 @@ def choose(c: Campaign, st: RunState, index: int, meta: Meta) -> Result:
         if not (target and target in c.scenes and c.scenes[target].ending):
             target = c.time.on_limit
     if target:  # без перехода — остаёмся в сцене, вход не повторяем
+        if target not in (REWIND, prev):
+            st.came_from = prev
         _enter(c, st, target, res, meta, ctx)
         on_limit = c.time.on_limit if c.time else None
         if target not in (REWIND, on_limit) and not st.ended and _time_ran_out(c, st, time_before):
@@ -492,6 +499,7 @@ def migrate(c: Campaign, st: RunState) -> bool:
     def fix(s: RunState) -> None:
         s.scene = resolve(s.scene)
         s.last_checkpoint = resolve(s.last_checkpoint)
+        s.came_from = resolve(s.came_from)
         if s.last_checkpoint not in c.scenes:
             s.last_checkpoint = None
         for p in s.pending:

@@ -69,7 +69,7 @@ python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 ```
 - `python -m textbot.lint campaigns/demo [--mode real]` — битые ссылки, тупики, недостижимые
   сцены, неизвестные флаги и переменные, длина текста, хабы без `again`, реплики с пустым или
-  повторяемым ответом.
+  повторяемым ответом; `--entries` — входы в сцены с несколькими входами, чтобы вычитать склейки.
 - `python -m textbot.play campaigns/demo [--mode real]` — играть в терминале.
 - `python -m textbot.autoplay campaigns/demo -n 2000` — случайные прохождения: тупики,
   зацикливание, все ли концовки достижимы, распределение концовок; и экраны глазами игрока —

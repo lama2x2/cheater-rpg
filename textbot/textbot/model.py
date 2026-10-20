@@ -62,6 +62,7 @@ class Scene(_M):
     chapter: str | None = None   # название главы — для сообщения «вы на начале главы …»
     text: str
     again: str | None = None     # короткий текст при возврате в сцену (вместо text); без него — text целиком
+    intro: list[TextVariant] = []  # вступление по условию (обычно по from — откуда пришли): первое подходящее — перед text
     extra: list[TextVariant] = []
     system: str | None = None
     on_enter: list[Any] = []
@@ -174,6 +175,8 @@ def iter_conditions(c: Campaign):
     for s in c.scenes.values():
         for v in s.extra:
             yield f"{s.id}.extra", v.if_
+        for v in s.intro:
+            yield f"{s.id}.intro", v.if_
         for i, ch in enumerate(s.choices):
             where = f"{s.id}.choices[{i}]"
             if ch.if_:

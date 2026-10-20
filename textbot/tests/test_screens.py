@@ -167,3 +167,40 @@ def test_reader_flags_repeated_paragraph(make_campaign):
     pick(c, st, "Назад")
     problems, repeats = reader.look(st, engine.view(c, st, Meta()), "yard")
     assert repeats == {LONG} and "абзац повторяется" in problems[0]
+
+
+def test_intro_depends_on_where_we_came_from(make_campaign):
+    scenes = [
+        {"id": "street", "text": "Улица.", "choices": [
+            {"label": "Под машину", "goto": "car"}, {"label": "На крышу", "goto": "roof"}]},
+        {"id": "car", "text": "Под машиной.", "choices": [{"label": "Вылезти", "goto": "roof"}]},
+        {"id": "roof", "text": "Гудрон и дым.", "intro": [
+            {"if": "from == 'car'", "text": "Вы выбираетесь из-под машины."}],
+         "choices": [
+             {"label": "Ждать рассвета", "if": "from != 'car'", "goto": "end"},
+             {"label": "Дальше", "goto": "end"}]},
+        {"id": "end", "text": "Конец.", "ending": {"id": "end", "title": "Конец"}},
+    ]
+    c = make_campaign({}, scenes)
+    st = engine.new_run(c, seed=1)
+    pick(c, st, "Под машину")
+    pick(c, st, "Вылезти")
+    scr = engine.view(c, st, Meta())
+    assert st.came_from == "car" and scr.text == ["Вы выбираетесь из-под машины.", "Гудрон и дым."]
+    assert [ch.label for ch in scr.choices] == ["Дальше"]
+    st = engine.new_run(c, seed=1)
+    pick(c, st, "На крышу")
+    scr = engine.view(c, st, Meta())
+    assert scr.text == ["Гудрон и дым."] and len(scr.choices) == 2
+
+
+def test_lint_checks_from_and_lists_joins(make_campaign):
+    scenes = [
+        {"id": "a", "text": "А.", "choices": [{"label": "1", "goto": "b"}, {"label": "2", "goto": "b"}]},
+        {"id": "b", "text": "Б.", "extra": [{"if": "from == 'nowhere'", "text": "?"}],
+         "choices": [{"label": "Конец", "goto": "end"}]},
+        {"id": "end", "text": "Конец.", "ending": {"id": "end", "title": "Конец"}},
+    ]
+    rep = lint(make_campaign({}, scenes))
+    assert any("nowhere" in e for e in rep.errors)  # from сравнивается с несуществующей сценой
+    assert rep.joins == ["b"]                        # два входа без intro — напоминание вычитать склейку
