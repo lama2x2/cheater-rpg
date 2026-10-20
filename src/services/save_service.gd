@@ -89,7 +89,11 @@ func start_new_game(carry: Dictionary = {}, options: Dictionary = {}) -> void:
 	WorldSim.new_world()
 	# Происхождение (16): с экрана новой игры, у «Новой игры+» — то же, что было.
 	var origin_kind := String(options.get("origin", carry.get("origin", OriginRules.ORDINARY)))
-	PlayerState.start_origin(origin_kind, String(options.get("variant", OriginRules.RANDOM)))
+	# Первая игра — с прологом и онбордингом (задача 17), куш — в своей сцене; «Новая игра+» — сразу.
+	var onboarding := carry.is_empty() and not bool(options.get("skip_onboarding", false))
+	PlayerState.start_origin(origin_kind, String(options.get("variant", OriginRules.RANDOM)), not onboarding)
+	if onboarding:
+		PlayerState.begin_onboarding()
 	StabState.setup()
 	_pending = {}
 	get_tree().reload_current_scene()

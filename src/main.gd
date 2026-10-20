@@ -31,11 +31,16 @@ const ContainerWindowScript := preload("res://src/ui/container_window.gd")
 const CharacterWindowScript := preload("res://src/ui/character_window.gd")
 const LogPanelScript := preload("res://src/ui/log_panel.gd")
 const LogCardScript := preload("res://src/ui/log_card.gd")
+const OnboardingDirectorScript := preload("res://src/world/onboarding_director.gd")
+const TutorialHintScript := preload("res://src/ui/tutorial_hint.gd")
+const MentorWindowScript := preload("res://src/ui/mentor_window.gd")
 
 var _death_flow: Node
 var _environment: Environment
 ## Отладочные аргументы срабатывают один раз за запуск: переход и загрузка пересобирают сцену.
 static var _debug_args_done := false
+## --new-game: новая игра запускается один раз (сцена пересоберётся, аргументы — потом).
+static var _new_game_done := false
 ## Титульный экран — один раз за запуск: без аргументов (обычный запуск игры) или с --title.
 static var _title_done := false
 
@@ -83,6 +88,8 @@ func _ready() -> void:
 	add_child(CharacterWindowScript.new())
 	add_child(_hud(LogPanelScript.new()))
 	add_child(LogCardScript.new())
+	add_child(_hud(TutorialHintScript.new()))
+	add_child(MentorWindowScript.new())
 	var map_watcher: Node = MapWatcherScript.new()
 	map_watcher.area = area
 	map_watcher.hero = player
@@ -103,6 +110,12 @@ func _ready() -> void:
 	_death_flow = DeathFlowScript.new()
 	_death_flow.hero = player
 	add_child(_death_flow)
+
+	var onboarding: Node = OnboardingDirectorScript.new()
+	onboarding.hero = player
+	onboarding.area = area
+	onboarding.population = population
+	add_child(onboarding)
 
 	var director: Node = ClusterDirectorScript.new()
 	director.name = "ClusterDirector"
@@ -172,6 +185,10 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --map=TAB     открыть карту: cluster или region (и --reveal — карты всех кластеров)
 ##   --tip=ID      показать подсказку предмета ID (со сравнением с оружием в руках)
 ##   --container=S через S секунд открыть окно ближайшего контейнера (труп героя, тайник)
+##   --new-game[=KIND[:VARIANT]]  новая игра с онбордингом: cheater (по умолчанию) или ordinary,
+##                 вариант — id из data/origins.json (по умолчанию случайно)
+##   --skip-prologue  сразу после пролога (пробуждение)
+##   --onboarding=STEP  поставить шаг начала игры (mentor, sack, return…); с --talk=mentor — окно наставника
 ##   --log         открыть окно лога Системы
 ##   --char        открыть экран персонажа (с 3 свободными очками)
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
@@ -180,6 +197,13 @@ func _unhandled_input(event: InputEvent) -> void:
 func _handle_debug_args() -> void:
 	if _debug_args_done:
 		return
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--new-game") and not _new_game_done:
+			_new_game_done = true
+			var spec := arg.trim_prefix("--new-game").trim_prefix("=").split(":")
+			var kind := spec[0] if not spec[0].is_empty() else OriginRules.CHEATER
+			SaveService.start_new_game.call_deferred({}, {"origin": kind, "variant": spec[1] if spec.size() > 1 else OriginRules.RANDOM})
+			return
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--cluster="):
 			var target := arg.trim_prefix("--cluster=")
@@ -243,6 +267,14 @@ func _handle_debug_args() -> void:
 			_debug_tip.call_deferred(arg.trim_prefix("--tip="))
 		elif arg.begins_with("--container="):
 			_debug_container.call_deferred(float(arg.trim_prefix("--container=")))
+		elif arg.begins_with("--onboarding="):
+			PlayerState.onboarding_step = arg.trim_prefix("--onboarding=")
+			PlayerState.onboarding_changed.emit(PlayerState.onboarding_step)
+		elif arg == "--skip-prologue":
+			(func() -> void:
+				for node in get_children():
+					if node.has_method("_finish"):
+						node._finish()).call_deferred()
 		elif arg == "--log":
 			(func() -> void: get_tree().get_first_node_in_group("log_panel").open()).call_deferred()
 		elif arg == "--char":

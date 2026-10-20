@@ -7,6 +7,8 @@ signal inventory_changed
 signal skills_changed
 ## Уровень характеристики изменился или потрачены свободные очки (экран персонажа).
 signal stats_changed
+## Шаг начала игры сменился (задача 17): подсказки, наставник, сцена куша.
+signal onboarding_changed(step: String)
 
 var stats: StatBlock
 var vitals: Vitals
@@ -59,6 +61,12 @@ var newbie_until := 0.0
 var cheater_property := false
 var cheater_since_day := -1
 var impossible_events := 0
+## Начало игры (задача 17): имя после крестин ("" — «Объект»), крестины были, шаг онбординга
+## ("" — онбординга нет: «Новая игра+», отладка), куш варианта ждёт своей сцены.
+var hero_name := ""
+var christened := false
+var onboarding_step := ""
+var pending_jackpot := false
 ## Для сообщений лога (задача 16): общий уровень, «мало здоровья», окно новичка ещё открыто.
 var _general_level := 0
 var _low_health_warned := false
@@ -111,6 +119,10 @@ func setup() -> void:
 	cheater_property = false
 	cheater_since_day = -1
 	impossible_events = 0
+	hero_name = ""
+	christened = false
+	onboarding_step = ""
+	pending_jackpot = false
 	_was_overloaded = false
 	_last_damage_source = "health"
 	_farm_warned = {}
@@ -349,7 +361,7 @@ func equip_weapon(id: String) -> String:
 
 ## Новая игра: Обычный или Читер с вариантом choice ("random" или id) — куш сразу (до сцен
 ## пролога задачи 17) с сообщением Системы.
-func start_origin(kind: String, choice: String = OriginRules.RANDOM) -> void:
+func start_origin(kind: String, choice: String = OriginRules.RANDOM, immediate: bool = true) -> void:
 	var rules := Content.origin_rules()
 	origin = OriginRules.CHEATER if kind == OriginRules.CHEATER else OriginRules.ORDINARY
 	origin_variant = ""
@@ -362,8 +374,55 @@ func start_origin(kind: String, choice: String = OriginRules.RANDOM) -> void:
 	origin_debts = rules.debts(origin_variant)
 	cheater_property = true  # скрытое: проявится после крестин (задача 17)
 	cheater_since_day = 1
-	_grant(rules.grants(origin_variant))
+	pending_jackpot = true
+	if immediate:
+		grant_jackpot()
+
+
+## Выдать куш варианта (сцена пролога или сразу). Повторно не выдаётся.
+func grant_jackpot() -> void:
+	if not pending_jackpot or origin != OriginRules.CHEATER:
+		return
+	pending_jackpot = false
+	_grant(Content.origin_rules().grants(origin_variant))
 	SystemLog.post("origin_jackpot", {"name": Content.ui("origin_" + origin_variant)}, "special")
+
+
+## Новая игра (не «Новая игра+»): пролог, пробуждение, наставник, крестины (задача 17).
+func begin_onboarding() -> void:
+	onboarding_step = OnboardingRules.START
+	onboarding_changed.emit(onboarding_step)
+
+
+## Событие онбординга: шаг меняется по data/onboarding.json.
+func onboarding_event(event: String) -> void:
+	if onboarding_step.is_empty():
+		return
+	var next := Content.onboarding_rules().next(onboarding_step, event)
+	if next != onboarding_step:
+		onboarding_step = next
+		onboarding_changed.emit(onboarding_step)
+
+
+## Крестины (3.5): имя (или кличка по поступку), скрытые характеристики открываются, первый общий
+## уровень — свободные очки, окно новичка закрывается (16.2). Возвращает итог OnboardingRules.christen.
+func christen(requested: String) -> Dictionary:
+	if christened:
+		return {"name": hero_name, "nickname": false}
+	var rules := Content.onboarding_rules()
+	var result := rules.christen(requested, {"deaths": deaths, "kills": run.count("kills"), "sacks_opened": run.count("sacks_opened")}, _rng)
+	hero_name = String(result["name"])
+	christened = true
+	free_points += int(rules.config()["christening"]["free_points"])
+	SystemLog.post("christened_nickname" if result["nickname"] else "christened", {"name": hero_name}, "special")
+	SystemLog.post("hidden_stats_open", {"n": free_points}, "progress")
+	if cheater_property:
+		SystemLog.post("cheater_revealed", {}, "special")
+	if pending_jackpot and String(rules.jackpot_scene(origin_variant)["kind"]) == "christening":
+		grant_jackpot()
+	stats_changed.emit()
+	onboarding_event("christened")
+	return result
 
 
 func _grant(list: Array) -> void:
@@ -406,7 +465,7 @@ func _grant(list: Array) -> void:
 
 
 func in_newbie_window() -> bool:
-	return OriginRules.newbie_active(GameClock.minutes, newbie_until)
+	return OriginRules.newbie_active(GameClock.minutes, newbie_until, christened)
 
 
 func _has_base_risk(id: String) -> bool:
@@ -555,6 +614,7 @@ func continue_after_final() -> void:
 func ng_plus_carry() -> Dictionary:
 	var known := skills.to_dict()
 	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"], "save_mode": save_mode, "origin": origin,
+		"hero_name": hero_name, "christened": christened,
 		"skills": {"learned": known["learned"], "active_list": known["active_list"]}}
 
 
@@ -562,6 +622,8 @@ func ng_plus_carry() -> Dictionary:
 func apply_carry(carry: Dictionary) -> void:
 	ng_plus = int(carry.get("ng_plus", 0))
 	save_mode = String(carry.get("save_mode", save_mode))
+	hero_name = String(carry.get("hero_name", ""))
+	christened = bool(carry.get("christened", false))
 	if carry.has("primary"):
 		inventory.load_dict({"primary": carry["primary"], "backpack": []})
 	if carry.has("skills"):
@@ -587,6 +649,7 @@ func to_dict() -> Dictionary:
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus, "save_mode": save_mode,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
 		"quick_slots": Array(quick_slots), "junk_marks": junk_marks.keys(),
+		"hero": {"name": hero_name, "christened": christened, "onboarding": onboarding_step, "pending_jackpot": pending_jackpot},
 		"origin": {"kind": origin, "variant": origin_variant, "chosen": origin_chosen, "debts": Array(origin_debts),
 			"newbie_until": newbie_until, "cheater_property": cheater_property, "cheater_since_day": cheater_since_day,
 			"impossible_events": impossible_events},
@@ -644,6 +707,12 @@ func load_dict(data: Dictionary) -> void:
 	cheater_property = bool(o["cheater_property"])
 	cheater_since_day = int(o["cheater_since_day"])
 	impossible_events = int(o["impossible_events"])
+	# Имя, крестины и онбординг — с задачи 17 (необязательный раздел, версия формата та же).
+	var hero: Dictionary = data.get("hero", {})
+	hero_name = String(hero.get("name", ""))
+	christened = bool(hero.get("christened", false))
+	onboarding_step = String(hero.get("onboarding", ""))
+	pending_jackpot = bool(hero.get("pending_jackpot", false))
 	_general_level = stats.general_level()
 	_newbie_was_open = in_newbie_window()
 	skills_changed.emit()
