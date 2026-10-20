@@ -134,6 +134,9 @@ func _show(target: Node3D) -> void:
 		_line(kind_line, Color(0.7, 0.72, 0.75), 13)
 	if card["unavailable"]:
 		_line(Content.ui("gaze_unavailable"), Color(0.95, 0.5, 0.4))
+		if PlayerState.run.count("gaze_unavailable") == 0:
+			SystemLog.post("gaze_unavailable_hint", {})
+		PlayerState.run.add("gaze_unavailable")
 	for field: Array in card["fields"]:
 		var key := String(field[0])
 		if key in ["name", "category"]:

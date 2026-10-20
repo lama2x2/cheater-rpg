@@ -155,6 +155,7 @@ func _check_all(alive: bool) -> void:
 				if seen:
 					_drop_ghost(id)
 					_confirm_sense(id)
+					_first_sight(node)
 				elif known:
 					_spawn_ghost(id, node)
 	for id in _seen.keys():
@@ -235,6 +236,19 @@ func _sense_tick() -> void:
 		if _rng.randf() < chance:
 			alarms[id] = {"node": target, "left": float(sense["hold_s"])}
 			_sensed_at[id] = Time.get_ticks_msec()
+			if PlayerState.run.count("sense_triggered") == 0:
+				SystemLog.post("sense_first", {}, "special")
+			PlayerState.run.add("sense_triggered")
+
+
+## Первая встреча с видом тварей за игру — справка Системы (лог, задача 16).
+func _first_sight(node: Node3D) -> void:
+	var enemy := String(node.get("enemy_id"))
+	if enemy.is_empty() or PlayerState.run.count("seen_" + enemy) > 0:
+		return
+	PlayerState.run.add("seen_" + enemy)
+	var data := Content.enemy_db().enemy(enemy)
+	SystemLog.post("species_seen", {"enemy": Content.enemy_name(enemy), "threat": Content.ui("threat_" + String(data["threat"]))}, "info")
 
 
 ## Чуйка подтвердилась: угрозу увидели вскоре после «!» — немного Наблюдательности.

@@ -95,6 +95,11 @@ func _process(delta: float) -> void:
 
 func _on_hour_passed(hour: int, day: int) -> void:
 	_check_reloads(((day - 1) * 24 + hour) * 60.0)
+	var vision := Content.vision_rules().config()
+	if hour == int(vision["night_from"]):
+		SystemLog.post("night_fell", {}, "warning")
+	elif hour == int(vision["night_to"]):
+		SystemLog.post("dawn", {})
 	for id: String in clusters:
 		var turned := population.tick_hour(clusters[id]["pop"])
 		if id == current and turned > 0.0:

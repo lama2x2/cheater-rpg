@@ -11,6 +11,8 @@ const ACCENT := Color(0.95, 0.78, 0.3)
 const GOOD := Color(0.45, 0.85, 0.45)
 const BAD := Color(0.95, 0.4, 0.35)
 const PANEL_ALPHA := 0.92
+## Открытые окна — с этого слоя и выше (меню Esc — 20, карточки событий — 18).
+const WINDOW_LAYER := 9
 
 static var _font: Font
 static var _theme: Theme
@@ -197,13 +199,20 @@ static func apply_hud_opacity(tree: SceneTree, value: float) -> void:
 # --- Стек окон ---------------------------------------------------------------------------------
 
 ## Окно открылось — наверх стека. У окна должен быть метод close().
+## Слой окна поднимается над остальными открытыми (последнее открытое — сверху).
 static func window_opened(window: Node) -> void:
 	_windows.erase(window)
 	_windows.append(window)
+	if window is CanvasLayer:
+		if not window.has_meta("base_layer"):
+			window.set_meta("base_layer", (window as CanvasLayer).layer)
+		(window as CanvasLayer).layer = WINDOW_LAYER + _windows.size()
 
 
 static func window_closed(window: Node) -> void:
 	_windows.erase(window)
+	if window is CanvasLayer and window.has_meta("base_layer"):
+		(window as CanvasLayer).layer = int(window.get_meta("base_layer"))
 
 
 ## Esc: закрыть верхнее открытое окно. false — открытых окон нет (тогда Esc открывает меню).

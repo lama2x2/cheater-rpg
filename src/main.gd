@@ -29,6 +29,8 @@ const QuickBarScript := preload("res://src/ui/quick_bar.gd")
 const PickupToastsScript := preload("res://src/ui/pickup_toasts.gd")
 const ContainerWindowScript := preload("res://src/ui/container_window.gd")
 const CharacterWindowScript := preload("res://src/ui/character_window.gd")
+const LogPanelScript := preload("res://src/ui/log_panel.gd")
+const LogCardScript := preload("res://src/ui/log_card.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -79,6 +81,8 @@ func _ready() -> void:
 	add_child(PickupToastsScript.new())
 	add_child(ContainerWindowScript.new())
 	add_child(CharacterWindowScript.new())
+	add_child(_hud(LogPanelScript.new()))
+	add_child(LogCardScript.new())
 	var map_watcher: Node = MapWatcherScript.new()
 	map_watcher.area = area
 	map_watcher.hero = player
@@ -168,6 +172,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --map=TAB     открыть карту: cluster или region (и --reveal — карты всех кластеров)
 ##   --tip=ID      показать подсказку предмета ID (со сравнением с оружием в руках)
 ##   --container=S через S секунд открыть окно ближайшего контейнера (труп героя, тайник)
+##   --log         открыть окно лога Системы
 ##   --char        открыть экран персонажа (с 3 свободными очками)
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
@@ -238,6 +243,8 @@ func _handle_debug_args() -> void:
 			_debug_tip.call_deferred(arg.trim_prefix("--tip="))
 		elif arg.begins_with("--container="):
 			_debug_container.call_deferred(float(arg.trim_prefix("--container=")))
+		elif arg == "--log":
+			(func() -> void: get_tree().get_first_node_in_group("log_panel").open()).call_deferred()
 		elif arg == "--char":
 			PlayerState.free_points += 3
 			(func() -> void: get_tree().get_first_node_in_group("character_window").open()).call_deferred()

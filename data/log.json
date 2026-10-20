@@ -1,0 +1,22 @@
+{
+  "_doc": "Лог Системы (docs/spec/12_ui_ux.md, 12.2; задача 16). hud_lines — сколько последних строк видно в HUD (развернуть — клавиша L). tabs — вкладки окна лога: виды сообщений (пусто — все). kind_colors — цвет строки по виду. cards — ключи сообщений, которые показываются ещё и полноэкранной карточкой (крупные события), card_s — сколько карточка держится. low_health — ниже этой доли здоровья Система предупреждает (раз, пока не поднимется выше recover).",
+  "hud_lines": 3,
+  "tabs": [
+    { "id": "all", "kinds": [] },
+    { "id": "progress", "kinds": ["progress"] },
+    { "id": "events", "kinds": ["special", "death"] },
+    { "id": "warnings", "kinds": ["warning"] },
+    { "id": "other", "kinds": ["info"] }
+  ],
+  "kind_colors": {
+    "info": [0.86, 0.88, 0.85],
+    "progress": [0.55, 0.85, 0.55],
+    "special": [0.95, 0.8, 0.4],
+    "warning": [0.95, 0.55, 0.4],
+    "death": [0.95, 0.35, 0.3]
+  },
+  "cards": ["general_level_up", "skill_learned", "skill_awakened", "origin_jackpot", "region_shift", "cheater_later", "cluster_timer_learned", "death_final"],
+  "card_s": 4.0,
+  "low_health": 0.25,
+  "low_health_recover": 0.5
+}

@@ -59,6 +59,10 @@ var newbie_until := 0.0
 var cheater_property := false
 var cheater_since_day := -1
 var impossible_events := 0
+## Для сообщений лога (задача 16): общий уровень, «мало здоровья», окно новичка ещё открыто.
+var _general_level := 0
+var _low_health_warned := false
+var _newbie_was_open := false
 ## Быстрые слоты расходников F1–F4 (12.8): id предмета или "".
 var quick_slots: PackedStringArray = ["", "", "", ""]
 ## Помеченное игроком как хлам (вкладка «Хлам», «Продать весь хлам»): {id: true}.
@@ -129,6 +133,9 @@ func setup() -> void:
 	_waiting_ready = {}
 	start_minutes = GameClock.minutes
 	newbie_until = Content.origin_rules().newbie_until(start_minutes)
+	_general_level = stats.general_level()
+	_low_health_warned = false
+	_newbie_was_open = true
 
 
 func add_progress(stat: String, points: float) -> void:
@@ -186,6 +193,7 @@ func _process(delta: float) -> void:
 		if not String(buff["source"]).begins_with("skill:"):
 			SystemLog.post("buff_ended", {"stat": Content.stat_name(buff["stat"])})
 	_skills_tick(delta)
+	_check_newbie_window()
 	if wounds and wounds.is_bleeding() and not awaiting_respawn:
 		var loss := wounds.tick(delta)
 		_last_damage_source = "bleeding"
@@ -215,6 +223,8 @@ func consume(id: String, confirmed: bool = false) -> String:
 	var newbie := in_newbie_window()
 	if trophies.is_violation(id, GameClock.minutes) and not confirmed and not newbie:
 		return "needs_confirm"
+	# Окно новичка спасло, только если без него был бы штраф или риск (сообщение — тогда).
+	var saved_by_window := newbie and (trophies.is_violation(id, GameClock.minutes) or _has_base_risk(id))
 	inventory.remove(id, 1)
 	var requires: Dictionary = trophies.spec(id).get("requires", {})
 	for need: String in requires:
@@ -224,7 +234,7 @@ func consume(id: String, confirmed: bool = false) -> String:
 		"additional_stats": stats.additional_stats(), "vitals": Array(Vitals.ALL), "newbie": newbie,
 	})
 	_apply_consume(result)
-	if newbie and not trophies.spec(id).get("risks", []).is_empty():
+	if saved_by_window:
 		_newbie_trophy(id)
 	_after_inventory_change()
 	return "ok"
@@ -301,6 +311,7 @@ func hurt(amount: float, source: String, bleed_chance: float = 0.0) -> void:
 		return
 	_stress_awaken(amount)
 	_last_damage_source = source
+	_check_low_health(amount)
 	EventBus.player_hurt.emit(amount, source)
 	if bleed_chance > 0.0 and _rng.randf() < bleed_chance:
 		var was_bleeding := wounds.is_bleeding()
@@ -398,6 +409,13 @@ func in_newbie_window() -> bool:
 	return OriginRules.newbie_active(GameClock.minutes, newbie_until)
 
 
+func _has_base_risk(id: String) -> bool:
+	for risk: Dictionary in trophies.spec(id).get("risks", []):
+		if float(risk.get("chance", 0.0)) > 0.0:
+			return true
+	return false
+
+
 ## Приём рискованного трофея в окне новичка: лог, для Обычного — шаг к «читеру позже» (D-68).
 func _newbie_trophy(id: String) -> void:
 	SystemLog.post("newbie_window_saved", {"item": Content.item_name(id)}, "special")
@@ -410,12 +428,33 @@ func _newbie_trophy(id: String) -> void:
 		SystemLog.post("cheater_later", {}, "special")
 
 
+## «Мало здоровья» — раз, пока здоровье снова не поднимется выше порога восстановления.
+func _check_low_health(incoming: float) -> void:
+	var cfg := Content.log_filter().config()
+	var ratio := (vitals.value(Vitals.HEALTH) - incoming) / maxf(vitals.max_value(Vitals.HEALTH), 1.0)
+	if ratio > float(cfg["low_health_recover"]):
+		_low_health_warned = false
+	elif ratio < float(cfg["low_health"]) and ratio > 0.0 and not _low_health_warned:
+		_low_health_warned = true
+		SystemLog.post("health_low", {}, "warning")
+
+
+## Окно новичка закрылось — сухое сообщение (один раз).
+func _check_newbie_window() -> void:
+	var open := in_newbie_window()
+	if _newbie_was_open and not open and newbie_until > start_minutes:
+		SystemLog.post("newbie_window_over", {}, "warning")
+	_newbie_was_open = open
+
+
 ## Быстрый слот index (0..3) ← предмет id ("" — очистить). Один предмет — в одном слоте.
 func set_quick_slot(index: int, id: String) -> void:
 	for i in quick_slots.size():
 		if quick_slots[i] == id:
 			quick_slots[i] = ""
 	quick_slots[index] = id
+	if not id.is_empty():
+		SystemLog.post("quick_assigned", {"item": Content.item_name(id), "n": index + 1})
 	inventory_changed.emit()
 
 
@@ -605,6 +644,8 @@ func load_dict(data: Dictionary) -> void:
 	cheater_property = bool(o["cheater_property"])
 	cheater_since_day = int(o["cheater_since_day"])
 	impossible_events = int(o["impossible_events"])
+	_general_level = stats.general_level()
+	_newbie_was_open = in_newbie_window()
 	skills_changed.emit()
 
 
@@ -629,6 +670,11 @@ func _on_stat_level_changed(stat: String, old_level: int, new_level: int) -> voi
 	if skills:
 		_on_skill_levels_changed(stat, old_level, new_level)
 	stats_changed.emit()
+	if stats.general_level() > _general_level:
+		_general_level = stats.general_level()
+		SystemLog.post("general_level_up", {"level": _general_level}, "progress")
+	elif stats.general_level() < _general_level:
+		_general_level = stats.general_level()
 	var params := {"stat": Content.stat_name(stat), "level": new_level}
 	if new_level < old_level:
 		SystemLog.post("stat_level_lost", params, "warning")

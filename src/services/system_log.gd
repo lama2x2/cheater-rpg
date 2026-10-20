@@ -2,6 +2,8 @@ extends Node
 ## Лог Системы: выбирает вариант текста по ключу, хранит историю, сообщает интерфейсу.
 
 signal message_posted(text: String, kind: String)
+## То же сообщение целиком: {"text", "kind", "minutes", "key"} — панель лога и карточки событий.
+signal entry_posted(entry: Dictionary)
 signal history_replaced
 
 ## Сколько последних сообщений попадает в сохранение.
@@ -16,11 +18,12 @@ var _rng := RandomNumberGenerator.new()
 
 func post(key: String, params: Dictionary = {}, kind: String = "info") -> String:
 	var text := _pick_variant(key).format(params)
-	var entry := {"text": text, "kind": kind, "minutes": GameClock.minutes}
+	var entry := {"text": text, "kind": kind, "minutes": GameClock.minutes, "key": key}
 	history.append(entry)
 	if Content.death_config()["highlight_kinds"].has(kind):
 		highlights.append(entry)
 	message_posted.emit(text, kind)
+	entry_posted.emit(entry)
 	return text
 
 
@@ -45,7 +48,7 @@ func load_dict(data: Dictionary) -> void:
 
 
 func _entry(data: Dictionary) -> Dictionary:
-	return {"text": String(data["text"]), "kind": String(data["kind"]), "minutes": float(data["minutes"])}
+	return {"text": String(data["text"]), "kind": String(data["kind"]), "minutes": float(data["minutes"]), "key": String(data.get("key", ""))}
 
 
 func has_key(key: String) -> bool:

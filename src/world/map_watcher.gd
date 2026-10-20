@@ -16,6 +16,8 @@ func _ready() -> void:
 	_interval = float(Content.map_config()["seen_check_s"])
 	if WorldSim.knowledge.visit(WorldSim.current):
 		EventBus.map_changed.emit()
+		if WorldSim.current != String(WorldSim.region.region["start"]):
+			SystemLog.post("map_cluster_added", {"name": WorldSim.cluster_name()}, "info")
 
 
 func _process(delta: float) -> void:
