@@ -44,7 +44,8 @@ def setup_logging(log_dir: Path) -> None:
 
 def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
     campaigns = {}
-    for cid in cfg.campaigns:
+    names = cfg.campaigns or sorted(p.parent.name for p in cfg.campaigns_dir.glob("*/campaign.yaml"))
+    for cid in names:
         c = load_campaign(cfg.campaigns_dir / cid)
         rep = lint(c)
         if rep.errors:
@@ -109,7 +110,7 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
     async def about(msg: Message) -> None:
         lines = ["Неофициальная фанатская игра в мире цикла «Читер» Артёма Каменистого. "
                  "Не связана с автором и издательством. Сюжет и тексты — свои. Некоммерческая.", ""]
-        lines += [f"<b>{escape(c.title)}</b> — {escape(c.about)}" for c in game.campaigns.values()]
+        lines += [f"<b>{escape(c.title)}</b> — {escape(c.about)}" for c in game.stories()]
         await msg.answer("\n".join(lines))
 
     @dp.message(F.text)
@@ -137,7 +138,7 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
     async def on_startup() -> None:
         base = [
             BotCommand(command="start", description="Продолжить игру"),
-            BotCommand(command="menu", description="Сохранения и новая игра"),
+            BotCommand(command="menu", description="Истории и сохранения"),
             BotCommand(command="status", description="Состояние героя"),
             BotCommand(command="memento", description="Концовки и смерти"),
             BotCommand(command="about", description="Об игре"),

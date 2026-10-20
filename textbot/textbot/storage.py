@@ -1,4 +1,4 @@
-"""SQLite: игроки, слоты прохождений, мета. Каждое сохранение — одна транзакция."""
+"""SQLite: доступ (заявки), игроки, сейвы по историям и слотам, мета. Каждое сохранение — одна транзакция."""
 from __future__ import annotations
 
 import sqlite3
@@ -10,20 +10,6 @@ from .engine import Meta, RunState
 SLOTS = 3
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS players (
-    tg_id INTEGER PRIMARY KEY,
-    name TEXT,
-    active_slot INTEGER NOT NULL DEFAULT 1,
-    created REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS slots (
-    tg_id INTEGER NOT NULL,
-    slot INTEGER NOT NULL,
-    campaign TEXT NOT NULL,
-    state TEXT NOT NULL,
-    updated REAL NOT NULL,
-    PRIMARY KEY (tg_id, slot)
-);
 CREATE TABLE IF NOT EXISTS users (
     tg_id INTEGER PRIMARY KEY,
     name TEXT,
@@ -33,6 +19,20 @@ CREATE TABLE IF NOT EXISTS users (
     notified_at REAL,                -- когда админу последний раз пришла заявка
     decided_by INTEGER,
     decided_at REAL
+);
+CREATE TABLE IF NOT EXISTS players (
+    tg_id INTEGER PRIMARY KEY,
+    name TEXT,
+    active_slot INTEGER NOT NULL DEFAULT 1,
+    created REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS saves (
+    tg_id INTEGER NOT NULL,
+    campaign TEXT NOT NULL,
+    slot INTEGER NOT NULL,
+    state TEXT NOT NULL,
+    updated REAL NOT NULL,
+    PRIMARY KEY (tg_id, campaign, slot)
 );
 CREATE TABLE IF NOT EXISTS meta (
     tg_id INTEGER NOT NULL,
@@ -50,15 +50,12 @@ class Storage:
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.executescript(SCHEMA)
+        cols = {r[1] for r in self.db.execute("PRAGMA table_info(players)")}
+        if "active_campaign" not in cols:  # база первой версии
+            self.db.execute("ALTER TABLE players ADD COLUMN active_campaign TEXT")
 
     def close(self) -> None:
         self.db.close()
-
-    def player(self, tg_id: int, name: str | None = None) -> int:
-        """Создаёт игрока при первом визите; возвращает активный слот."""
-        self.db.execute(
-            "INSERT OR IGNORE INTO players (tg_id, name, created) VALUES (?, ?, ?)", (tg_id, name, time.time()))
-        return self.db.execute("SELECT active_slot FROM players WHERE tg_id = ?", (tg_id,)).fetchone()[0]
 
     # ---------- доступ ----------
 
@@ -88,15 +85,27 @@ class Storage:
             "decided_at = excluded.decided_at",
             (tg_id, status, now, by, now))
 
-    def set_active(self, tg_id: int, slot: int) -> None:
-        self.db.execute("UPDATE players SET active_slot = ? WHERE tg_id = ?", (slot, tg_id))
+    # ---------- игрок и сейвы ----------
 
-    def load(self, tg_id: int, slot: int) -> RunState | None:
-        row = self.db.execute("SELECT state FROM slots WHERE tg_id = ? AND slot = ?", (tg_id, slot)).fetchone()
+    def active(self, tg_id: int) -> tuple[str | None, int]:
+        """Создаёт игрока при первом визите; возвращает (активная история, слот)."""
+        self.db.execute("INSERT OR IGNORE INTO players (tg_id, created) VALUES (?, ?)", (tg_id, time.time()))
+        row = self.db.execute("SELECT active_campaign, active_slot FROM players WHERE tg_id = ?", (tg_id,)).fetchone()
+        return row[0], row[1]
+
+    def set_active(self, tg_id: int, campaign: str | None, slot: int) -> None:
+        self.active(tg_id)
+        self.db.execute("UPDATE players SET active_campaign = ?, active_slot = ? WHERE tg_id = ?",
+                        (campaign, slot, tg_id))
+
+    def load(self, tg_id: int, campaign: str, slot: int) -> RunState | None:
+        row = self.db.execute("SELECT state FROM saves WHERE tg_id = ? AND campaign = ? AND slot = ?",
+                              (tg_id, campaign, slot)).fetchone()
         return RunState.model_validate_json(row[0]) if row else None
 
-    def slots(self, tg_id: int) -> dict[int, RunState]:
-        rows = self.db.execute("SELECT slot, state FROM slots WHERE tg_id = ?", (tg_id,)).fetchall()
+    def slots(self, tg_id: int, campaign: str) -> dict[int, RunState]:
+        rows = self.db.execute("SELECT slot, state FROM saves WHERE tg_id = ? AND campaign = ?",
+                               (tg_id, campaign)).fetchall()
         return {slot: RunState.model_validate_json(s) for slot, s in rows}
 
     def meta(self, tg_id: int, campaign: str) -> Meta:
@@ -104,18 +113,20 @@ class Storage:
         return Meta.model_validate_json(row[0]) if row else Meta()
 
     def save(self, tg_id: int, slot: int, st: RunState, meta: Meta | None = None) -> None:
-        """Состояние и мета — атомарно, одной транзакцией."""
+        """Сейв и мета — атомарно, одной транзакцией."""
         with self._tx():
             self.db.execute(
-                "INSERT INTO slots (tg_id, slot, campaign, state, updated) VALUES (?, ?, ?, ?, ?) "
-                "ON CONFLICT (tg_id, slot) DO UPDATE SET campaign = excluded.campaign, state = excluded.state, "
-                "updated = excluded.updated",
-                (tg_id, slot, st.campaign, st.model_dump_json(), time.time()))
+                "INSERT INTO saves (tg_id, campaign, slot, state, updated) VALUES (?, ?, ?, ?, ?) "
+                "ON CONFLICT (tg_id, campaign, slot) DO UPDATE SET state = excluded.state, updated = excluded.updated",
+                (tg_id, st.campaign, slot, st.model_dump_json(), time.time()))
             if meta is not None:
                 self.db.execute(
                     "INSERT INTO meta (tg_id, campaign, data) VALUES (?, ?, ?) "
                     "ON CONFLICT (tg_id, campaign) DO UPDATE SET data = excluded.data",
                     (tg_id, st.campaign, meta.model_dump_json()))
+
+    def delete(self, tg_id: int, campaign: str, slot: int) -> None:
+        self.db.execute("DELETE FROM saves WHERE tg_id = ? AND campaign = ? AND slot = ?", (tg_id, campaign, slot))
 
     def backup(self, folder: str | Path, keep: int = 7) -> Path:
         """Копия базы средствами SQLite (безопасно на ходу); хранит последние keep штук."""
@@ -129,9 +140,6 @@ class Storage:
         for old in sorted(folder.glob("textbot-*.db"))[:-keep]:
             old.unlink()
         return dest
-
-    def delete(self, tg_id: int, slot: int) -> None:
-        self.db.execute("DELETE FROM slots WHERE tg_id = ? AND slot = ?", (tg_id, slot))
 
     def _tx(self):
         db = self.db

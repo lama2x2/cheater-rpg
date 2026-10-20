@@ -2,6 +2,7 @@
 id: demo_real
 title: "Пропавший живчик (демо, без Системы)"
 mode: real
+hidden: true
 about: "Демо в режиме реал-РПГ: одна жизнь, без интерфейса."
 start: start
 scenes_dir: ../demo/scenes

@@ -39,6 +39,8 @@ class RunState(BaseModel):
     deaths: int = 0
     pending: list[dict] = []
     checkpoint: dict | None = None
+    last_checkpoint: str | None = None   # id последней пройденной сцены с checkpoint: true
+    campaign_version: int = 1
     ended: str | None = None
     shown_text: list[str] = []    # итог прошлого выбора — над текстом сцены
     shown_system: list[str] = []  # строки Системы к этому экрану
@@ -81,6 +83,7 @@ def new_run(c: Campaign, seed: int | None = None, run: int = 1, mode: str | None
         vars={k: v.start for k, v in c.vars.items()},
         lives=c.death.lives if mode == "system" else 1,
         awaiting_name=bool(c.ask_name),
+        campaign_version=c.version,
     )
     if not st.awaiting_name:
         _enter(c, st, c.start, Result(), Meta())
@@ -336,6 +339,7 @@ def _enter(c: Campaign, st: RunState, target: str, res: Result, meta: Meta, ctx:
                 return
             continue
         if scene.checkpoint:
+            st.last_checkpoint = target
             snap = st.model_dump()
             snap["checkpoint"] = None
             st.checkpoint = snap
@@ -344,6 +348,44 @@ def _enter(c: Campaign, st: RunState, target: str, res: Result, meta: Meta, ctx:
             res.events.append(("ending", scene.ending.id))
         return
     raise GameError("слишком много переходов подряд")
+
+
+def migrate(c: Campaign, st: RunState) -> bool:
+    """Подогнать старый сейв под новую версию кампании. True — состояние изменилось (сохранить)."""
+    before = st.model_dump_json()
+
+    def resolve(sid: str | None) -> str | None:
+        seen: set[str] = set()
+        while sid in c.renamed and sid not in seen:
+            seen.add(sid)
+            sid = c.renamed[sid]
+        return sid
+
+    st.scene = resolve(st.scene)
+    st.last_checkpoint = resolve(st.last_checkpoint)
+    if st.last_checkpoint not in c.scenes:
+        st.last_checkpoint = None
+    for p in st.pending:
+        if p.get("goto"):
+            p["goto"] = resolve(p["goto"])
+            if p["goto"] not in c.scenes:
+                p["goto"] = None
+    if st.checkpoint:
+        st.checkpoint["scene"] = resolve(st.checkpoint["scene"])
+        if st.checkpoint["scene"] not in c.scenes:
+            st.checkpoint = None
+    for key, var in c.vars.items():
+        st.vars.setdefault(key, var.start)
+    if st.scene not in c.scenes:
+        target = st.last_checkpoint or c.start
+        st.scene = target
+        chapter = c.scenes[target].chapter
+        if not st.ended:
+            st.shown_system = []
+            st.shown_text = [f"Кампания обновлена — вы на начале главы «{chapter}»." if chapter
+                             else "Кампания обновлена — вы на последней контрольной точке."]
+    st.campaign_version = c.version
+    return st.model_dump_json() != before
 
 
 def record(meta: Meta, st: RunState, res: Result) -> None:

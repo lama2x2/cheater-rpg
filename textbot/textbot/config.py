@@ -26,7 +26,7 @@ class Config:
         return cls(
             token=token,
             admin_ids=ids,
-            campaigns=[x.strip() for x in os.environ.get("CAMPAIGNS", "demo").split(",") if x.strip()],
+            campaigns=[x.strip() for x in os.environ.get("CAMPAIGNS", "").split(",") if x.strip()],  # пусто — все
             campaigns_dir=Path(os.environ.get("CAMPAIGNS_DIR", root / "campaigns")),
             data_dir=Path(os.environ.get("DATA_DIR", root / "data")),
         )

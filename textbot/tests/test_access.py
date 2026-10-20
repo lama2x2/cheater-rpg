@@ -40,7 +40,7 @@ def test_approve_by_button_gives_welcome_and_game(tmp_path):
     rep = g.press(ADMIN, f"a:ok:{GUEST}")
     assert rep.mark == "✅ Пущен"
     assert all(to == GUEST for to, _ in rep.notify)
-    assert "Добро пожаловать" in rep.notify[0][1].html and "зовут" in rep.notify[1][1].html  # меню игры
+    assert "Добро пожаловать" in rep.notify[0][1].html and "Истории" in rep.notify[1][1].html  # библиотека
     u = g.db.user(GUEST)
     assert u["status"] == "approved" and u["decided_by"] == ADMIN and u["decided_at"]
     assert g.allowed(GUEST)

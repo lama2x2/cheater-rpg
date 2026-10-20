@@ -59,6 +59,7 @@ class Ending(_M):
 
 class Scene(_M):
     id: str
+    chapter: str | None = None   # название главы — для сообщения «вы на начале главы …»
     text: str
     extra: list[TextVariant] = []
     system: str | None = None
@@ -99,8 +100,15 @@ class DeathCfg(_M):
 class Campaign(_M):
     id: str
     title: str
+    version: int = 1                       # поднимать при правках, ломающих сейвы
     mode: Literal["system", "real"] = "system"
     about: str = ""
+    teaser: str = ""                       # карточка в библиотеке, без спойлеров
+    length: str = ""                       # «30–40 минут»
+    order: int = 100                       # порядок в библиотеке
+    hidden: bool = False                   # не показывать в библиотеке (демо, тесты)
+    renamed: dict[str, str] = {}           # старый id сцены → новый (для старых сейвов)
+    removed: list[str] = []                # удалённые сцены — линтер не предупреждает
     start: str
     ask_name: str | None = None
     default_name: str = "Нулёвка"

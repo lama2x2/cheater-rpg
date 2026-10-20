@@ -4,10 +4,12 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from . import expr
 from .model import Campaign, Goto, compile_effects, load_campaign, parse_expr
 
+LOCK = "scene_ids.lock"  # id сцен прошлой версии: python -m textbot.lint <папка> --lock
 TEXT_LIMIT = 3500  # запас под шапку и строки Системы до лимита Telegram 4096
 
 
@@ -64,6 +66,16 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
             r.errors.append(f"{where}: нет сцены «{sid}»")
 
     need(c.start, "start")
+    for old, new in c.renamed.items():
+        if old in scenes:
+            r.errors.append(f"renamed: «{old}» всё ещё есть среди сцен")
+        need(new, f"renamed.{old}")
+    lock = Path(c.folder) / LOCK if c.folder else None
+    if lock and lock.exists():
+        for sid in lock.read_text(encoding="utf-8").split():
+            if sid not in scenes and sid not in c.renamed and sid not in c.removed:
+                r.warnings.append(f"сцена «{sid}» была в прошлой версии и пропала — добавьте её в "
+                                  f"renamed (если переименована) или removed")
     if c.time:
         need(c.time.on_limit, "time.on_limit")
     d = c.death
@@ -156,6 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Проверка кампании")
     ap.add_argument("folder")
     ap.add_argument("--mode", choices=["system", "real"])
+    ap.add_argument("--lock", action="store_true", help="записать текущие id сцен как «прошлую версию»")
     a = ap.parse_args(argv)
     try:
         c = load_campaign(a.folder)
@@ -169,6 +182,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ОШИБКА: {e}")
     print(f"{c.id} ({a.mode or c.mode}): сцен {len(c.scenes)}, концовки: {', '.join(sorted(rep.endings)) or '—'}; "
           f"ошибок {len(rep.errors)}, предупреждений {len(rep.warnings)}")
+    if a.lock and not rep.errors:
+        (Path(a.folder) / LOCK).write_text("\n".join(sorted(c.scenes)) + "\n", encoding="utf-8")
+        print(f"записано {LOCK}")
     return 1 if rep.errors else 0
 
 

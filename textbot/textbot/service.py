@@ -36,7 +36,6 @@ class Game:
     def __init__(self, storage: Storage, campaigns: dict[str, Campaign], admins: set[int] | None = None):
         self.db = storage
         self.campaigns = campaigns
-        self.default = next(iter(campaigns))
         self.admins = admins or set()
 
     # ---------- доступ: заявки ----------
@@ -72,7 +71,7 @@ class Game:
             return Reply(toast="Уже пущен", mark="✅ уже пущен")
         self.db.decide(target, "approved" if approve else "denied", admin, now)
         if approve:
-            welcome = Out("Добро пожаловать! Вас пустили в игру. /menu — сохранения, /about — об игре.")
+            welcome = Out("Добро пожаловать! Вас пустили в игру. /menu — истории и сохранения, /about — об игре.")
             return Reply(mark="✅ Пущен", notify=[(target, welcome)] + [(target, o) for o in self.current(target).outs])
         return Reply(mark="⛔ Отказано", notify=[(target, Out("Извините, доступ к этой игре не открыт."))])
 
@@ -103,96 +102,134 @@ class Game:
         lines.append("\n/approve &lt;id&gt; — пустить · /revoke &lt;id&gt; — закрыть")
         return Reply([Out("\n".join(lines))])
 
+    # ---------- загрузка с миграцией ----------
+
+    def _load(self, uid: int, cid: str, slot: int) -> engine.RunState | None:
+        """Сейв, подогнанный под текущую версию истории (новые переменные, переименованные сцены)."""
+        st = self.db.load(uid, cid, slot)
+        c = self.campaigns.get(cid)
+        if st is not None and c is not None and engine.migrate(c, st):
+            self.db.save(uid, slot, st)
+        return st
+
+    def stories(self) -> list[Campaign]:
+        return sorted((c for c in self.campaigns.values() if not c.hidden), key=lambda c: (c.order, c.title))
+
     # ---------- экраны ----------
 
     def screen(self, uid: int, slot: int, st: engine.RunState) -> Out:
         c = self.campaigns.get(st.campaign)
-        if c is None or st.scene not in c.scenes:
-            return Out("Кампания обновилась, и этого места в ней больше нет. Начните заново.",
-                       [[("☰ Меню", "m:menu")]])
+        if c is None:
+            return Out("Этой истории больше нет в сборнике.", [[("📚 Истории", "m:menu")]])
+        cid = c.id
         if st.awaiting_name:
             return Out(escape(c.ask_name or "Как вас зовут?"),
-                       [[(f"Пусть будет «{c.default_name}»", f"n:{slot}")]])
-        meta = self.db.meta(uid, c.id)
+                       [[(f"Пусть будет «{c.default_name}»", f"n:{cid}:{slot}")]])
+        meta = self.db.meta(uid, cid)
         scr = engine.view(c, st, meta)
         kb: Keyboard = []
         for ch in scr.choices:
             if ch.enabled:
-                kb.append([(ch.label, f"c:{slot}:{st.steps}:{ch.index}")])
+                kb.append([(ch.label, f"c:{cid}:{slot}:{st.steps}:{ch.index}")])
             else:
-                kb.append([(f"🔒 {ch.label}", f"l:{slot}:{ch.index}")])
+                kb.append([(f"🔒 {ch.label}", f"l:{cid}:{slot}:{ch.index}")])
         if st.ended:
-            kb = [[("🔁 Сыграть ещё раз", f"m:new:{slot}:{c.id}")], [("📜 Мементо", "m:memento"), ("☰ Меню", "m:menu")]]
+            kb = [[("🔁 Сыграть ещё раз", f"m:new:{cid}:{slot}")],
+                  [("📜 Мементо", f"m:memento:{cid}"), ("📚 Истории", "m:menu")]]
         return Out(render.html(scr), kb)
 
     def current(self, uid: int) -> Reply:
-        slot = self.db.player(uid)
-        st = self.db.load(uid, slot)
+        cid, slot = self.db.active(uid)
+        st = self._load(uid, cid, slot) if cid in self.campaigns else None
         if st is None:
-            if len(self.campaigns) > 1:
-                return Reply([self.pick_campaign(slot)])
-            return self.new_run(uid, slot, self.default)
+            return self.menu(uid)
         return Reply([self.screen(uid, slot, st)])
 
-    def pick_campaign(self, slot: int) -> Out:
-        kb = [[(c.title, f"m:new:{slot}:{cid}")] for cid, c in self.campaigns.items()]
-        return Out("Во что играем?", kb)
-
-    def new_run(self, uid: int, slot: int, cid: str) -> Reply:
+    def new_run(self, uid: int, cid: str, slot: int) -> Reply:
         c = self.campaigns.get(cid)
-        if c is None:
-            return Reply([self.pick_campaign(slot)])
+        if c is None or not 1 <= slot <= SLOTS:
+            return self.menu(uid)
         meta = self.db.meta(uid, cid)
         meta.runs += 1
         st = engine.new_run(c, run=meta.runs)
-        self.db.player(uid)
-        self.db.set_active(uid, slot)
+        self.db.set_active(uid, cid, slot)
         self.db.save(uid, slot, st, meta)
         return Reply([self.screen(uid, slot, st)])
+
+    # ---------- библиотека ----------
+
+    @staticmethod
+    def mode_label(c: Campaign) -> str:
+        return "с Системой" if c.mode == "system" else "без Системы, одна жизнь"
+
+    def endings_done(self, uid: int, c: Campaign) -> tuple[int, int]:
+        ids = {s.ending.id for s in c.scenes.values() if s.ending}
+        meta = self.db.meta(uid, c.id)
+        return len(ids & set(meta.endings)), len(ids)
+
+    def menu(self, uid: int) -> Reply:
+        cid, slot = self.db.active(uid)
+        lines, kb = ["<b>📚 Истории</b>"], []
+        if cid in self.campaigns and self.db.load(uid, cid, slot):
+            kb.append([(f"▶ Продолжить: {self.campaigns[cid].title}"[:60], f"m:open:{cid}:{slot}")])
+        for n, c in enumerate(self.stories(), 1):
+            done, total = self.endings_done(uid, c)
+            mark = f" · ✓ пройдено ({done}/{total} концовок)" if done else ""
+            info = " · ".join(x for x in (self.mode_label(c), c.length) if x)
+            lines.append(f"\n<b>{n}. {escape(c.title)}</b>{mark}\n<i>{escape(info)}</i>\n{escape(c.teaser)}")
+            kb.append([(f"{'✓ ' if done else ''}{n}. {c.title}"[:60], f"m:story:{c.id}")])
+        if not self.stories():
+            lines.append("Пока пусто.")
+        return Reply([Out("\n".join(lines), kb)])
+
+    def story(self, uid: int, cid: str) -> Reply:
+        c = self.campaigns.get(cid)
+        if c is None:
+            return self.menu(uid)
+        done, total = self.endings_done(uid, c)
+        meta = self.db.meta(uid, cid)
+        info = " · ".join(x for x in (self.mode_label(c), c.length) if x)
+        lines = [f"<b>{escape(c.title)}</b>", f"<i>{escape(info)}</i>", "", escape(c.teaser),
+                 "", f"Концовки: {done} из {total} · прохождений: {meta.runs}", "", "<b>Сохранения</b>"]
+        slots = self.db.slots(uid, cid)
+        kb: Keyboard = []
+        for n in range(1, SLOTS + 1):
+            st = slots.get(n)
+            if st:
+                where = "концовка" if st.ended else f"шаг {st.steps}"
+                lines.append(f"{n}. {where}")
+                kb.append([(f"▶ Слот {n} · {where}", f"m:open:{cid}:{n}"), (f"🗑 {n}", f"m:reset:{cid}:{n}")])
+            else:
+                lines.append(f"{n}. пусто")
+                kb.append([(f"＋ Слот {n} · начать", f"m:new:{cid}:{n}")])
+        kb.append([("📜 Мементо", f"m:memento:{cid}"), ("📚 Истории", "m:menu")])
+        return Reply([Out("\n".join(lines), kb)])
 
     # ---------- команды ----------
 
     def start(self, uid: int) -> Reply:
         return self.current(uid)
 
-    def menu(self, uid: int) -> Reply:
-        active = self.db.player(uid)
-        slots = self.db.slots(uid)
-        lines, kb = ["<b>Сохранения</b>"], []
-        for n in range(1, SLOTS + 1):
-            st = slots.get(n)
-            mark = " ◀" if n == active else ""
-            if st:
-                c = self.campaigns.get(st.campaign)
-                title = c.title if c else st.campaign
-                where = f"концовка «{st.ended}»" if st.ended else f"шаг {st.steps}"
-                lines.append(f"{n}. {escape(title)} — {where}{mark}")
-                kb.append([(f"▶ {n}: {title}"[:60], f"m:open:{n}")])
-            else:
-                lines.append(f"{n}. пусто{mark}")
-                kb.append([(f"＋ {n}: новая игра", f"m:open:{n}")])
-        if active in slots:
-            kb.append([(f"🗑 Начать заново в слоте {active}", f"m:reset:{active}")])
-        return Reply([Out("\n".join(lines), kb)])
-
     def status(self, uid: int) -> Reply:
-        slot = self.db.player(uid)
-        st = self.db.load(uid, slot)
-        if st is None or st.campaign not in self.campaigns:
-            return Reply([Out("Игра ещё не начата: /start")])
-        c = self.campaigns[st.campaign]
-        return Reply([Out(escape(render.status(c, st, self.db.meta(uid, c.id))))])
+        cid, slot = self.db.active(uid)
+        st = self._load(uid, cid, slot) if cid in self.campaigns else None
+        if st is None:
+            return Reply([Out("История ещё не начата: /menu")])
+        c = self.campaigns[cid]
+        return Reply([Out(escape(render.status(c, st, self.db.meta(uid, cid))))])
 
-    def memento(self, uid: int) -> Reply:
-        slot = self.db.player(uid)
-        st = self.db.load(uid, slot)
-        cid = st.campaign if st and st.campaign in self.campaigns else self.default
-        return Reply([Out(escape(render.memento(self.campaigns[cid], self.db.meta(uid, cid))))])
+    def memento(self, uid: int, cid: str | None = None) -> Reply:
+        cid = cid or self.db.active(uid)[0]
+        if cid not in self.campaigns:
+            return self.menu(uid)
+        c = self.campaigns[cid]
+        text = f"<b>{escape(c.title)}</b>\n" + escape(render.memento(c, self.db.meta(uid, cid)))
+        return Reply([Out(text, [[("📚 Истории", "m:menu"), ("← История", f"m:story:{cid}")]])])
 
     def text(self, uid: int, text: str) -> Reply:
-        slot = self.db.player(uid)
-        st = self.db.load(uid, slot)
-        if st is not None and st.awaiting_name and st.campaign in self.campaigns:
+        cid, slot = self.db.active(uid)
+        st = self._load(uid, cid, slot) if cid in self.campaigns else None
+        if st is not None and st.awaiting_name:
             return self._name(uid, slot, st, text)
         return self.current(uid)
 
@@ -205,14 +242,13 @@ class Game:
             if kind == "a":
                 return self.decide(uid, int(parts[2]), parts[1] == "ok")
             if kind == "c":
-                return self._choose(uid, int(parts[1]), int(parts[2]), int(parts[3]))
+                return self._choose(uid, parts[1], int(parts[2]), int(parts[3]), int(parts[4]))
             if kind == "l":
-                return self._locked(uid, int(parts[1]), int(parts[2]))
+                return self._locked(uid, parts[1], int(parts[2]), int(parts[3]))
             if kind == "n":
-                slot = int(parts[1])
-                st = self.db.load(uid, slot)
-                if st and st.awaiting_name and st.campaign in self.campaigns:
-                    return self._name(uid, slot, st, "")
+                st = self._load(uid, parts[1], int(parts[2]))
+                if st and st.awaiting_name and (parts[1], int(parts[2])) == self.db.active(uid):
+                    return self._name(uid, int(parts[2]), st, "")
             if kind == "m":
                 return self._menu_action(uid, parts[1:])
         except (ValueError, IndexError):
@@ -221,16 +257,16 @@ class Game:
         rep.toast = "Экран обновлён"
         return rep
 
-    def _choose(self, uid: int, slot: int, nonce: int, index: int) -> Reply:
-        st = self.db.load(uid, slot)
-        active = self.db.player(uid)
-        if st is None or slot != active or st.steps != nonce or st.ended or st.campaign not in self.campaigns:
+    def _choose(self, uid: int, cid: str, slot: int, nonce: int, index: int) -> Reply:
+        st = self._load(uid, cid, slot) if cid in self.campaigns else None
+        if st is None or (cid, slot) != self.db.active(uid) or st.steps != nonce or st.ended or st.awaiting_name:
             rep = self.current(uid)
             rep.toast = "Экран обновлён"
             return rep
-        c = self.campaigns[st.campaign]
-        meta = self.db.meta(uid, c.id)
-        label = c.scenes[st.scene].choices[index].label if index < len(c.scenes[st.scene].choices) else ""
+        c = self.campaigns[cid]
+        meta = self.db.meta(uid, cid)
+        choices = c.scenes[st.scene].choices
+        label = choices[index].label if 0 <= index < len(choices) else ""
         try:
             res = engine.choose(c, st, index, meta)
         except engine.GameError:
@@ -241,10 +277,10 @@ class Game:
         self.db.save(uid, slot, st, meta)  # сначала сохранить, потом показывать
         return Reply([self.screen(uid, slot, st)], mark=engine.fill(label, st, meta))
 
-    def _locked(self, uid: int, slot: int, index: int) -> Reply:
-        st = self.db.load(uid, slot)
-        if st and st.campaign in self.campaigns:
-            choices = self.campaigns[st.campaign].scenes[st.scene].choices
+    def _locked(self, uid: int, cid: str, slot: int, index: int) -> Reply:
+        st = self._load(uid, cid, slot) if cid in self.campaigns else None
+        if st:
+            choices = self.campaigns[cid].scenes[st.scene].choices
             if index < len(choices) and choices[index].locked:
                 return Reply(alert=f"🔒 {choices[index].locked}")
         return Reply(toast="Недоступно")
@@ -261,31 +297,25 @@ class Game:
         what = args[0]
         if what == "menu":
             return self.menu(uid)
+        if what == "story":
+            return self.story(uid, args[1])
         if what == "memento":
-            return self.memento(uid)
+            return self.memento(uid, args[1] if len(args) > 1 else None)
+        cid, slot = args[1], int(args[2])
+        if cid not in self.campaigns or not 1 <= slot <= SLOTS:
+            return self.menu(uid)
         if what == "open":
-            slot = int(args[1])
-            if not 1 <= slot <= SLOTS:
-                return self.menu(uid)
-            self.db.player(uid)
-            self.db.set_active(uid, slot)
+            if self.db.load(uid, cid, slot) is None:
+                return self.new_run(uid, cid, slot)
+            self.db.set_active(uid, cid, slot)
             return self.current(uid)
         if what == "new":
-            slot = int(args[1])
-            if not 1 <= slot <= SLOTS:
-                return self.menu(uid)
-            return self.new_run(uid, slot, args[2])
+            return self.new_run(uid, cid, slot)
         if what == "reset":
-            slot = int(args[1])
-            return Reply([Out(f"Начать заново в слоте {slot}? Текущее прохождение пропадёт "
-                              f"(открытые концовки и «Мементо» останутся).",
-                              [[("Да, заново", f"m:reset!:{slot}"), ("Нет", "m:menu")]])])
+            return Reply([Out(f"Начать «{escape(self.campaigns[cid].title)}» заново в слоте {slot}? "
+                              f"Это прохождение пропадёт (открытые концовки и «Мементо» останутся).",
+                              [[("Да, заново", f"m:reset!:{cid}:{slot}"), ("Нет", f"m:story:{cid}")]])])
         if what == "reset!":
-            slot = int(args[1])
-            st = self.db.load(uid, slot)
-            self.db.delete(uid, slot)
-            self.db.set_active(uid, slot)
-            if st and st.campaign in self.campaigns:
-                return self.new_run(uid, slot, st.campaign)
-            return self.current(uid)
+            self.db.delete(uid, cid, slot)
+            return self.new_run(uid, cid, slot)
         return self.menu(uid)
