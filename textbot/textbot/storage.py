@@ -24,6 +24,16 @@ CREATE TABLE IF NOT EXISTS slots (
     updated REAL NOT NULL,
     PRIMARY KEY (tg_id, slot)
 );
+CREATE TABLE IF NOT EXISTS users (
+    tg_id INTEGER PRIMARY KEY,
+    name TEXT,
+    username TEXT,
+    status TEXT NOT NULL,            -- pending | approved | denied | blocked
+    requested_at REAL NOT NULL,
+    notified_at REAL,                -- когда админу последний раз пришла заявка
+    decided_by INTEGER,
+    decided_at REAL
+);
 CREATE TABLE IF NOT EXISTS meta (
     tg_id INTEGER NOT NULL,
     campaign TEXT NOT NULL,
@@ -49,6 +59,34 @@ class Storage:
         self.db.execute(
             "INSERT OR IGNORE INTO players (tg_id, name, created) VALUES (?, ?, ?)", (tg_id, name, time.time()))
         return self.db.execute("SELECT active_slot FROM players WHERE tg_id = ?", (tg_id,)).fetchone()[0]
+
+    # ---------- доступ ----------
+
+    def user(self, tg_id: int) -> dict | None:
+        cur = self.db.execute("SELECT * FROM users WHERE tg_id = ?", (tg_id,))
+        row = cur.fetchone()
+        return dict(zip([d[0] for d in cur.description], row)) if row else None
+
+    def users(self) -> list[dict]:
+        cur = self.db.execute("SELECT * FROM users ORDER BY status, requested_at")
+        cols = [d[0] for d in cur.description]
+        return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+    def add_request(self, tg_id: int, name: str, username: str | None, now: float) -> None:
+        self.db.execute(
+            "INSERT INTO users (tg_id, name, username, status, requested_at) VALUES (?, ?, ?, 'pending', ?) "
+            "ON CONFLICT (tg_id) DO UPDATE SET name = excluded.name, username = excluded.username",
+            (tg_id, name, username, now))
+
+    def mark_notified(self, tg_id: int, now: float) -> None:
+        self.db.execute("UPDATE users SET notified_at = ? WHERE tg_id = ?", (now, tg_id))
+
+    def decide(self, tg_id: int, status: str, by: int, now: float) -> None:
+        self.db.execute(
+            "INSERT INTO users (tg_id, status, requested_at, decided_by, decided_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT (tg_id) DO UPDATE SET status = excluded.status, decided_by = excluded.decided_by, "
+            "decided_at = excluded.decided_at",
+            (tg_id, status, now, by, now))
 
     def set_active(self, tg_id: int, slot: int) -> None:
         self.db.execute("UPDATE players SET active_slot = ? WHERE tg_id = ?", (slot, tg_id))

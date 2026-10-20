@@ -2,6 +2,7 @@
 поэтому после рестарта игрок продолжает с того же экрана."""
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from html import escape
 
@@ -24,13 +25,83 @@ class Reply:
     alert: str | None = None   # всплывающее окно на нажатие
     toast: str | None = None   # короткая подсказка на нажатие
     mark: str | None = None    # дописать к старому сообщению и снять с него кнопки
+    notify: list[tuple[int, Out]] = field(default_factory=list)  # сообщения другим людям (админам, игроку)
+
+
+REPEAT_NOTIFY_S = 24 * 3600  # повтор заявки «в ожидании» — админу не чаще раза в сутки
+STATUS_RU = {"pending": "⏳ ждёт", "approved": "✅ пущен", "denied": "⛔ отказ", "blocked": "🚫 закрыт"}
 
 
 class Game:
-    def __init__(self, storage: Storage, campaigns: dict[str, Campaign]):
+    def __init__(self, storage: Storage, campaigns: dict[str, Campaign], admins: set[int] | None = None):
         self.db = storage
         self.campaigns = campaigns
         self.default = next(iter(campaigns))
+        self.admins = admins or set()
+
+    # ---------- доступ: заявки ----------
+
+    def allowed(self, uid: int) -> bool:
+        if uid in self.admins:
+            return True
+        u = self.db.user(uid)
+        return bool(u and u["status"] == "approved")
+
+    def request(self, uid: int, name: str, username: str | None, now: float | None = None) -> Reply:
+        """Любое действие неодобренного пользователя."""
+        now = time.time() if now is None else now
+        u = self.db.user(uid)
+        if u and u["status"] in ("denied", "blocked"):
+            return Reply([Out("Извините, доступ к этой игре не открыт.")])  # админа не тревожим
+        self.db.add_request(uid, name, username, now)
+        rep = Reply([Out("Заявка отправлена, ждите — хозяин бота скоро ответит.")])
+        if u is None or not u["notified_at"] or now - u["notified_at"] >= REPEAT_NOTIFY_S:
+            self.db.mark_notified(uid, now)
+            who = escape(name or "без имени") + (f" (@{escape(username)})" if username else "")
+            card = Out(f"Заявка в игру: {who}\nid: <code>{uid}</code>",
+                       [[("✅ Пустить", f"a:ok:{uid}"), ("⛔ Отказать", f"a:no:{uid}")]])
+            rep.notify = [(admin, card) for admin in sorted(self.admins)]
+        return rep
+
+    def decide(self, admin: int, target: int, approve: bool, now: float | None = None) -> Reply:
+        if admin not in self.admins:
+            return Reply(alert="Это может только хозяин бота")
+        now = time.time() if now is None else now
+        u = self.db.user(target)
+        if approve and u and u["status"] == "approved":
+            return Reply(toast="Уже пущен", mark="✅ уже пущен")
+        self.db.decide(target, "approved" if approve else "denied", admin, now)
+        if approve:
+            welcome = Out("Добро пожаловать! Вас пустили в игру. /menu — сохранения, /about — об игре.")
+            return Reply(mark="✅ Пущен", notify=[(target, welcome)] + [(target, o) for o in self.current(target).outs])
+        return Reply(mark="⛔ Отказано", notify=[(target, Out("Извините, доступ к этой игре не открыт."))])
+
+    def revoke(self, admin: int, target: int, now: float | None = None) -> Reply:
+        if admin not in self.admins:
+            return Reply([Out("Это может только хозяин бота")])
+        if target in self.admins:
+            return Reply([Out("Админа закрыть нельзя — он задан в .env (ADMIN_IDS).")])
+        self.db.decide(target, "blocked", admin, time.time() if now is None else now)
+        return Reply([Out(f"Доступ для <code>{target}</code> закрыт.")])
+
+    def approve_cmd(self, admin: int, target: int, now: float | None = None) -> Reply:
+        rep = self.decide(admin, target, True, now)
+        if rep.alert:
+            return Reply([Out(rep.alert)])
+        return Reply([Out(f"<code>{target}</code>: {rep.mark}")], notify=rep.notify)
+
+    def users_list(self, admin: int) -> Reply:
+        if admin not in self.admins:
+            return Reply([Out("Это может только хозяин бота")])
+        rows = self.db.users()
+        if not rows:
+            return Reply([Out("Заявок пока нет.")])
+        lines = ["<b>Пользователи</b>"]
+        for u in rows:
+            who = escape(u["name"] or "?") + (f" @{escape(u['username'])}" if u["username"] else "")
+            lines.append(f"{STATUS_RU.get(u['status'], u['status'])} · {who} · <code>{u['tg_id']}</code>")
+        lines.append("\n/approve &lt;id&gt; — пустить · /revoke &lt;id&gt; — закрыть")
+        return Reply([Out("\n".join(lines))])
 
     # ---------- экраны ----------
 
@@ -131,6 +202,8 @@ class Game:
         parts = data.split(":")
         kind = parts[0]
         try:
+            if kind == "a":
+                return self.decide(uid, int(parts[2]), parts[1] == "ok")
             if kind == "c":
                 return self._choose(uid, int(parts[1]), int(parts[2]), int(parts[3]))
             if kind == "l":

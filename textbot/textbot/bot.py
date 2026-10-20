@@ -12,9 +12,9 @@ from pathlib import Path
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramUnauthorizedError
 from aiogram.filters import Command
-from aiogram.types import BotCommand, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import BotCommand, BotCommandScopeChat, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .config import Config
 from .lint import lint
@@ -50,7 +50,7 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
         if rep.errors:
             raise SystemExit(f"Кампания {cid} с ошибками: {rep.errors}")
         campaigns[c.id] = c
-    game = Game(Storage(cfg.data_dir / "textbot.db"), campaigns)
+    game = Game(Storage(cfg.data_dir / "textbot.db"), campaigns, cfg.admin_ids)
     bot = Bot(cfg.token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
     locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -58,6 +58,11 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
     async def send(msg: Message, rep: Reply) -> None:
         for out in rep.outs:
             await msg.answer(out.html, reply_markup=keyboard(out.keyboard))
+        for to, out in rep.notify:
+            try:
+                await bot.send_message(to, out.html, reply_markup=keyboard(out.keyboard))
+            except (TelegramBadRequest, TelegramForbiddenError):
+                log.warning("не удалось написать %s (не запускал бота или заблокировал)", to)
 
     async def run(uid: int, fn, *args) -> Reply:
         async with locks[uid]:
@@ -67,18 +72,31 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
                 log.exception("ошибка у %s", uid)
                 return Reply([Out("Что-то сломалось. Попробуйте /start — прогресс сохранён.")])
 
-    @dp.message(Command("whoami"))
-    async def whoami(msg: Message) -> None:
-        await msg.answer(f"Ваш id: <code>{msg.from_user.id}</code>")
+    stranger = F.from_user.func(lambda u: not game.allowed(u.id))
 
-    @dp.message(F.from_user.func(lambda u: u.id not in cfg.allowed_ids))
-    async def stranger(msg: Message) -> None:
-        await msg.answer("Это закрытая семейная игра. Ваш id: "
-                         f"<code>{msg.from_user.id}</code> — передайте его хозяину бота.")
+    @dp.message(stranger)
+    async def request(msg: Message) -> None:
+        u = msg.from_user
+        await send(msg, await run(u.id, game.request, u.full_name, u.username))
 
-    @dp.callback_query(F.from_user.func(lambda u: u.id not in cfg.allowed_ids))
+    @dp.callback_query(stranger)
     async def stranger_cb(cb: CallbackQuery) -> None:
-        await cb.answer("Закрытая игра", show_alert=True)
+        await cb.answer("Заявка на рассмотрении — ждите", show_alert=True)
+
+    admin = F.from_user.id.in_(cfg.admin_ids)
+
+    @dp.message(Command("users"), admin)
+    async def users(msg: Message) -> None:
+        await send(msg, await run(msg.from_user.id, game.users_list))
+
+    @dp.message(Command("approve", "revoke"), admin)
+    async def approve_revoke(msg: Message) -> None:
+        cmd, _, arg = (msg.text or "").partition(" ")
+        if not arg.strip().lstrip("-").isdigit():
+            await msg.answer("Нужно так: /approve 123456 или /revoke 123456 (id — в /users)")
+            return
+        fn = game.approve_cmd if cmd.startswith("/approve") else game.revoke
+        await send(msg, await run(msg.from_user.id, fn, int(arg.strip())))
 
     commands = {"start": Game.start, "menu": Game.menu, "status": Game.status, "memento": Game.memento}
 
@@ -117,18 +135,25 @@ def build(cfg: Config) -> tuple[Bot, Dispatcher, Game]:
             await send(cb.message, rep)
 
     async def on_startup() -> None:
-        await bot.set_my_commands([
+        base = [
             BotCommand(command="start", description="Продолжить игру"),
             BotCommand(command="menu", description="Сохранения и новая игра"),
             BotCommand(command="status", description="Состояние героя"),
             BotCommand(command="memento", description="Концовки и смерти"),
             BotCommand(command="about", description="Об игре"),
-        ])
+        ]
+        await bot.set_my_commands(base)
+        extra = [BotCommand(command="users", description="Игроки и заявки"),
+                 BotCommand(command="approve", description="Пустить: /approve id"),
+                 BotCommand(command="revoke", description="Закрыть доступ: /revoke id")]
+        for admin_id in cfg.admin_ids:
+            try:
+                await bot.set_my_commands(base + extra, scope=BotCommandScopeChat(chat_id=admin_id))
+            except TelegramBadRequest:
+                log.warning("админ %s ещё не писал боту — меню админа появится позже", admin_id)
         asyncio.create_task(heartbeat(cfg.data_dir / "heartbeat"))
         asyncio.create_task(daily_backup(game, cfg.data_dir / "backups"))
-        log.info("бот запущен: кампании %s, игроков в списке %d", list(game.campaigns), len(cfg.allowed_ids))
-        if not cfg.allowed_ids:
-            log.warning("ALLOWED_IDS пуст: бот только отвечает id — впишите id семьи в .env")
+        log.info("бот запущен: кампании %s, админов %d", list(game.campaigns), len(cfg.admin_ids))
 
     dp.startup.register(on_startup)
     return bot, dp, game
