@@ -26,6 +26,8 @@ var layout: Dictionary
 var is_navigation_ready := false
 
 var _doors: Array[StaticBody3D] = []
+## Стены зданий для среза (D-102): [{"rect": Rect2, "walls": [{"side", "body", "height"}]}].
+var building_walls: Array = []
 var _stashes: Array[Node3D] = []
 
 
@@ -193,6 +195,8 @@ func _build_building(b: Dictionary) -> void:
 	var h := float(b["height"])
 	var color := _color(template["wall_color"])
 	var t := WALL_THICKNESS
+	var record := {"rect": Rect2(b["center"] - b["size"] / 2.0, b["size"]), "walls": []}
+	building_walls.append(record)
 	var walls := {
 		"n": {"at": center + Vector3(0, 0, sz / 2.0), "length": sx, "along_x": true},
 		"s": {"at": center + Vector3(0, 0, -sz / 2.0), "length": sx, "along_x": true},
@@ -205,17 +209,17 @@ func _build_building(b: Dictionary) -> void:
 		var length := float(wall["length"])
 		var along_x := bool(wall["along_x"])
 		if side != String(b["door"]):
-			_wall(at, Vector3(length, h, t) if along_x else Vector3(t, h, length), color)
+			record["walls"].append({"side": side, "body": _wall(at, Vector3(length, h, t) if along_x else Vector3(t, h, length), color)})
 			continue
 		var piece := (length - DOOR_WIDTH) / 2.0
 		var shift := (DOOR_WIDTH + piece) / 2.0
 		var axis := Vector3(1, 0, 0) if along_x else Vector3(0, 0, 1)
 		var piece_size := Vector3(piece, h, t) if along_x else Vector3(t, h, piece)
-		_wall(at - axis * shift, piece_size, color)
-		_wall(at + axis * shift, piece_size, color)
+		record["walls"].append({"side": side, "body": _wall(at - axis * shift, piece_size, color)})
+		record["walls"].append({"side": side, "body": _wall(at + axis * shift, piece_size, color)})
 		if h > DOOR_HEIGHT:
 			var lintel := Vector3(DOOR_WIDTH, h - DOOR_HEIGHT, t) if along_x else Vector3(t, h - DOOR_HEIGHT, DOOR_WIDTH)
-			_wall(at + Vector3(0, DOOR_HEIGHT, 0), lintel, color)
+			record["walls"].append({"side": side, "body": _wall(at + Vector3(0, DOOR_HEIGHT, 0), lintel, color)})
 		if bool(b["leaf"]):
 			var door: StaticBody3D = DoorScript.new()
 			door.width = DOOR_WIDTH
@@ -223,15 +227,18 @@ func _build_building(b: Dictionary) -> void:
 			door.rotation.y = 0.0 if along_x else PI / 2.0
 			add_child(door)
 			_doors.append(door)
+			record["walls"].append({"side": side, "body": door})
 
 
-func _wall(base: Vector3, size: Vector3, color: Color) -> void:
+func _wall(base: Vector3, size: Vector3, color: Color) -> StaticBody3D:
 	var box := BoxShape3D.new()
 	box.size = size
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	var at := base + Vector3(0, size.y / 2.0, 0)
-	add_child(_static_body(box, at, mesh, at, color))
+	var body := _static_body(box, at, mesh, at, color)
+	add_child(body)
+	return body
 
 
 func _build_prop(prop: Dictionary) -> void:

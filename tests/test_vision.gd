@@ -57,3 +57,17 @@ func test_sense_chance() -> void:
 	assert_true(rules.sense_chance(8.0, 8.0, 3.0, 20, 6.0, false) > rules.sense_chance(1.0, 1.0, 3.0, 20, 6.0, false), "Наблюдательность и Реакция помогают")
 	assert_eq(rules.sense_chance(9.0, 9.0, 0.0, 1, 1.0, true, 1.0), 0.0, "полное гашение элиты")
 	assert_true(rules.sense_chance(1000.0, 1000.0, 0.0, 0, 0.0, true) <= 0.95, "не выше потолка")
+
+
+func test_sight_fan() -> void:
+	var fan := _rules().sight_fan(Vector3(0, 0, -1))
+	assert_eq(fan.size(), 180, "180 лучей по кругу")
+	assert_almost(fan[0], Vector2(0, -1).angle(), "первый — по взгляду")
+	assert_almost(absf(wrapf(fan[90] - fan[0], -PI, PI)), PI, "90-й — за спиной", 0.001)
+
+
+func test_camera_sides() -> void:
+	# Изометрическая камера (рысканье 45°) смотрит на −x −z: к ней обращены стороны +z (n) и +x (e).
+	var sides := VisionRules.camera_sides(Vector3(-0.707, -0.5, -0.707))
+	assert_eq(sides.size(), 2, "к камере — две стороны")
+	assert_true(sides.has("n") and sides.has("e"), "смотрит на −x −z — к камере стороны +z и +x: %s" % [sides])

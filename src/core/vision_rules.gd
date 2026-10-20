@@ -7,7 +7,10 @@ extends RefCounted
 const REQUIRED_KEYS: PackedStringArray = ["cone_deg", "sprint_cone_deg", "near_m", "range_day_m",
 	"range_night_m", "night_from", "night_to", "kislyak_mult", "range_per_perception",
 	"angle_per_perception", "angle_bonus_max", "turn_deg_s", "turn_per_reaction", "check_s",
-	"last_seen_s", "shade", "shade_soft_deg", "shade_soft_m", "fade_walls_alpha", "sense"]
+	"last_seen_s", "shade", "shade_soft_deg", "shade_soft_m", "fade_walls_alpha", "sense",
+	"sight_rays", "sight_eye_m", "sight_extend_m", "sight_mask_m", "sight_mask_px", "cutaway_m"]
+## Стороны здания (ClusterLayout): n — +z, s — −z, e — +x, w — −x; наружные нормали в (x, z).
+const SIDE_NORMALS := {"n": Vector2(0, 1), "s": Vector2(0, -1), "e": Vector2(1, 0), "w": Vector2(-1, 0)}
 
 var _config: Dictionary
 
@@ -92,3 +95,26 @@ static func turn_towards(from: Vector3, to: Vector3, max_deg: float) -> Vector3:
 	var step := clampf(angle, -deg_to_rad(max_deg), deg_to_rad(max_deg))
 	var result := a.normalized().rotated(step)
 	return Vector3(result.x, 0.0, result.y)
+
+
+## Веер лучей тени по линии взгляда (D-102): углы по кругу от взгляда (от оси x к z, как
+## Vector2.angle()), каждый луч — на дальность зрения. Это только «что закрыто стенами»: конус и
+## дальность затемняет шейдер мягко сам, а маска добавляет тень за препятствиями.
+func sight_fan(facing: Vector3) -> PackedFloat32Array:
+	var result := PackedFloat32Array()
+	var rays := int(_config["sight_rays"])
+	var look := Vector2(facing.x, facing.z)
+	var base := look.angle() if look.length() > 0.0001 else -PI / 2.0
+	for i in rays:
+		result.append(base + TAU * float(i) / float(rays))
+	return result
+
+
+## Стороны здания, обращённые к камере (их срезает cutaway): нормаль смотрит против взгляда камеры.
+static func camera_sides(camera_forward: Vector3) -> PackedStringArray:
+	var f := Vector2(camera_forward.x, camera_forward.z)
+	var result: PackedStringArray = []
+	for side: String in SIDE_NORMALS:
+		if (SIDE_NORMALS[side] as Vector2).dot(f) < -0.01:
+			result.append(side)
+	return result

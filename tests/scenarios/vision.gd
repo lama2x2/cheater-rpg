@@ -55,6 +55,11 @@ func _run() -> void:
 	wall.global_position = hero.global_position + (look + side * 0.35).normalized() * 6.0 + Vector3.UP * 1.5
 	await _wait(0.6)
 	print("vision: front=%s back=%s near=%s wall=%s" % [vision.is_seen(front), vision.is_seen(back), vision.is_seen(near), vision.is_seen(walled)])
+	var mask: Node = get_first_node_in_group("sight_mask")
+	var poly: PackedVector2Array = mask._polygon.polygon
+	var px := func(p: Vector3) -> Vector2: return (Vector2(p.x, p.z) - mask.origin) * (float(mask._viewport.size.x) / mask.size_m)
+	print("sight mask: front lit=%s behind wall lit=%s (ожидается true / false)" % [
+		Geometry2D.is_point_in_polygon(px.call(front.global_position), poly), Geometry2D.is_point_in_polygon(px.call(walled.global_position), poly)])
 	var ps: Node = root.get_node("PlayerState")
 	var rules = root.get_node("Content").vision_rules()
 	print("rules: cone=%.0f range=%.1f" % [rules.cone_deg(false, ps.stats.get_level("perception")), rules.view_range(12, false, 1)])

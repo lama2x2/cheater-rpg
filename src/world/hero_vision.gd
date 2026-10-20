@@ -9,6 +9,8 @@ extends Node3D
 const LAYER_WORLD := 1
 const EYE := Vector3(0, 1.5, 0)
 const WALL_CHECK_S := 0.1
+const SightMaskScript := preload("res://src/world/sight_mask.gd")
+const CutawayScript := preload("res://src/world/building_cutaway.gd")
 const SHADE_SHADER := """
 shader_type spatial;
 render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, blend_mix, fog_disabled, shadows_disabled;
@@ -22,6 +24,11 @@ uniform float near_r = 2.5;
 uniform float strength = 0.45;
 uniform float soft_angle = 0.14;
 uniform float soft_dist = 3.0;
+// Тень по линии взгляда (D-102): маска видимости сверху (src/world/sight_mask.gd).
+uniform sampler2D sight_mask : filter_linear, repeat_disable, hint_default_white;
+uniform vec2 mask_origin;
+uniform float mask_size = 80.0;
+uniform float use_mask = 0.0;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -39,6 +46,9 @@ void fragment() {
 	float shade = max(smoothstep(half_cone - soft_angle * 0.5, half_cone + soft_angle * 0.5, ang),
 		smoothstep(reach - soft_dist, reach, d));
 	shade *= smoothstep(near_r - 0.4, near_r + 0.4, d);
+	vec2 muv = (world.xz - mask_origin) / mask_size;
+	float hidden = (muv.x < 0.0 || muv.y < 0.0 || muv.x > 1.0 || muv.y > 1.0) ? 1.0 : 1.0 - texture(sight_mask, muv).r;
+	shade = max(shade, hidden * use_mask);
 	ALBEDO = vec3(0.0);
 	ALPHA = shade * strength;
 }
@@ -57,6 +67,7 @@ var _check_left := 0.0
 var _sense_left := 0.0
 var _wall_left := 0.0
 var _faded: Dictionary = {}
+var _sight: Node
 ## Чуйка сработала — ждём, увидит ли герой угрозу (подтверждение): {id: мс}.
 var _sensed_at: Dictionary = {}
 var _shade: MeshInstance3D
@@ -70,6 +81,13 @@ func _ready() -> void:
 	add_to_group("hero_vision")
 	_rules = Content.vision_rules()
 	_rng.randomize()
+	_sight = SightMaskScript.new()
+	_sight.hero = hero
+	add_child(_sight)
+	var cutaway: Node = CutawayScript.new()
+	cutaway.hero = hero
+	add_child(cutaway)
+	(func() -> void: cutaway.area = get_tree().get_first_node_in_group("cluster_area")).call_deferred()
 	_build_shade.call_deferred()
 
 
@@ -297,6 +315,11 @@ func _update_shade(alive: bool) -> void:
 	_shade_material.set_shader_parameter("strength", strength)
 	_shade_material.set_shader_parameter("soft_angle", deg_to_rad(float(c["shade_soft_deg"])))
 	_shade_material.set_shader_parameter("soft_dist", float(c["shade_soft_m"]))
+	if _sight and _sight.texture:
+		_shade_material.set_shader_parameter("sight_mask", _sight.texture)
+		_shade_material.set_shader_parameter("mask_origin", _sight.origin)
+		_shade_material.set_shader_parameter("mask_size", _sight.size_m)
+		_shade_material.set_shader_parameter("use_mask", 1.0 if alive else 0.0)
 
 
 # --- Прозрачные стены --------------------------------------------------------------------------

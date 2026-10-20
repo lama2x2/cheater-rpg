@@ -204,6 +204,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --log         открыть окно лога Системы
 ##   --char        открыть экран персонажа (с 3 свободными очками)
 ##   --elite       (в Городке) встать в 8 м от раненого-приманки элиты
+##   --outside     встать в 1,5 м к востоку от ближайшего к центру здания (тень за стеной, D-102)
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
@@ -307,6 +308,8 @@ func _handle_debug_args() -> void:
 					get_tree().get_first_node_in_group("hero").global_position = victim.global_position + Vector3(6.0, 0.1, 5.0)).call_deferred()
 		elif arg == "--inside":
 			_debug_inside()
+		elif arg == "--outside":
+			_debug_inside(true)
 		elif arg == "--gaze":
 			_debug_gaze.call_deferred()
 		elif arg == "--gift":
@@ -388,14 +391,15 @@ func _debug_container(after: float) -> void:
 		get_tree().get_first_node_in_group("container_window").open_or_take(best)
 
 
-func _debug_inside() -> void:
+func _debug_inside(outside: bool = false) -> void:
 	var area := get_node("Area")
 	var best: Dictionary = {}
 	for building: Dictionary in area.layout["buildings"]:
 		if best.is_empty() or (building["center"] as Vector2).length() < (best["center"] as Vector2).length():
 			best = building
 	if not best.is_empty():
-		get_tree().get_first_node_in_group("hero").position = Vector3(best["center"].x, 0.1, best["center"].y)
+		var shift := Vector3(float(best["size"].x) / 2.0 + 1.5, 0.0, 0.0) if outside else Vector3.ZERO
+		get_tree().get_first_node_in_group("hero").position = Vector3(best["center"].x, 0.1, best["center"].y) + shift
 
 
 func _debug_gaze() -> void:
