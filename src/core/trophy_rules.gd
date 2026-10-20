@@ -60,13 +60,15 @@ func missing_requirements(id: String, inventory: Inventory) -> Dictionary:
 ##   {"type": "skill_chance", "chance": float, "success": bool}
 func resolve(id: String, now: float, rng: RandomNumberGenerator, context: Dictionary) -> Dictionary:
 	var s := spec(id)
-	var violation := is_violation(id, now)
+	# Окно новичка (D-67, context.newbie): нарушения интервала нет, риска кваза нет.
+	var newbie := bool(context.get("newbie", false))
+	var violation := is_violation(id, now) and not newbie
 	var mult := float(s.get("violation_effect_mult", 1.0)) if violation else 1.0
 	var effects: Array[Dictionary] = []
 	for effect: Dictionary in s.get("effects", []):
 		effects.append_array(_roll_effect(effect, mult, rng, context))
 	var risks: PackedStringArray = []
-	for risk: Dictionary in s.get("risks", []):
+	for risk: Dictionary in ([] if newbie else s.get("risks", [])):
 		var chance := float(risk["chance_if_cooldown_violated"]) if violation else float(risk["chance"])
 		if chance > 0.0 and rng.randf() < chance:
 			risks.append(String(risk["type"]))

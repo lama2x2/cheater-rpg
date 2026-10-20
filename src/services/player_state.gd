@@ -47,6 +47,18 @@ var start_minutes: float = 0.0
 var ng_plus: int = 0
 ## Режим сохранений партии (D-30): "anywhere" / "stab_only". Умолчание для новой игры — в настройках.
 var save_mode: String = SettingsModel.ANYWHERE
+## Происхождение (16, D-66): "cheater" / "ordinary"; вариант форс-мажора и выбран ли он сам.
+var origin: String = OriginRules.ORDINARY
+var origin_variant := ""
+var origin_chosen := false
+## Долги варианта — флаги для событий (16.3, задача 17 и дальше).
+var origin_debts: PackedStringArray = []
+## Окно новичка (D-67): до этой игровой минуты трофеи без риска и без штрафа интервала.
+var newbie_until := 0.0
+## Скрытое свойство «Читер» (16.4) и с какого дня оно включилось (для «читер позже», D-68).
+var cheater_property := false
+var cheater_since_day := -1
+var impossible_events := 0
 ## Быстрые слоты расходников F1–F4 (12.8): id предмета или "".
 var quick_slots: PackedStringArray = ["", "", "", ""]
 ## Помеченное игроком как хлам (вкладка «Хлам», «Продать весь хлам»): {id: true}.
@@ -88,6 +100,13 @@ func setup() -> void:
 	save_mode = String(Settings.value("save_mode"))
 	quick_slots = ["", "", "", ""]
 	junk_marks = {}
+	origin = OriginRules.ORDINARY
+	origin_variant = ""
+	origin_chosen = false
+	origin_debts = []
+	cheater_property = false
+	cheater_since_day = -1
+	impossible_events = 0
 	_was_overloaded = false
 	_last_damage_source = "health"
 	_farm_warned = {}
@@ -109,6 +128,7 @@ func setup() -> void:
 	_luck_logged = {}
 	_waiting_ready = {}
 	start_minutes = GameClock.minutes
+	newbie_until = Content.origin_rules().newbie_until(start_minutes)
 
 
 func add_progress(stat: String, points: float) -> void:
@@ -192,7 +212,8 @@ func consume(id: String, confirmed: bool = false) -> String:
 		var need: String = missing.keys()[0]
 		SystemLog.post("consume_missing", {"item": Content.item_name(id), "need": Content.item_name(need)}, "warning")
 		return "missing"
-	if trophies.is_violation(id, GameClock.minutes) and not confirmed:
+	var newbie := in_newbie_window()
+	if trophies.is_violation(id, GameClock.minutes) and not confirmed and not newbie:
 		return "needs_confirm"
 	inventory.remove(id, 1)
 	var requires: Dictionary = trophies.spec(id).get("requires", {})
@@ -200,9 +221,11 @@ func consume(id: String, confirmed: bool = false) -> String:
 		inventory.remove(need, int(requires[need]))
 	var result := trophies.resolve(id, GameClock.minutes, _rng, {
 		"skill_count": skills_awakened, "main_stats": stats.main_stats(),
-		"additional_stats": stats.additional_stats(), "vitals": Array(Vitals.ALL),
+		"additional_stats": stats.additional_stats(), "vitals": Array(Vitals.ALL), "newbie": newbie,
 	})
 	_apply_consume(result)
+	if newbie and not trophies.spec(id).get("risks", []).is_empty():
+		_newbie_trophy(id)
 	_after_inventory_change()
 	return "ok"
 
@@ -311,6 +334,82 @@ func equip_weapon(id: String) -> String:
 	return id
 
 
+# --- Происхождение (16) --------------------------------------------------------------------
+
+## Новая игра: Обычный или Читер с вариантом choice ("random" или id) — куш сразу (до сцен
+## пролога задачи 17) с сообщением Системы.
+func start_origin(kind: String, choice: String = OriginRules.RANDOM) -> void:
+	var rules := Content.origin_rules()
+	origin = OriginRules.CHEATER if kind == OriginRules.CHEATER else OriginRules.ORDINARY
+	origin_variant = ""
+	origin_chosen = false
+	origin_debts = []
+	if origin == OriginRules.ORDINARY:
+		return
+	origin_chosen = choice != OriginRules.RANDOM and rules.has_variant(choice)
+	origin_variant = rules.resolve_choice(choice, _rng)
+	origin_debts = rules.debts(origin_variant)
+	cheater_property = true  # скрытое: проявится после крестин (задача 17)
+	cheater_since_day = 1
+	_grant(rules.grants(origin_variant))
+	SystemLog.post("origin_jackpot", {"name": Content.ui("origin_" + origin_variant)}, "special")
+
+
+func _grant(list: Array) -> void:
+	for g: Dictionary in list:
+		match String(g["type"]):
+			"item":
+				var left := int(inventory.add(String(g["id"]), int(g["count"]))["left"])
+				if left > 0:
+					EventBus.items_dropped.emit(String(g["id"]), left)
+			"stat_add":
+				stats.add_levels(String(g["stat"]), int(g["value"]))
+			"free_points":
+				free_points += int(g["value"])
+			"lives":
+				lives += int(g["value"])
+			"primary_slots":
+				inventory.set_slot_count(inventory.primary.size() + int(g["value"]))
+			"coef_bonus":
+				var main := stats.main_stats()
+				var stat := main[_rng.randi_range(0, main.size() - 1)]
+				stats.set_coefficient(stat, stats.get_coefficient(stat) + float(g["value"]))
+			"known_timers":
+				var ids := WorldSim.region.ids()
+				ids.sort()
+				var opened := 0
+				for cid in ids:
+					var s: Dictionary = WorldSim.clusters.get(cid, {})
+					if opened < int(g["value"]) and not s.is_empty() and ClusterLifecycle.reloads(s["timer"]) and not bool(s["known_timer"]):
+						s["known_timer"] = true
+						opened += 1
+			"map_reveal":
+				for i in int(g["value"]):
+					WorldSim.reveal_random_map(_rng)
+			"skill":
+				learn_skill(String(g["id"]))
+			"cheater_now":
+				cheater_property = true
+	inventory_changed.emit()
+	stats_changed.emit()
+
+
+func in_newbie_window() -> bool:
+	return OriginRules.newbie_active(GameClock.minutes, newbie_until)
+
+
+## Приём рискованного трофея в окне новичка: лог, для Обычного — шаг к «читеру позже» (D-68).
+func _newbie_trophy(id: String) -> void:
+	SystemLog.post("newbie_window_saved", {"item": Content.item_name(id)}, "special")
+	if id != "pearl_black" or origin == OriginRules.CHEATER or cheater_property:
+		return
+	impossible_events += 1
+	if Content.origin_rules().later_reached(impossible_events):
+		cheater_property = true
+		cheater_since_day = GameClock.day()
+		SystemLog.post("cheater_later", {}, "special")
+
+
 ## Быстрый слот index (0..3) ← предмет id ("" — очистить). Один предмет — в одном слоте.
 func set_quick_slot(index: int, id: String) -> void:
 	for i in quick_slots.size():
@@ -416,7 +515,7 @@ func continue_after_final() -> void:
 ## (со свойствами и слотами, без откатов).
 func ng_plus_carry() -> Dictionary:
 	var known := skills.to_dict()
-	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"], "save_mode": save_mode,
+	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"], "save_mode": save_mode, "origin": origin,
 		"skills": {"learned": known["learned"], "active_list": known["active_list"]}}
 
 
@@ -449,6 +548,9 @@ func to_dict() -> Dictionary:
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus, "save_mode": save_mode,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
 		"quick_slots": Array(quick_slots), "junk_marks": junk_marks.keys(),
+		"origin": {"kind": origin, "variant": origin_variant, "chosen": origin_chosen, "debts": Array(origin_debts),
+			"newbie_until": newbie_until, "cheater_property": cheater_property, "cheater_since_day": cheater_since_day,
+			"impossible_events": impossible_events},
 	}
 
 
@@ -494,6 +596,15 @@ func load_dict(data: Dictionary) -> void:
 	junk_marks = {}
 	for id in data.get("junk_marks", []):
 		junk_marks[String(id)] = true
+	var o: Dictionary = data["origin"]
+	origin = String(o["kind"])
+	origin_variant = String(o["variant"])
+	origin_chosen = bool(o["chosen"])
+	origin_debts = PackedStringArray(o["debts"])
+	newbie_until = float(o["newbie_until"])
+	cheater_property = bool(o["cheater_property"])
+	cheater_since_day = int(o["cheater_since_day"])
+	impossible_events = int(o["impossible_events"])
 	skills_changed.emit()
 
 

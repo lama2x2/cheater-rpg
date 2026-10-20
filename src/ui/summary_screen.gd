@@ -142,6 +142,7 @@ func _stat_rows() -> PackedStringArray:
 		rows.append(Content.ui("summary_deaths", {
 			"deaths": run.deaths.size(), "cause": Content.death_cause(causes[0][0]), "times": causes[0][1]}))
 	rows.append(Content.ui("summary_kills", {"kills": run.count("kills")}))
+	rows.append(_origin_line())
 	var changes := run.count("save_mode_changes")
 	rows.append(Content.ui("summary_save_mode", {
 		"mode": Content.ui("save_mode_" + PlayerState.save_mode),
@@ -155,3 +156,13 @@ func _stat_rows() -> PackedStringArray:
 func _on_choice(mode: String) -> void:
 	close()
 	continue_pressed.emit(mode)
+
+
+## Строка происхождения (16.1): читер с вариантом, обычный или «обычный → читер (день N)».
+func _origin_line() -> String:
+	if PlayerState.origin == OriginRules.CHEATER:
+		return Content.ui("summary_origin_cheater", {"name": Content.ui("origin_" + PlayerState.origin_variant),
+			"how": Content.ui("summary_origin_chosen" if PlayerState.origin_chosen else "summary_origin_random")})
+	if PlayerState.cheater_property:
+		return Content.ui("summary_origin_later", {"day": PlayerState.cheater_since_day})
+	return Content.ui("summary_origin_ordinary")

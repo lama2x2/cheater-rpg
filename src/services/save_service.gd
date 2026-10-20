@@ -87,6 +87,9 @@ func start_new_game(carry: Dictionary = {}, options: Dictionary = {}) -> void:
 	if options.has("save_mode"):
 		PlayerState.save_mode = String(options["save_mode"])
 	WorldSim.new_world()
+	# Происхождение (16): с экрана новой игры, у «Новой игры+» — то же, что было.
+	var origin_kind := String(options.get("origin", carry.get("origin", OriginRules.ORDINARY)))
+	PlayerState.start_origin(origin_kind, String(options.get("variant", OriginRules.RANDOM)))
 	StabState.setup()
 	_pending = {}
 	get_tree().reload_current_scene()

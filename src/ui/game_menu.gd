@@ -11,6 +11,9 @@ var _on_confirm: Callable
 var _title_mode := false
 ## Выбор на экране новой игры.
 var _new_save_mode := ""
+## Происхождение на экране новой игры (16): cheater / ordinary и вариант (random или id).
+var _new_origin := OriginRules.CHEATER
+var _new_variant := OriginRules.RANDOM
 ## Страница «Клавиши»: ждём нажатия для этого действия ("" — не ждём).
 var _waiting_action := ""
 var _bindings: KeyBindings
@@ -106,22 +109,75 @@ func _title_page() -> void:
 ## Экран новой игры: режим сохранений (D-30), дальше — предыстория (D-10).
 func _open_new_game() -> void:
 	_new_save_mode = String(Settings.value("save_mode"))
+	_new_origin = OriginRules.CHEATER
+	_new_variant = OriginRules.RANDOM
 	_new_game_page()
 
 
 func _new_game_page() -> void:
 	_clear(Content.ui("new_game_title"))
 	_text(Content.ui("new_game_save_mode"), 18, Color(0.85, 0.75, 0.55))
+	var modes := _choice_row()
 	for mode in [SettingsModel.ANYWHERE, SettingsModel.STAB_ONLY]:
-		var mark := "●" if mode == _new_save_mode else "○"
-		_button("%s %s" % [mark, Content.ui("save_mode_" + mode)], func() -> void:
+		_choice(modes, Content.ui("save_mode_" + mode), mode == _new_save_mode, func() -> void:
 			_new_save_mode = mode
 			_new_game_page())
 	_text(Content.ui("save_mode_hint_" + _new_save_mode), 14, Color(0.75, 0.75, 0.75))
+	# Происхождение (16.1): Читер по умолчанию — со «Случайно» или карточкой варианта; Обычный.
+	_text(Content.ui("new_game_origin"), 18, Color(0.85, 0.75, 0.55))
+	var origins := _choice_row()
+	for kind in [OriginRules.CHEATER, OriginRules.ORDINARY]:
+		_choice(origins, Content.ui("origin_kind_" + kind), kind == _new_origin, func() -> void:
+			_new_origin = kind
+			_new_game_page())
+	_text(Content.ui("origin_kind_hint_" + _new_origin), 14, Color(0.75, 0.75, 0.75))
+	if _new_origin == OriginRules.CHEATER:
+		var scroll := ScrollContainer.new()
+		scroll.custom_minimum_size = Vector2(760, clampf(get_viewport().get_visible_rect().size.y - 560.0, 90.0, 250.0))
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_box.add_child(scroll)
+		var grid := GridContainer.new()
+		grid.columns = 3
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.add_theme_constant_override("v_separation", 6)
+		scroll.add_child(grid)
+		var cards: Array = [{"id": OriginRules.RANDOM, "stars": 0, "skulls": 0}]
+		cards.append_array(Content.origin_rules().cards())
+		for card: Dictionary in cards:
+			var id := String(card["id"])
+			var marks := "" if id == OriginRules.RANDOM else "\n%s  %s" % ["★".repeat(int(card["stars"])) + "☆".repeat(3 - int(card["stars"])),
+				"☠".repeat(int(card["skulls"])) + "·".repeat(3 - int(card["skulls"]))]
+			var b := Button.new()
+			b.text = ("● " if id == _new_variant else "") + Content.ui("origin_" + id) + marks
+			b.custom_minimum_size = Vector2(248, 54)
+			b.add_theme_font_size_override("font_size", 14)
+			b.focus_mode = Control.FOCUS_NONE
+			b.pressed.connect(func() -> void:
+				_new_variant = id
+				_new_game_page())
+			grid.add_child(b)
+		_text(Content.ui("origin_hook_" + _new_variant), 14, Color(0.85, 0.85, 0.8))
 	_button(Content.ui("new_game_start"), func() -> void:
 		Settings.change("save_mode", _new_save_mode)
-		SaveService.start_new_game({}, {"save_mode": _new_save_mode}))
+		SaveService.start_new_game({}, {"save_mode": _new_save_mode, "origin": _new_origin, "variant": _new_variant}))
 	_button(Content.ui("menu_back"), _main_page)
+
+
+func _choice_row() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_box.add_child(row)
+	return row
+
+
+func _choice(row: HBoxContainer, text: String, selected: bool, action: Callable) -> void:
+	var b := Button.new()
+	b.text = ("● " if selected else "○ ") + text
+	b.custom_minimum_size = Vector2(300, 38)
+	b.add_theme_font_size_override("font_size", 17)
+	b.pressed.connect(action)
+	row.add_child(b)
 
 
 ## Настройки (12.6a). Режим сохранений в игре меняет и партию (отметка в итогах), на титуле —
