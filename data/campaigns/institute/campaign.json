@@ -1,0 +1,9 @@
+{
+  "_doc": "Кампания на потом (11.4a): карточка видна, выбрать нельзя — после M2.",
+  "id": "institute",
+  "available": false,
+  "order": 4,
+  "length": "campaign_length_long",
+  "missions_from": "",
+  "final": ""
+}

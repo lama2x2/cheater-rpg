@@ -1,0 +1,9 @@
+{
+  "_doc": "Кампания (11.4a, D-97, задача 17b): карточка (тексты campaign_<id>_*), доступна ли в этой сборке, миссии — missions.json рядом (или missions_from — чужие), final — миссия, после которой кампания считается пройденной (в M1 — пройдено начало).",
+  "id": "blank_slate",
+  "available": true,
+  "order": 1,
+  "length": "campaign_length_long",
+  "missions_from": "",
+  "final": "bs_road"
+}

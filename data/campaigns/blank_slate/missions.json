@@ -1,0 +1,35 @@
+{
+  "_doc": "Миссии «Чистого листа» в M1 — начало (наставник → крестины → путь в стаб). Схема — src/core/quest_rules.gd. События: mentor_appeared, mentor_talked, sack_opened, christened, stab_entered, hero_died (PlayerState.quest_event). delay_h — игровые часы.",
+  "missions": [
+    {
+      "id": "bs_mentor", "title": "m_bs_mentor", "desc": "m_bs_mentor_desc",
+      "start": { "event": "mentor_appeared" },
+      "objectives": [ { "id": "talk", "event": "mentor_talked", "count": 1, "text": "o_bs_mentor_talk" } ],
+      "next": ["bs_skull"]
+    },
+    {
+      "id": "bs_skull", "title": "m_bs_skull", "desc": "m_bs_skull_desc",
+      "objectives": [
+        { "id": "sack", "event": "sack_opened", "count": 1, "text": "o_bs_skull_sack" },
+        { "id": "christen", "event": "christened", "count": 1, "text": "o_bs_skull_christen" }
+      ],
+      "choices": [
+        { "id": "share", "text": "c_bs_share", "options": [
+          { "id": "share", "text": "c_bs_share_yes", "flags": { "shared_with_mentor": true }, "cost": { "sporan": 5 } },
+          { "id": "keep", "text": "c_bs_share_no", "flags": { "shared_with_mentor": false } }
+        ] }
+      ],
+      "consequences": [
+        { "id": "mentor_tip", "delay_h": 3, "if": { "shared_with_mentor": true }, "log": "cons_mentor_tip", "grants": [ { "type": "known_timers", "value": 1 }, { "type": "item", "id": "zhivchik", "count": 1 } ] },
+        { "id": "mentor_grudge", "delay_h": 5, "if": { "shared_with_mentor": false }, "log": "cons_mentor_grudge", "grants": [] }
+      ],
+      "next": ["bs_road"]
+    },
+    {
+      "id": "bs_road", "title": "m_bs_road", "desc": "m_bs_road_desc",
+      "objectives": [ { "id": "stab", "event": "stab_entered", "count": 1, "text": "o_bs_road_stab" } ],
+      "fail": { "events": ["hero_died"], "retry": true },
+      "final": true
+    }
+  ]
+}

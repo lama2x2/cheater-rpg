@@ -4,7 +4,8 @@
     "story": { "versions": [
       { "id": "blank_slate", "available": true, "prologue": false },
       { "id": "last_memory", "available": true, "prologue": true },
-      { "id": "hunted", "available": false, "prologue": false },
+      { "id": "collector", "available": false, "prologue": false },
+      { "id": "institute", "available": false, "prologue": false },
       { "id": "bonds", "available": false, "prologue": false }
     ], "default": "blank_slate" },
     "sandbox": { "prologue": false }

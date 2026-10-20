@@ -15,7 +15,7 @@
     "warning": [0.95, 0.55, 0.4],
     "death": [0.95, 0.35, 0.3]
   },
-  "cards": ["general_level_up", "skill_learned", "skill_awakened", "origin_jackpot", "region_shift", "cheater_later", "cluster_timer_learned", "death_final", "elite_killed"],
+  "cards": ["general_level_up", "skill_learned", "skill_awakened", "origin_jackpot", "region_shift", "cheater_later", "cluster_timer_learned", "death_final", "elite_killed", "quest_done", "campaign_done"],
   "card_s": 4.0,
   "low_health": 0.25,
   "low_health_recover": 0.5

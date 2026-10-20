@@ -35,6 +35,8 @@ const OnboardingDirectorScript := preload("res://src/world/onboarding_director.g
 const EliteEventScript := preload("res://src/world/elite_event.gd")
 const TutorialHintScript := preload("res://src/ui/tutorial_hint.gd")
 const MentorWindowScript := preload("res://src/ui/mentor_window.gd")
+const QuestTrackerScript := preload("res://src/ui/quest_tracker.gd")
+const JournalWindowScript := preload("res://src/ui/journal_window.gd")
 
 var _death_flow: Node
 var _environment: Environment
@@ -91,6 +93,8 @@ func _ready() -> void:
 	add_child(LogCardScript.new())
 	add_child(_hud(TutorialHintScript.new()))
 	add_child(MentorWindowScript.new())
+	add_child(_hud(QuestTrackerScript.new()))
+	add_child(JournalWindowScript.new())
 	var map_watcher: Node = MapWatcherScript.new()
 	map_watcher.area = area
 	map_watcher.hero = player

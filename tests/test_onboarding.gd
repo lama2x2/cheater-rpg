@@ -65,7 +65,7 @@ func test_modes_and_versions() -> void:
 	assert_eq(r.start_step(OnboardingRules.STORY, "blank_slate"), OnboardingRules.AWAKEN, "Чистый лист — сразу пробуждение")
 	assert_eq(r.start_step(OnboardingRules.STORY, "last_memory"), OnboardingRules.START, "Последнее воспоминание — с пролога")
 	assert_eq(r.start_step(OnboardingRules.SANDBOX, "last_memory"), OnboardingRules.AWAKEN, "песочница — без пролога")
-	assert_eq(r.clean_version("hunted"), "blank_slate", "версии на потом — недоступны")
+	assert_eq(r.clean_version("collector"), "blank_slate", "кампании на потом — недоступны")
 	var ids := []
 	for v in r.story_versions():
 		ids.append(v["id"])

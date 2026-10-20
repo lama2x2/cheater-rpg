@@ -9,6 +9,8 @@ signal skills_changed
 signal stats_changed
 ## Шаг начала игры сменился (задача 17): подсказки, наставник, сцена куша.
 signal onboarding_changed(step: String)
+## Миссии кампании изменились (задача 17b): трекер, журнал, окно наставника.
+signal quests_changed
 
 var stats: StatBlock
 var vitals: Vitals
@@ -70,6 +72,9 @@ var pending_jackpot := false
 ## Режим игры (11.4a, D-95): "story" — сюжетная версия story_version, "sandbox" — без главной цели.
 var game_mode := OnboardingRules.STORY
 var story_version := "blank_slate"
+## Миссии кампании (QuestRules): активные, сделанные, флаги выборов, отложенные последствия.
+var quests: Dictionary = QuestRules.new_state()
+var _quest_tick_left := 0.0
 ## Для сообщений лога (задача 16): общий уровень, «мало здоровья», окно новичка ещё открыто.
 var _general_level := 0
 var _low_health_warned := false
@@ -128,6 +133,7 @@ func setup() -> void:
 	pending_jackpot = false
 	game_mode = OnboardingRules.STORY
 	story_version = "blank_slate"
+	quests = QuestRules.new_state()
 	_was_overloaded = false
 	_last_damage_source = "health"
 	_farm_warned = {}
@@ -203,6 +209,7 @@ func die(cause: String) -> void:
 		SystemLog.post("death_final", {}, "death")
 	awaiting_respawn = true
 	EventBus.player_died.emit(cause, lives)
+	quest_event("hero_died")
 
 
 func _process(delta: float) -> void:
@@ -211,6 +218,7 @@ func _process(delta: float) -> void:
 			SystemLog.post("buff_ended", {"stat": Content.stat_name(buff["stat"])})
 	_skills_tick(delta)
 	_check_newbie_window()
+	_quests_tick(delta)
 	if wounds and wounds.is_bleeding() and not awaiting_respawn:
 		var loss := wounds.tick(delta)
 		_last_damage_source = "bleeding"
@@ -408,14 +416,98 @@ func begin_onboarding() -> void:
 	onboarding_changed.emit(onboarding_step)
 
 
-## Событие онбординга: шаг меняется по data/onboarding.json.
+## Событие онбординга: шаг меняется по data/onboarding.json; то же событие — миссиям кампании.
 func onboarding_event(event: String) -> void:
+	if event != "hero_died":  # смерть миссии получают из die()
+		quest_event(event)
 	if onboarding_step.is_empty():
 		return
 	var next := Content.onboarding_rules().next(onboarding_step, event)
 	if next != onboarding_step:
 		onboarding_step = next
 		onboarding_changed.emit(onboarding_step)
+
+
+# --- Миссии кампании (задача 17b) ---------------------------------------------------------
+
+## Движок миссий текущей кампании; в песочнице — нет (null).
+func quest_rules() -> QuestRules:
+	if game_mode != OnboardingRules.STORY:
+		return null
+	return Content.quest_rules(story_version)
+
+
+func quest_event(event: String) -> void:
+	var rules := quest_rules()
+	if rules == null:
+		return
+	var notes := rules.on_event(quests, event, GameClock.minutes)
+	if notes.is_empty():
+		return
+	for note in notes:
+		var m := rules.mission(String(note["mission"]))
+		var title := Content.ui(String(m.get("title", note["mission"])))
+		match String(note["type"]):
+			"started":
+				SystemLog.post("quest_started", {"title": title}, "special")
+			"done":
+				SystemLog.post("quest_done", {"title": title}, "progress")
+				if bool(m.get("final", false)):
+					MetaProgress.complete(story_version)
+					SystemLog.post("campaign_done", {"name": Content.ui("campaign_" + story_version)}, "special")
+			"retry":
+				SystemLog.post("quest_retry", {"title": title}, "warning")
+			"failed":
+				SystemLog.post("quest_failed", {"title": title}, "warning")
+	quests_changed.emit()
+
+
+## Выбор в миссии: цена (спораны и т. п.) списывается; не хватает — false.
+func quest_choose(mission_id: String, choice_id: String, option_id: String) -> bool:
+	var rules := quest_rules()
+	if rules == null or not rules.chosen(quests, mission_id, choice_id).is_empty():
+		return false
+	for c: Dictionary in rules.mission(mission_id).get("choices", []):
+		for option: Dictionary in c.get("options", []) if String(c["id"]) == choice_id else []:
+			if String(option["id"]) != option_id:
+				continue
+			var cost: Dictionary = option.get("cost", {})
+			for id: String in cost:
+				if inventory.count_of(id) < int(cost[id]):
+					SystemLog.post("not_enough_money", {"price": int(cost[id])}, "warning")
+					return false
+			for id: String in cost:
+				inventory.remove(id, int(cost[id]))
+	rules.choose(quests, mission_id, choice_id, option_id)
+	SystemLog.post("quest_choice", {"text": Content.ui(String(_option_text(rules, mission_id, choice_id, option_id)))})
+	_after_inventory_change()
+	quests_changed.emit()
+	return true
+
+
+func _option_text(rules: QuestRules, mission_id: String, choice_id: String, option_id: String) -> String:
+	for c: Dictionary in rules.mission(mission_id).get("choices", []):
+		if String(c["id"]) == choice_id:
+			for option: Dictionary in c["options"]:
+				if String(option["id"]) == option_id:
+					return String(option.get("text", option_id))
+	return option_id
+
+
+## Отложенные последствия: раз в секунду — что подошло по времени и флагам.
+func _quests_tick(delta: float) -> void:
+	_quest_tick_left -= delta
+	if _quest_tick_left > 0.0:
+		return
+	_quest_tick_left = 1.0
+	var rules := quest_rules()
+	if rules == null or (quests["pending"] as Array).is_empty():
+		return
+	for c in rules.due(quests, GameClock.minutes):
+		if c.has("log"):
+			SystemLog.post(String(c["log"]), {}, "special")
+		_grant(c.get("grants", []))
+		quests_changed.emit()
 
 
 ## Крестины (3.5): имя (или кличка по поступку), скрытые характеристики открываются, первый общий
@@ -667,6 +759,7 @@ func to_dict() -> Dictionary:
 		"quick_slots": Array(quick_slots), "junk_marks": junk_marks.keys(),
 		"hero": {"name": hero_name, "christened": christened, "onboarding": onboarding_step, "pending_jackpot": pending_jackpot,
 			"mode": game_mode, "version": story_version},
+		"quests": quests.duplicate(true),
 		"origin": {"kind": origin, "variant": origin_variant, "chosen": origin_chosen, "debts": Array(origin_debts),
 			"newbie_until": newbie_until, "cheater_property": cheater_property, "cheater_since_day": cheater_since_day,
 			"impossible_events": impossible_events},
@@ -732,6 +825,12 @@ func load_dict(data: Dictionary) -> void:
 	pending_jackpot = bool(hero.get("pending_jackpot", false))
 	game_mode = String(hero.get("mode", OnboardingRules.STORY))
 	story_version = String(hero.get("version", "blank_slate"))
+	var saved_quests: Dictionary = data["quests"]
+	quests = QuestRules.new_state() if saved_quests.is_empty() else saved_quests.duplicate(true)
+	for key: String in QuestRules.new_state():
+		if not quests.has(key):
+			quests[key] = QuestRules.new_state()[key]
+	quests_changed.emit()
 	_general_level = stats.general_level()
 	_newbie_was_open = in_newbie_window()
 	skills_changed.emit()

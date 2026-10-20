@@ -29,6 +29,7 @@ const ACTIONS := {
 	"minimap": [KEY_N],
 	"character": [KEY_P],
 	"log": [KEY_L],
+	"journal": [KEY_J],
 	"quick_1": [KEY_F1],
 	"quick_2": [KEY_F2],
 	"quick_3": [KEY_F3],

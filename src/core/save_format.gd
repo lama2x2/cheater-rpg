@@ -24,13 +24,20 @@ extends RefCounted
 ##   13 — player.skills.active_list вместо слотов (D-84): внесённые в слоты — первыми, остальные
 ##       изученные — следом; player.pending_pearl_skills (висящие умения жемчужины, D-86).
 ##   14 — player.origin (происхождение, 16): старые партии — Обычный, окно новичка закрыто.
+##   15 — player.quests (миссии кампании, 17b): старые партии — без миссий.
 
-const VERSION := 14
+const VERSION := 15
 
 
 ## Миграции по исходной версии: {K: Callable}.
 static func migrations() -> Dictionary:
-	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9, 9: _v9_to_v10, 10: _v10_to_v11, 11: _v11_to_v12, 12: _v12_to_v13, 13: _v13_to_v14}
+	return {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5, 5: _v5_to_v6, 6: _v6_to_v7, 7: _v7_to_v8, 8: _v8_to_v9, 9: _v9_to_v10, 10: _v10_to_v11, 11: _v11_to_v12, 12: _v12_to_v13, 13: _v13_to_v14, 14: _v14_to_v15}
+
+
+static func _v14_to_v15(data: Dictionary) -> Dictionary:
+	if data["sections"].has("player"):
+		data["sections"]["player"].merge({"quests": {}})
+	return data
 
 
 static func _v13_to_v14(data: Dictionary) -> Dictionary:

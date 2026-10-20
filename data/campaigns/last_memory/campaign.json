@@ -1,0 +1,9 @@
+{
+  "_doc": "Кампания «Последнее воспоминание» (11.4a): в M1 — пролог и общее начало на миссиях «Чистого листа».",
+  "id": "last_memory",
+  "available": true,
+  "order": 2,
+  "length": "campaign_length_long",
+  "missions_from": "blank_slate",
+  "final": "bs_road"
+}

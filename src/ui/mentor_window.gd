@@ -67,6 +67,10 @@ func _refresh() -> void:
 		"sack":
 			_say("mentor_sack_reminder")
 		"return":
+			var rules := PlayerState.quest_rules()
+			if rules and rules.is_active(PlayerState.quests, "bs_skull") and rules.chosen(PlayerState.quests, "bs_skull", "share").is_empty():
+				_choice(rules, "bs_skull", "share")
+				return
 			_say("mentor_christening")
 			_name_edit = LineEdit.new()
 			_name_edit.placeholder_text = Content.ui("mentor_name_placeholder")
@@ -82,6 +86,22 @@ func _refresh() -> void:
 			_content.add_child(row)
 		_:
 			_say("mentor_after" if PlayerState.christened else "mentor_busy", {"name": PlayerState.hero_name})
+
+
+## Выбор миссии (задача 17b): реплика и варианты-кнопки; выбор — PlayerState.quest_choose.
+func _choice(rules: QuestRules, mission_id: String, choice_id: String) -> void:
+	for c: Dictionary in rules.mission(mission_id).get("choices", []):
+		if String(c["id"]) != choice_id:
+			continue
+		_say(String(c["text"]))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		for option: Dictionary in c["options"]:
+			var oid := String(option["id"])
+			row.add_child(UiKit.button(Content.ui(String(option["text"])), func() -> void:
+				if PlayerState.quest_choose(mission_id, choice_id, oid):
+					_refresh(), 15))
+		_content.add_child(row)
 
 
 func _say(key: String, params: Dictionary = {}) -> void:

@@ -140,13 +140,29 @@ func _new_game_page() -> void:
 			_new_mode = mode
 			_new_game_page())
 	if _new_mode == OnboardingRules.STORY:
-		var versions := _choice_row()
-		for v: Dictionary in Content.onboarding_rules().story_versions():
-			var id := String(v["id"])
-			_choice(versions, Content.ui("story_" + id), id == _new_version, func() -> void:
+		# Кампании (11.4a, D-97): карточки — герой и завязка без спойлеров, «пройдено», «позже».
+		var grid := GridContainer.new()
+		grid.columns = 3
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.add_theme_constant_override("v_separation", 6)
+		_box.add_child(grid)
+		for card: Dictionary in Content.campaign_list():
+			var id := String(card["id"])
+			var available := bool(card["available"])
+			var mark := Content.ui("campaign_later") if not available else (Content.ui("campaign_done_mark") if MetaProgress.completed(id) else "")
+			var b := Button.new()
+			b.text = ("● " if id == _new_version else "") + Content.ui("campaign_card", {"name": Content.ui("campaign_" + id),
+				"hero": Content.ui("campaign_%s_hero" % id), "mark": mark}).strip_edges()
+			b.custom_minimum_size = Vector2(250, 84)
+			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			b.add_theme_font_size_override("font_size", 13)
+			b.disabled = not available
+			b.focus_mode = Control.FOCUS_NONE
+			b.pressed.connect(func() -> void:
 				_new_version = id
 				_new_game_page())
-		_text(Content.ui("story_hint_" + _new_version), 14, Color(0.75, 0.75, 0.75))
+			grid.add_child(b)
+		_text(Content.ui("campaign_%s_hook" % _new_version), 14, Color(0.8, 0.8, 0.78))
 	else:
 		_text(Content.ui("game_mode_hint_sandbox"), 14, Color(0.75, 0.75, 0.75))
 	_text(Content.ui("new_game_save_mode"), 18, Color(0.85, 0.75, 0.55))

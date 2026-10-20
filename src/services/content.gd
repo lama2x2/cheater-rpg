@@ -34,6 +34,7 @@ const ORIGINS_PATH := "res://data/origins.json"
 const LOG_PATH := "res://data/log.json"
 const ONBOARDING_PATH := "res://data/onboarding.json"
 const ELITE_PATH := "res://data/elite.json"
+const CAMPAIGNS_DIR := "res://data/campaigns"
 
 var _cache: Dictionary = {}
 
@@ -128,6 +129,40 @@ func luck_model() -> LuckModel:
 	if not _cache.has(LUCK_PATH):
 		_cache[LUCK_PATH] = LuckModel.new(JsonData.load_dict(LUCK_PATH, LuckModel.REQUIRED_KEYS))
 	return _cache[LUCK_PATH]
+
+
+## Кампании (11.4a): {id: карточка campaign.json}, по полю order.
+func campaigns() -> Dictionary:
+	if not _cache.has(CAMPAIGNS_DIR):
+		var result := {}
+		for dir in DirAccess.get_directories_at(CAMPAIGNS_DIR):
+			var path := CAMPAIGNS_DIR.path_join(dir).path_join("campaign.json")
+			if FileAccess.file_exists(path):
+				result[dir] = JsonData.load_dict(path, ["id", "available", "order", "final"])
+		_cache[CAMPAIGNS_DIR] = result
+	return _cache[CAMPAIGNS_DIR]
+
+
+## Карточки кампаний по порядку.
+func campaign_list() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for id: String in campaigns():
+		list.append(campaigns()[id])
+	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["order"]) < int(b["order"]))
+	return list
+
+
+## Движок миссий кампании id (миссии — свои или missions_from). Нет кампании — пустой.
+func quest_rules(id: String) -> QuestRules:
+	var key := "quests:" + id
+	if not _cache.has(key):
+		var card: Dictionary = campaigns().get(id, {})
+		var from := String(card.get("missions_from", ""))
+		var source := from if not from.is_empty() else id
+		var path := CAMPAIGNS_DIR.path_join(source).path_join("missions.json")
+		var defs: Array = JsonData.load_dict(path, ["missions"])["missions"] if FileAccess.file_exists(path) else []
+		_cache[key] = QuestRules.new(defs)
+	return _cache[key]
 
 
 func elite_rules() -> EliteRules:

@@ -127,6 +127,7 @@ func _spawn_mentor() -> void:
 	_mentor.global_position = area.snap(at)
 	_mentor.look_at(PlayerState.respawn_position, Vector3.UP)
 	_mentor.rotation.x = 0.0
+	PlayerState.quest_event("mentor_appeared")
 
 
 func _spawn_site(scene: Dictionary) -> void:
