@@ -80,6 +80,25 @@ def _stay_checks(sid: str, i: int, ch, r: Report) -> None:
             return
 
 
+def _order_checks(sid: str, i: int, ch, r: Report) -> None:
+    """Сначала событие в тексте, потом строка Системы о нём: у выбора со строкой Системы или со
+    смертью должен быть текст-итог (иначе о гибели или трофее расскажет только Система)."""
+    where = f"{sid}.choices[{i}] «{ch.label}»"
+    outcomes = [(ch.text, ch.system, ch.effects)]
+    if ch.roll:
+        outcomes = [(b.text or ch.text, b.system or ch.system, ch.effects + b.effects)
+                    for b in (ch.roll.success, ch.roll.fail)]
+    for text, system, effects in outcomes:
+        if text:
+            continue
+        if system:
+            r.warnings.append(f"{where}: строка Системы без текста-итога — Система сообщит о том, "
+                              f"чего в тексте не было")
+        if _writes(effects)[1]:
+            r.warnings.append(f"{where}: смерть без текста — о гибели расскажет только Система; "
+                              f"опишите, что случилось")
+
+
 def _hubs(edges: dict[str, set[str]], once: set[tuple[str, str]]) -> dict[str, str]:
     """Хабы: сцена с несколькими выходами, из которой можно сходить в соседнюю и вернуться
     назад; once — переходы, которые закрываются после первого раза (их if гасит сам выбор или вход
@@ -151,6 +170,7 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
                     if goto and goto[-1].if_:
                         r.warnings.append(f"{where}: у условного goto нет варианта по умолчанию")
             _stay_checks(sid, i, ch, r)
+            _order_checks(sid, i, ch, r)
             if ch.if_:
                 cond = expr.names_in(parse_expr(ch.if_))
                 for t in _targets(ch.goto):

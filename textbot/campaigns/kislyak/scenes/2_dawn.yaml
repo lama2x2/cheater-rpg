@@ -35,7 +35,7 @@
       roll:
         chance: "40 + var.luck * 10"
         success: { text: "Выстрел мимо, второй — по забору. Вы влетаете в ворота стаба, и охранник наконец поворачивается куда надо.", effects: ["set flag.knows_depot"], goto: square }
-        fail: { effects: ["die 'обрез у задних ворот'"] }
+        fail: { text: "До ворот двадцать шагов. Первый выстрел — мимо. Второй — нет.", effects: ["die 'обрез у задних ворот'"] }
 
 - id: depot
   chapter: "Автопарк"
@@ -75,6 +75,7 @@
           effects: ["item.anchor += 1", "var.humanity -= 1"]
           goto: square
         fail:
+          text: "Вы тянетесь к стволу на долю секунды позже, чем нужно."
           effects: ["die 'обрез в автопарке'"]
 
 - id: accuse

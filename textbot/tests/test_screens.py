@@ -36,9 +36,9 @@ def test_reply_does_not_repeat_scene_text(make_campaign):
     assert engine.view(c, st, Meta()).text == [LONG]
     pick(c, st, "Радио")
     scr = engine.view(c, st, Meta())
-    # только ответ, его строка Системы и то, что стало видно из-за выбора, — без текста сцены
-    assert scr.parts == [("text", "— А ничего! Одно шипение."), ("system", "Связь: нет"),
-                         ("text", "Радио шипит на всех частотах.")]
+    # только ответ и то, что стало видно из-за выбора, — без текста сцены; строка Системы — после события
+    assert scr.parts == [("text", "— А ничего! Одно шипение."), ("text", "Радио шипит на всех частотах."),
+                         ("system", "Связь: нет")]
     pick(c, st, "Урчат?")
     assert engine.view(c, st, Meta()).text == ["— Видел. Ночью."]  # новый extra уже показан — не повторяем
     assert [ch.label for ch in engine.view(c, st, Meta()).choices] == ["Молчать", "Ждать", "В двор", "В переулок"]
@@ -126,6 +126,35 @@ def test_lint_warns_about_repeats(make_campaign):
     assert any("«Позвать»" in x and "пустым" in x for x in w)
     assert any(x.startswith("hub: в сцену возвращаются") for x in w)
     assert not any(x.startswith("bar:") for x in w)
+
+
+def test_lint_wants_text_before_system(make_campaign):
+    scenes = [
+        {"id": "s", "text": "Двор.", "choices": [
+            {"label": "Ударить", "system": "Уничтожен заражённый.", "goto": "end"},
+            {"label": "Прыгнуть ☠", "roll": {"chance": 50, "success": {"text": "Повезло.", "goto": "end"},
+                                             "fail": {"effects": ["die 'прыжок'"]}}},
+            {"label": "Сдаться ☠", "text": "Вы опускаете руки. Это последнее, что вы делаете.",
+             "effects": ["die 'сдался'"]}]},
+        {"id": "end", "text": "Конец.", "ending": {"id": "end", "title": "Конец"}},
+    ]
+    w = lint(make_campaign({"death": {"lives": 1, "final": "end"}}, scenes)).warnings
+    assert any("«Ударить»" in x and "строка Системы без текста" in x for x in w)
+    assert any("«Прыгнуть ☠»" in x and "смерть без текста" in x for x in w)
+    assert not any("«Сдаться ☠»" in x for x in w)
+
+
+def test_death_text_comes_before_system_message(make_campaign):
+    scenes = [
+        {"id": "s", "text": "Двор.", "choices": [
+            {"label": "Сдаться ☠", "text": "Вы опускаете руки.", "effects": ["die 'сдался'"]}]},
+        {"id": "r", "text": "Темнота.", "system": "Возрождение.", "choices": [{"label": "Встать", "goto": "s"}]},
+    ]
+    c = make_campaign({"death": {"lives": 3, "respawn": "r", "message": "Причина: {cause}."}}, scenes)
+    st = engine.new_run(c, seed=1)
+    pick(c, st, "Сдаться ☠")
+    assert engine.view(c, st, Meta()).parts == [
+        ("text", "Вы опускаете руки."), ("system", "Причина: сдался."), ("text", "Темнота."), ("system", "Возрождение.")]
 
 
 def test_reader_flags_repeated_paragraph(make_campaign):

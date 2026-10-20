@@ -197,7 +197,15 @@ def view(c: Campaign, st: RunState, meta: Meta, full: bool = False) -> Screen:
     if not before and not text and not after:  # выбор без итога — хоть что-то показать
         text = body("again" if scene.again else "full")
     title = [("title", scene.ending.title)] if scene.ending else []
-    parts = before + title + [("text", fill(t.strip(), st, meta)) for t in text] + after
+    body_parts = [("text", fill(t.strip(), st, meta)) for t in text]
+    if mode == "stay":
+        # остались в сцене: открывшиеся абзацы — часть события, строки Системы о нём — после
+        cut = len(before)
+        while cut and before[cut - 1][0] == "system":
+            cut -= 1
+        parts = before[:cut] + body_parts + before[cut:] + after
+    else:
+        parts = before + title + body_parts + after
     choices = []
     if not st.ended:
         for i, ch in enumerate(scene.choices):
