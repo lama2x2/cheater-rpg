@@ -1,0 +1,28 @@
+# Та же демо-история в режиме real: без Системы, одна жизнь, смерть — концовка.
+id: demo_real
+title: "Пропавший живчик (демо, без Системы)"
+mode: real
+about: "Демо в режиме реал-РПГ: одна жизнь, без интерфейса."
+start: start
+scenes_dir: ../demo/scenes
+ask_name: "Как вас зовут? Напишите имя сообщением."
+default_name: "Путник"
+
+vars:
+  humanity: { start: 0 }
+  luck:     { start: 1 }
+  council:  { start: 0 }
+
+items:
+  knife:  { name: "Нож" }
+  key:    { name: "Ключ от склада" }
+  jacket: { name: "Серая куртка" }
+
+time:
+  limit: 4
+  label: "Смена {time}/{limit}"
+  on_limit: late
+
+death:
+  real: ending
+  real_final: death_end

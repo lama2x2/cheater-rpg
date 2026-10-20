@@ -1,0 +1,227 @@
+# Демо: «Пропавший живчик». Тексты свои (D-01).
+
+- id: start
+  text: |
+    Вы приходите в себя на обочине. Асфальт тёплый, небо чужое, во рту кисло.
+    Вдали — частокол и дым: похоже, люди. Рядом ржавеет автобус с распахнутой дверью.
+  system: "Объект зарегистрирован. Жизней: {lives}. Добро пожаловать."
+  choices:
+    - label: "Обыскать автобус"
+      if: "not flag.bus"
+      effects: ["set flag.bus"]
+      roll:
+        chance: "40 + var.luck * 10"
+        success:
+          text: "Под сиденьем — нож. Ржавый, но острый."
+          system: "Удача сработала. Не привыкайте."
+          effects: ["item.knife += 1"]
+        fail:
+          text: "Пустые сиденья, чужие сумки, ничего полезного."
+          system: "Удача: не сегодня."
+    - label: "Идти к частоколу"
+      goto: gate
+
+- id: gate
+  text: |
+    У ворот стаба — двое с ружьями. «Нулёвка? Вход — работой или спорами.
+    Спор у тебя, ясное дело, нет».
+  choices:
+    - label: "Отработать: дотащить мешки до склада"
+      effects: ["time += 1", "var.council += 1"]
+      text: "Спина ноет, зато на вас смотрят чуть теплее."
+      goto: square
+    - label: "Соврать, что вас ждёт знахарка"
+      roll:
+        chance: 50
+        success: { text: "Охранник машет рукой: проходи.", goto: square }
+        fail:
+          text: "«Мирра никого не ждёт». Вас пускают, но запоминают."
+          effects: ["set flag.liar", "var.council -= 1"]
+          goto: square
+
+- id: square
+  checkpoint: true
+  text: |
+    Площадь стаба «Перекрёсток». У склада ругаются: ночью пропал ящик живчика —
+    запас на всех. Старшина объявляет: патруль уходит через четыре смены, до тех пор
+    вора надо найти.
+  extra:
+    - if: "flag.clue_bar"
+      text: "Вы помните слова Гуся о серой куртке."
+    - if: "flag.jacket_known"
+      text: "Система уже намекнула, чья это куртка."
+  choices:
+    - label: "Зайти в бар к Гусю"
+      if: "not flag.clue_bar"
+      goto: bar
+    - label: "Осмотреть склад"
+      goto: warehouse
+    - label: "Сходить к знахарке Мирре"
+      if: "item.key == 0"
+      goto: mirra
+    - label: "Выйти за ворота, к Деревне"
+      goto: road
+    - label: "Назвать вора старшине"
+      if: "flag.clue_bar or flag.clue_button or item.jacket > 0"
+      locked: "Нужна хотя бы одна зацепка"
+      goto: accuse
+
+- id: bar
+  text: |
+    Гусь протирает стакан, который чище его совести. «Видел ли я кого ночью?
+    За просто так я и себя не вижу».
+  choices:
+    - label: "Поговорить по душам (смена)"
+      effects: ["time += 1", "set flag.clue_bar"]
+      text: "Гусь сдаётся: ночью у склада крутился кто-то в серой куртке. Новенький, кажется."
+      goto: square
+    - label: "Пригрозить"
+      effects: ["var.humanity -= 1", "set flag.clue_bar"]
+      system: "Гуманность: −1. Система всё видит."
+      text: "Гусь бледнеет и выкладывает про серую куртку."
+      goto: square
+    - label: "Уйти"
+      goto: square
+
+- id: warehouse
+  text: |
+    Склад заперт на висячий замок. На земле у двери — следы: ящик волокли к задним воротам.
+  extra:
+    - if: "flag.clue_button"
+      text: "Здесь вы уже нашли всё, что можно."
+  choices:
+    - label: "Открыть ключом Мирры"
+      if: "item.key > 0 and not flag.clue_button"
+      locked: "Нужен ключ"
+      effects: ["time += 1", "set flag.clue_button"]
+      text: "Внутри, у пустой полки, — серая пуговица с оторванной ниткой."
+      goto: square
+    - label: "Сбить замок камнем"
+      if: "not flag.clue_button"
+      roll:
+        chance: "30 + var.luck * 10"
+        success:
+          effects: ["set flag.clue_button", "time += 1"]
+          text: "Замок поддаётся. У пустой полки — серая пуговица."
+          goto: square
+        fail:
+          effects: ["var.council -= 1"]
+          text: "Грохот на весь стаб. Охрана записывает вас в подозреваемые."
+          system: "Репутация: теперь вы интересный."
+          goto: square
+    - label: "Вернуться"
+      goto: square
+
+- id: mirra
+  text: |
+    Знахарка Мирра зашивает охотнику распоротый бок. «Ключ от склада? Помоги — тогда поговорим».
+  choices:
+    - label: "Помочь (смена)"
+      effects: ["time += 1", "var.humanity += 1", "item.key += 1"]
+      text: "Вы держите, она шьёт. Потом Мирра молча кладёт вам в ладонь ключ."
+      system: "Гуманность: +1."
+      goto: square
+    - label: "Уйти"
+      goto: square
+
+- id: road
+  text: |
+    За воротами — дорога к Деревне. В канаве шевелятся медляки, штуки три.
+    Без оружия туда соваться — плохая идея.
+  system: "Внимание: угроза для жизни. Рекомендуем подумать."
+  choices:
+    - label: "Пробраться тихо, с ножом наготове"
+      if: "item.knife > 0"
+      locked: "Нужно оружие"
+      effects: ["time += 1"]
+      goto: village
+    - label: "Бежать напролом ☠"
+      roll:
+        chance: "35 + var.luck * 10"
+        success:
+          text: "Вы проскакиваете — медляки слишком медленные."
+          effects: ["time += 1"]
+          goto: village
+        fail:
+          effects: ["die 'медляки у канавы'"]
+    - label: "Вернуться в стаб"
+      goto: square
+
+- id: village
+  text: |
+    В крайнем доме Деревни — разбитый ящик. Живчика нет, зато на заборе висит
+    серая куртка без одной пуговицы.
+  choices:
+    - label: "Забрать куртку и вернуться"
+      if: "item.jacket == 0"
+      effects:
+        - "item.jacket += 1"
+        - "time += 1"
+        - after: { steps: 2 }
+          system: "Анализ: на куртке споры с пометкой «новичок, третий день». Совпадение? Система в них не верит."
+          do: ["set flag.jacket_known"]
+      text: "Куртка пахнет кислым и дешёвым табаком."
+      goto: square
+    - label: "Вернуться"
+      goto: square
+
+- id: accuse
+  text: "Старшина ждёт. «Ну? Кто?»"
+  choices:
+    - label: "Новенький Тихон — тот, что в серой куртке"
+      goto:
+        - if: "(flag.clue_button or flag.clue_bar) and item.jacket > 0"
+          goto: justice
+        - goto: no_proof
+    - label: "Бармен Гусь"
+      effects: ["var.humanity -= 1"]
+      goto: wrong
+    - label: "Передумать"
+      goto: square
+
+- id: no_proof
+  text: |
+    Тихон смеётся вам в лицо: «Куртка? Какая куртка?» Доказательств нет, старшина хмурится.
+  on_enter: ["var.council -= 1"]
+  choices:
+    - label: "Вернуться к поискам"
+      goto: square
+
+- id: justice
+  text: |
+    Куртку узнают все. Тихон сознаётся: продал живчик проезжим. Ящик выкупят,
+    а старшина жмёт вам руку.
+  extra:
+    - if: "var.humanity < 0"
+      text: "Но Гусь с тех пор наливает вам последним."
+    - if: "flag.liar"
+      text: "Охрана всё равно не забыла ваше враньё у ворот."
+    - if: "meta.ending.wrong"
+      text: "Где-то в памяти шевелится: в прошлый раз вы обвинили не того."
+  ending: { id: justice, title: "Вор найден" }
+
+- id: wrong
+  text: |
+    Гуся выгоняют за ворота. Через смену живчик всплывает у проезжих торговцев —
+    рядом с курткой Тихона. Поздно.
+  system: "Гуманность: −1. Ошибка зафиксирована."
+  ending: { id: wrong, title: "Не тот" }
+
+- id: late
+  text: |
+    Патруль уходит на рассвете — без живчика. Вор не найден, стаб молча считает спораны.
+  ending: { id: late, title: "Патруль ушёл" }
+
+- id: respawn
+  text: "Вы встаёте на респе у ворот стаба. Голый, злой, живой."
+  choices:
+    - label: "На площадь"
+      goto: square
+
+- id: final_death
+  text: "Счётчик гаснет. Вставать больше не на что."
+  ending: { id: final, title: "Окончательная смерть" }
+
+- id: death_end
+  text: "Медляки в канаве сыты. Ваша история кончилась на обочине."
+  ending: { id: dead, title: "Смерть на дороге" }

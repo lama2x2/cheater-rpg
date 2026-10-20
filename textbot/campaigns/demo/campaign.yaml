@@ -1,0 +1,32 @@
+# Демо-кампания: только для проверки движка (не настоящий сюжет).
+id: demo
+title: "Пропавший живчик (демо)"
+mode: system            # system — интерфейс Системы и жизни; real — одна жизнь, без Системы
+about: "Крошечная демо-история: расследование за четыре смены."
+start: start
+ask_name: "Как вас зовут? Напишите имя сообщением."
+default_name: "Нулёвка"
+
+vars:
+  humanity: { start: 0, label: "Гуманность", show: true }
+  luck:     { start: 1, label: "Удача", show: true }
+  council:  { start: 0 }          # скрытое отношение Совета
+
+items:
+  knife:  { name: "Нож", keep_on_death: false }
+  key:    { name: "Ключ от склада" }
+  jacket: { name: "Серая куртка" }
+
+time:
+  limit: 4
+  label: "Смена {time}/{limit}"
+  on_limit: late
+
+death:
+  lives: 3
+  respawn: respawn
+  final: final_death
+  time_cost: 1
+  message: "Жизнь {deaths} закончилась. Причина: {cause}. Осталось жизней: {lives}."
+  real: rewind          # для запуска этой кампании в режиме real: откат к контрольной точке
+  real_final: death_end

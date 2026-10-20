@@ -1,0 +1,12 @@
+services:
+  bot:
+    build: .
+    container_name: textbot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data                      # база, бэкапы, логи — переживают пересборку
+      - ./campaigns:/app/campaigns:ro     # кампании можно править без пересборки
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
