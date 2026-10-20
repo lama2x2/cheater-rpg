@@ -67,6 +67,9 @@ var hero_name := ""
 var christened := false
 var onboarding_step := ""
 var pending_jackpot := false
+## Режим игры (11.4a, D-95): "story" — сюжетная версия story_version, "sandbox" — без главной цели.
+var game_mode := OnboardingRules.STORY
+var story_version := "blank_slate"
 ## Для сообщений лога (задача 16): общий уровень, «мало здоровья», окно новичка ещё открыто.
 var _general_level := 0
 var _low_health_warned := false
@@ -123,6 +126,8 @@ func setup() -> void:
 	christened = false
 	onboarding_step = ""
 	pending_jackpot = false
+	game_mode = OnboardingRules.STORY
+	story_version = "blank_slate"
 	_was_overloaded = false
 	_last_damage_source = "health"
 	_farm_warned = {}
@@ -388,9 +393,16 @@ func grant_jackpot() -> void:
 	SystemLog.post("origin_jackpot", {"name": Content.ui("origin_" + origin_variant)}, "special")
 
 
-## Новая игра (не «Новая игра+»): пролог, пробуждение, наставник, крестины (задача 17).
+## Режим и сюжетная версия новой игры (11.4a).
+func set_game_mode(mode: String, version: String) -> void:
+	var rules := Content.onboarding_rules()
+	game_mode = OnboardingRules.SANDBOX if mode == OnboardingRules.SANDBOX else OnboardingRules.STORY
+	story_version = rules.clean_version(version)
+
+
+## Новая игра (не «Новая игра+»): пролог (у версий с ним), пробуждение, наставник, крестины.
 func begin_onboarding() -> void:
-	onboarding_step = OnboardingRules.START
+	onboarding_step = Content.onboarding_rules().start_step(game_mode, story_version)
 	onboarding_changed.emit(onboarding_step)
 
 
@@ -614,7 +626,7 @@ func continue_after_final() -> void:
 func ng_plus_carry() -> Dictionary:
 	var known := skills.to_dict()
 	return {"ng_plus": ng_plus + 1, "primary": inventory.to_dict()["primary"], "save_mode": save_mode, "origin": origin,
-		"hero_name": hero_name, "christened": christened,
+		"hero_name": hero_name, "christened": christened, "mode": game_mode, "version": story_version,
 		"skills": {"learned": known["learned"], "active_list": known["active_list"]}}
 
 
@@ -624,6 +636,8 @@ func apply_carry(carry: Dictionary) -> void:
 	save_mode = String(carry.get("save_mode", save_mode))
 	hero_name = String(carry.get("hero_name", ""))
 	christened = bool(carry.get("christened", false))
+	game_mode = String(carry.get("mode", game_mode))
+	story_version = String(carry.get("version", story_version))
 	if carry.has("primary"):
 		inventory.load_dict({"primary": carry["primary"], "backpack": []})
 	if carry.has("skills"):
@@ -649,7 +663,8 @@ func to_dict() -> Dictionary:
 		"awaiting_respawn": awaiting_respawn, "start_minutes": start_minutes, "ng_plus": ng_plus, "save_mode": save_mode,
 		"respawn_position": [respawn_position.x, respawn_position.y, respawn_position.z],
 		"quick_slots": Array(quick_slots), "junk_marks": junk_marks.keys(),
-		"hero": {"name": hero_name, "christened": christened, "onboarding": onboarding_step, "pending_jackpot": pending_jackpot},
+		"hero": {"name": hero_name, "christened": christened, "onboarding": onboarding_step, "pending_jackpot": pending_jackpot,
+			"mode": game_mode, "version": story_version},
 		"origin": {"kind": origin, "variant": origin_variant, "chosen": origin_chosen, "debts": Array(origin_debts),
 			"newbie_until": newbie_until, "cheater_property": cheater_property, "cheater_since_day": cheater_since_day,
 			"impossible_events": impossible_events},
@@ -713,6 +728,8 @@ func load_dict(data: Dictionary) -> void:
 	christened = bool(hero.get("christened", false))
 	onboarding_step = String(hero.get("onboarding", ""))
 	pending_jackpot = bool(hero.get("pending_jackpot", false))
+	game_mode = String(hero.get("mode", OnboardingRules.STORY))
+	story_version = String(hero.get("version", "blank_slate"))
 	_general_level = stats.general_level()
 	_newbie_was_open = in_newbie_window()
 	skills_changed.emit()

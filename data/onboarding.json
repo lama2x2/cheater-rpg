@@ -1,5 +1,14 @@
 {
-  "_doc": "Начало игры (docs/spec/01_core_loop.md «первые 2 часа», 3.5 крестины, 16 сцены вариантов; задача 17). Онбординг идёт только в новой игре (не в «Новой игре+»). prologue — карточки пролога-воспоминания (тексты prologue_N в ru_onboarding.json). steps — шаги и переходы по событиям: hint — подсказка в HUD (ключ текста), next — {событие: следующий шаг}. first_infected — первый медляк: через delay_s после пробуждения, на distance_m от героя; не убит и не убил за escape_s — герой «ушёл», дальше к наставнику. mentor — наставник: offset от респа [x, z], подарки gifts, нож, если нечем вскрыть мешок. christening — крестины: refuse_chance — крестный отказывает в имени и даёт кличку по поступку, nicknames — клички по условию (counter — счётчик статистики, min), name_len — допустимая длина имени, free_points — первый общий уровень (03: 50 свободных очков). jackpot_scenes — сцены куша вариантов (16.3): kind object — предмет на кластере в distance_m от героя (цвет, размер, подпись), first_death — при первой смерти, system — через delay_s сообщением Системы; варианты без сцены — kind system.",
+  "_doc": "Начало игры (docs/spec/01_core_loop.md «первые 2 часа», 3.5 крестины, 16 сцены вариантов; задача 17). Онбординг идёт только в новой игре (не в «Новой игре+»). modes — режим игры (11.4a, D-95): story — сюжетные версии (available — есть в M1; prologue — начинается ли с пролога-воспоминания; default — по умолчанию), sandbox — песочница без главной цели (пролога нет, наставник и крестины — как у всех). prologue — карточки пролога-воспоминания (тексты prologue_N в ru_onboarding.json). steps — шаги и переходы по событиям: hint — подсказка в HUD (ключ текста), next — {событие: следующий шаг}. first_infected — первый медляк: через delay_s после пробуждения, на distance_m от героя; не убит и не убил за escape_s — герой «ушёл», дальше к наставнику. mentor — наставник: offset от респа [x, z], подарки gifts, нож, если нечем вскрыть мешок. christening — крестины: refuse_chance — крестный отказывает в имени и даёт кличку по поступку, nicknames — клички по условию (counter — счётчик статистики, min), name_len — допустимая длина имени, free_points — первый общий уровень (03: 50 свободных очков). jackpot_scenes — сцены куша вариантов (16.3): kind object — предмет на кластере в distance_m от героя (цвет, размер, подпись), first_death — при первой смерти, system — через delay_s сообщением Системы; варианты без сцены — kind system.",
+  "modes": {
+    "story": { "versions": [
+      { "id": "blank_slate", "available": true, "prologue": false },
+      { "id": "last_memory", "available": true, "prologue": true },
+      { "id": "hunted", "available": false, "prologue": false },
+      { "id": "bonds", "available": false, "prologue": false }
+    ], "default": "blank_slate" },
+    "sandbox": { "prologue": false }
+  },
   "prologue": ["prologue_1", "prologue_2", "prologue_3", "prologue_4"],
   "steps": {
     "prologue": { "hint": "", "next": { "prologue_done": "awaken" } },

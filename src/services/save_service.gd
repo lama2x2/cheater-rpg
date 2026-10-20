@@ -91,6 +91,8 @@ func start_new_game(carry: Dictionary = {}, options: Dictionary = {}) -> void:
 	var origin_kind := String(options.get("origin", carry.get("origin", OriginRules.ORDINARY)))
 	# Первая игра — с прологом и онбордингом (задача 17), куш — в своей сцене; «Новая игра+» — сразу.
 	var onboarding := carry.is_empty() and not bool(options.get("skip_onboarding", false))
+	if options.has("mode") or options.has("version"):
+		PlayerState.set_game_mode(String(options.get("mode", OnboardingRules.STORY)), String(options.get("version", "")))
 	PlayerState.start_origin(origin_kind, String(options.get("variant", OriginRules.RANDOM)), not onboarding)
 	if onboarding:
 		PlayerState.begin_onboarding()

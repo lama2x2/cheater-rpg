@@ -5,9 +5,12 @@ extends RefCounted
 ## варианта происхождения. Чистые правила; сцена — src/world/onboarding_director.gd.
 ## Данные — data/onboarding.json.
 
-const REQUIRED_KEYS: PackedStringArray = ["prologue", "steps", "first_infected", "mentor", "christening", "jackpot_scenes"]
+const REQUIRED_KEYS: PackedStringArray = ["modes", "prologue", "steps", "first_infected", "mentor", "christening", "jackpot_scenes"]
 const START := "prologue"
+const AWAKEN := "awaken"
 const DONE := "done"
+const STORY := "story"
+const SANDBOX := "sandbox"
 
 var _config: Dictionary
 
@@ -18,6 +21,37 @@ func _init(config: Dictionary) -> void:
 
 func config() -> Dictionary:
 	return _config
+
+
+## Сюжетные версии этой сборки (11.4a): [{"id", "prologue"}], доступные.
+func story_versions() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for v: Dictionary in _config["modes"]["story"]["versions"]:
+		if bool(v.get("available", true)):
+			result.append(v)
+	return result
+
+
+func default_version() -> String:
+	return String(_config["modes"]["story"]["default"])
+
+
+## Допустимая версия: известная и доступная, иначе — по умолчанию.
+func clean_version(version: String) -> String:
+	for v in story_versions():
+		if String(v["id"]) == version:
+			return version
+	return default_version()
+
+
+## С какого шага начинается новая игра: пролог-воспоминание — только у версий с прологом.
+func start_step(mode: String, version: String) -> String:
+	if mode == SANDBOX:
+		return AWAKEN
+	for v in story_versions():
+		if String(v["id"]) == clean_version(version):
+			return START if bool(v.get("prologue", false)) else AWAKEN
+	return AWAKEN
 
 
 ## Следующий шаг после события; событие, которое шагу не важно, ничего не меняет.

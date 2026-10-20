@@ -47,6 +47,7 @@ func _setup() -> void:
 		return
 	if step == "awaken":
 		_awaken_left = float(_rules.config()["first_infected"]["delay_s"])
+		_post_awaken()
 	if MENTOR_STEPS.has(step):
 		_spawn_mentor()
 	if PlayerState.pending_jackpot:
@@ -61,9 +62,18 @@ func _setup() -> void:
 func _on_step(step: String) -> void:
 	if step == "awaken" and _on_start_cluster():
 		_awaken_left = float(_rules.config()["first_infected"]["delay_s"])
-		SystemLog.post("awaken")
+		_post_awaken()
 	if MENTOR_STEPS.has(step) and _on_start_cluster():
 		_spawn_mentor()
+
+
+## Пробуждение — сообщение один раз за игру; у «Чистого листа» — своё: ни имени, ни памяти.
+func _post_awaken() -> void:
+	if PlayerState.run.count("awakened") > 0:
+		return
+	PlayerState.run.add("awakened")
+	var key := "awaken_" + PlayerState.story_version
+	SystemLog.post(key if SystemLog.has_key(key) else "awaken")
 
 
 func _process(delta: float) -> void:

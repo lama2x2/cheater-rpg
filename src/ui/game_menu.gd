@@ -14,6 +14,9 @@ var _new_save_mode := ""
 ## Происхождение на экране новой игры (16): cheater / ordinary и вариант (random или id).
 var _new_origin := OriginRules.CHEATER
 var _new_variant := OriginRules.RANDOM
+## Режим игры и сюжетная версия (11.4a, D-95).
+var _new_mode := OnboardingRules.STORY
+var _new_version := ""
 ## Страница «Клавиши»: ждём нажатия для этого действия ("" — не ждём).
 var _waiting_action := ""
 var _bindings: KeyBindings
@@ -111,11 +114,41 @@ func _open_new_game() -> void:
 	_new_save_mode = String(Settings.value("save_mode"))
 	_new_origin = OriginRules.CHEATER
 	_new_variant = OriginRules.RANDOM
+	_new_mode = OnboardingRules.STORY
+	_new_version = Content.onboarding_rules().default_version()
 	_new_game_page()
 
 
 func _new_game_page() -> void:
 	_clear(Content.ui("new_game_title"))
+	# Страница длинная — в прокрутке, чтобы влезала при любом масштабе интерфейса.
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(800, maxf(get_viewport().get_visible_rect().size.y - 90.0, 300.0))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_box.add_child(scroll)
+	var page := VBoxContainer.new()
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page.add_theme_constant_override("separation", 10)
+	scroll.add_child(page)
+	var outer := _box
+	_box = page
+	# Режим игры (11.4a): Сюжет с версией или Песочница.
+	_text(Content.ui("new_game_mode"), 18, Color(0.85, 0.75, 0.55))
+	var modes_row := _choice_row()
+	for mode in [OnboardingRules.STORY, OnboardingRules.SANDBOX]:
+		_choice(modes_row, Content.ui("game_mode_" + mode), mode == _new_mode, func() -> void:
+			_new_mode = mode
+			_new_game_page())
+	if _new_mode == OnboardingRules.STORY:
+		var versions := _choice_row()
+		for v: Dictionary in Content.onboarding_rules().story_versions():
+			var id := String(v["id"])
+			_choice(versions, Content.ui("story_" + id), id == _new_version, func() -> void:
+				_new_version = id
+				_new_game_page())
+		_text(Content.ui("story_hint_" + _new_version), 14, Color(0.75, 0.75, 0.75))
+	else:
+		_text(Content.ui("game_mode_hint_sandbox"), 14, Color(0.75, 0.75, 0.75))
 	_text(Content.ui("new_game_save_mode"), 18, Color(0.85, 0.75, 0.55))
 	var modes := _choice_row()
 	for mode in [SettingsModel.ANYWHERE, SettingsModel.STAB_ONLY]:
@@ -132,15 +165,15 @@ func _new_game_page() -> void:
 			_new_game_page())
 	_text(Content.ui("origin_kind_hint_" + _new_origin), 14, Color(0.75, 0.75, 0.75))
 	if _new_origin == OriginRules.CHEATER:
-		var scroll := ScrollContainer.new()
-		scroll.custom_minimum_size = Vector2(760, clampf(get_viewport().get_visible_rect().size.y - 560.0, 90.0, 250.0))
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		_box.add_child(scroll)
+		var cards_scroll := ScrollContainer.new()
+		cards_scroll.custom_minimum_size = Vector2(760, 250)
+		cards_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_box.add_child(cards_scroll)
 		var grid := GridContainer.new()
 		grid.columns = 3
 		grid.add_theme_constant_override("h_separation", 6)
 		grid.add_theme_constant_override("v_separation", 6)
-		scroll.add_child(grid)
+		cards_scroll.add_child(grid)
 		var cards: Array = [{"id": OriginRules.RANDOM, "stars": 0, "skulls": 0}]
 		cards.append_array(Content.origin_rules().cards())
 		for card: Dictionary in cards:
@@ -159,8 +192,10 @@ func _new_game_page() -> void:
 		_text(Content.ui("origin_hook_" + _new_variant), 14, Color(0.85, 0.85, 0.8))
 	_button(Content.ui("new_game_start"), func() -> void:
 		Settings.change("save_mode", _new_save_mode)
-		SaveService.start_new_game({}, {"save_mode": _new_save_mode, "origin": _new_origin, "variant": _new_variant}))
+		SaveService.start_new_game({}, {"save_mode": _new_save_mode, "origin": _new_origin, "variant": _new_variant,
+			"mode": _new_mode, "version": _new_version}))
 	_button(Content.ui("menu_back"), _main_page)
+	_box = outer
 
 
 func _choice_row() -> HBoxContainer:

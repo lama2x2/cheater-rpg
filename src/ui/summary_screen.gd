@@ -143,6 +143,8 @@ func _stat_rows() -> PackedStringArray:
 			"deaths": run.deaths.size(), "cause": Content.death_cause(causes[0][0]), "times": causes[0][1]}))
 	rows.append(Content.ui("summary_kills", {"kills": run.count("kills")}))
 	rows.append(_origin_line())
+	rows.append(Content.ui("summary_mode_sandbox") if PlayerState.game_mode == OnboardingRules.SANDBOX
+		else Content.ui("summary_mode_story", {"version": Content.ui("story_" + PlayerState.story_version)}))
 	var changes := run.count("save_mode_changes")
 	rows.append(Content.ui("summary_save_mode", {
 		"mode": Content.ui("save_mode_" + PlayerState.save_mode),

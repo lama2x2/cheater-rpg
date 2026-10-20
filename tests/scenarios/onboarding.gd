@@ -27,7 +27,7 @@ func _run() -> void:
 	root.add_child(main)
 	current_scene = main
 	await _wait(1.0)
-	save.start_new_game({}, {"origin": "cheater", "variant": "armored_van"})
+	save.start_new_game({}, {"origin": "cheater", "variant": "armored_van", "mode": "story", "version": "last_memory"})
 	await _wait(1.0)
 	_step("start")
 	for node in current_scene.get_children():

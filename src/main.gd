@@ -187,6 +187,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --container=S через S секунд открыть окно ближайшего контейнера (труп героя, тайник)
 ##   --new-game[=KIND[:VARIANT]]  новая игра с онбордингом: cheater (по умолчанию) или ordinary,
 ##                 вариант — id из data/origins.json (по умолчанию случайно)
+##                 с --story=VERSION (blank_slate, last_memory) или --sandbox — режим игры
 ##   --skip-prologue  сразу после пролога (пробуждение)
 ##   --onboarding=STEP  поставить шаг начала игры (mentor, sack, return…); с --talk=mentor — окно наставника
 ##   --log         открыть окно лога Системы
@@ -202,7 +203,13 @@ func _handle_debug_args() -> void:
 			_new_game_done = true
 			var spec := arg.trim_prefix("--new-game").trim_prefix("=").split(":")
 			var kind := spec[0] if not spec[0].is_empty() else OriginRules.CHEATER
-			SaveService.start_new_game.call_deferred({}, {"origin": kind, "variant": spec[1] if spec.size() > 1 else OriginRules.RANDOM})
+			var options := {"origin": kind, "variant": spec[1] if spec.size() > 1 else OriginRules.RANDOM}
+			for other in OS.get_cmdline_user_args():
+				if other.begins_with("--story="):
+					options["version"] = other.trim_prefix("--story=")
+				elif other == "--sandbox":
+					options["mode"] = OnboardingRules.SANDBOX
+			SaveService.start_new_game.call_deferred({}, options)
 			return
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--cluster="):
