@@ -39,6 +39,8 @@
   system: "Получено задание: «Якорь». Срок: рассвет."
   choices:
     - label: "«С чего начать?»"
+      if: "not flag.asked_start"
+      effects: ["set flag.asked_start"]
       text: "— С подвала, — Ирбис пожимает плечами. — Или с людей. Совет заседает до полуночи. Институт стоит лагерем за складами. Пепельные молятся в старой часовне. Гусь знает всё, что говорят в баре. Мирра знает всё, что у людей болит."
     - label: "Выйти на площадь"
       goto: square
@@ -49,6 +51,7 @@
   text: |
     Площадь стаба. Огонь в бочке, тени людей, шёпот. Кто-то уже грузит скарб на тележки,
     кто-то сидит на земле, обхватив голову. Над всем этим висит строка, которую видит каждый.
+  again: "Вы снова на площади. Огонь в бочке, шёпот, строка над головами."
   extra:
     - if: "time >= 8"
       text: "Небо на востоке светлеет. До рассвета — считанные часы."
@@ -92,8 +95,9 @@
       effects: ["time += 2"]
       goto: depot
     - label: "Назвать вора Совету"
-      if: "not flag.accused and (flag.c_slip or flag.c_cutter or flag.c_tea or flag.c_powder or flag.c_ledger or flag.c_offer or flag.c_wax)"
-      locked: "Нужна хотя бы одна улика"
+      # улик больше, чем при прошлом обвинении (var.evidence — их число тогда; в начале 0)
+      if: "not flag.accused and flag.c_slip + flag.c_cutter + flag.c_tea + flag.c_powder + flag.c_ledger + flag.c_offer + flag.c_button > var.evidence"
+      locked: "Нужна улика — хотя бы одна новая"
       goto: accuse
     - label: "Лавка Клима, пока хозяин на Совете (1 ч)"
       if: "not flag.v_shop"
@@ -103,12 +107,18 @@
       if: "time >= 4 and not flag.v_wall"
       effects: ["set flag.v_wall", "time += 1"]
       goto: wall
-    - label: "Посидеть у бочки, подумать (1 ч)"
-      effects: ["time += 1"]
+    - label: "Послушать, о чём шепчутся у бочки (1 ч)"
+      if: "not flag.sat_fire"
+      effects: ["set flag.sat_fire", "time += 1"]
       text: "Огонь трещит. Люди вокруг шепчутся о грузовиках Клима и о том, что Пепельные что-то знают. Час уходит, как вода в песок."
+    - label: "Посидеть у огня, подумать (1 ч)"
+      effects: ["time += 1"]
+      text: "Ещё час у огня. Мысли ходят по кругу, как искры над бочкой."
     - label: "Хватит. Идти к Совету с решением"
       if: "time >= 6 or item.anchor > 0"
       locked: "Ночь только началась — Совет ждёт до рассвета"
+      effects: ["time = 12"]
+      text: "Совет соберётся только на рассвете. Остаток ночи вы сидите на ступеньках штаба и ждёте — ждать тоже надо уметь."
       goto: final_choice
 
 - id: shop
@@ -184,7 +194,8 @@
   on_enter: ["set flag.c_cutter", "set flag.c_wax"]
   choices:
     - label: "Растолкать Сыча"
-      if: "item.salts == 0 and not flag.c_tea"
+      if: "item.salts == 0 and not flag.c_tea and not flag.shook_sych"
+      effects: ["set flag.shook_sych"]
       text: "Сыч мычит, отмахивается и снова храпит. Это не сон — это что-то посильнее. Без снадобья не разбудить."
     - label: "Сунуть Сычу под нос соль Мирры"
       if: "item.salts > 0 and not flag.c_tea"
@@ -210,6 +221,7 @@
     Мирра — худая, строгая, с руками в травяной пыли — перевязывает парня, который в панике
     налетел на колючку. На вас смотрит устало. — Если ты про якорь, — говорит она, не
     оборачиваясь, — то я его не брала. Я его… берегла. Моя мать была среди основателей.
+  again: "Мирра снова склоняется над раненым и ждёт, что вы скажете."
   choices:
     - label: "«Кто покупал у вас снотворное?»"
       if: "not flag.asked_powder"
@@ -217,6 +229,9 @@
       goto:
         - { if: "var.humanity >= 2", goto: healer_trust }
         - { goto: healer_secret }
+    - label: "«Теперь скажете, кто брал снотворное?»"
+      if: "flag.powder_refused and var.humanity >= 2 and not flag.c_powder"
+      goto: healer_trust
     - label: "Помочь ей с ранеными (1 ч)"
       if: "not flag.helped_mirra"
       effects: ["set flag.helped_mirra", "time += 1", "var.humanity += 1"]
@@ -249,7 +264,7 @@
     Докажи, что ты не хуже тех, кого ищешь, — может, тогда поговорим.
   choices:
     - label: "Вернуться к разговору"
-      effects: ["clear flag.asked_powder"]
+      effects: ["set flag.powder_refused"]
       goto: healer
 
 - id: bar
@@ -259,14 +274,15 @@
     это видно.
   choices:
     - label: "«Гусь, кто ходил к задним воротам днём?»"
-      if: "not flag.c_ledger"
+      if: "not flag.c_ledger and not flag.gus_shut"
       roll:
         chance: "35 + var.luck * 10"
         success:
           text: "Гусь сглатывает и подвигает вам амбарную книгу. В ней — запись его рукой: «Задние ворота, полдень, без вопросов — 1 чёрный». — Клим заплатил. Жемчугом. Сказал, вывезет хлам в старый автопарк. Я не спрашивал. За жемчуг не спрашивают."
           effects: ["set flag.c_ledger", "set flag.knows_depot"]
         fail:
-          text: "— Не знаю, не видел, не помню, — Гусь отворачивается. Может, позже разговорится."
+          text: "— Не знаю, не видел, не помню, — Гусь отворачивается. По-хорошему он больше ничего не скажет."
+          effects: ["set flag.gus_shut"]
     - label: "Надавить на Гуся при всех"
       if: "not flag.c_ledger"
       effects: ["var.humanity -= 1", "set flag.c_ledger", "set flag.knows_depot"]
@@ -287,13 +303,14 @@
 
     — Якорь — это не артефакт, — говорит она. — Это… шов. Место, где кластер пришит к
     Континенту крепче, чем другие. Мы изучали его пять лет. Без него стаб — обычный кластер.
+  again: "Ланская снова смотрит на вас поверх приборов."
   choices:
     - label: "«Вы можете вернуть его на место?»"
       if: "not flag.asked_return"
       effects: ["set flag.asked_return", "var.t_inst += 1"]
       text: "— Можем попробовать. Но нужен проводник — живой иммунный, через которого якорь снова «схватится». Это будет стоить ему дорого. Добровольцев обычно нет."
     - label: "«Вам кто-нибудь предлагал купить что-то редкое?»"
-      if: "not flag.c_offer"
+      if: "not flag.c_offer and (not flag.inst_refused or var.t_inst >= 1)"
       goto:
         - { if: "var.t_inst >= 1", goto: inst_offer }
         - { goto: inst_closed }
@@ -319,6 +336,7 @@
     Если у вас всё, не отнимайте у нас ночь.
   choices:
     - label: "Вернуться к разговору"
+      effects: ["set flag.inst_refused"]
       goto: institute
 
 - id: ashen
