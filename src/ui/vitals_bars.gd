@@ -79,6 +79,8 @@ func _update_weapon_line() -> void:
 	var ammo := ""
 	if s.has("magazine"):
 		ammo = Content.ui("weapon_ammo", {"loaded": s["loaded"], "magazine": s["magazine"], "reserve": s["reserve"]})
+		if bool(s.get("ap", false)):
+			ammo += " " + Content.ui("weapon_ap")
 	if s["reloading"]:
 		ammo = Content.ui("weapon_reloading")
 	elif float(s["charge"]) > 0.0:

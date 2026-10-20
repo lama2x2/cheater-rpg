@@ -24,13 +24,16 @@ func test_data_valid_and_stages_ordered() -> void:
 	var db := _db()
 	assert_eq(db.errors(), PackedStringArray(), "схема")
 	var stages: Array = []
-	for id in ["crawler", "slowpoke", "jumper", "runner", "lottery", "stomper"]:
+	for id in ["crawler", "slowpoke", "jumper", "runner", "lottery", "stomper", "elite"]:
 		assert_true(db.has_enemy(id), "есть «%s»" % id)
 		stages.append(int(db.enemy(id)["stage"]))
-	assert_eq(stages, [0, 1, 2, 3, 4, 5], "стадии 0–5 по порядку")
+	assert_eq(stages, [0, 1, 2, 3, 4, 5, 8], "стадии 0–5 по порядку и элита (8)")
 	assert_true(not db.enemy("slowpoke")["can_open_doors"], "медляки не открывают двери")
 	assert_true(db.enemy("runner")["can_open_doors"], "бегуны открывают")
 	var names: Dictionary = JsonDataScript.load_dict("res://data/text/ru.json")["enemy_names"]
+	for file in DirAccess.get_files_at("res://data/text"):  # дополнения ru_*.json (как Content.texts)
+		if file.begins_with("ru_") and file.ends_with(".json"):
+			names.merge(JsonDataScript.load_dict("res://data/text/" + file).get("enemy_names", {}), true)
 	for id in db.ids():
 		assert_true(names.has(id), "нет имени для «%s»" % id)
 

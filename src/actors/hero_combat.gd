@@ -53,7 +53,8 @@ func status() -> Dictionary:
 	if weapon["kind"] == "ranged":
 		result["loaded"] = PlayerState.weapons.in_magazine(id)
 		result["magazine"] = int(weapon["magazine"])
-		result["reserve"] = PlayerState.inventory.count_of(String(weapon["ammo"]))
+		result["reserve"] = PlayerState.weapons.reserve(id, PlayerState.inventory)
+		result["ap"] = PlayerState.weapons.loaded_type(id) == String(weapon.get("ap_ammo", "-"))
 	var need := float(weapon.get("charge", 0.0)) if weapon["kind"] == "ranged" else float(weapon["heavy"]["charge"])
 	if _charging and need > 0.0:
 		result["charge"] = clampf(_charge / need, 0.0, 1.0)
@@ -168,7 +169,7 @@ func _ranged_hit(target: Node3D, _at: Vector3, weapon: Dictionary) -> void:
 	var behind := model.is_from_behind(-target.global_transform.basis.z, hero.global_position - target.global_position)
 	var has_sack := bool(data.get("spore_sack", false))
 	var zone := _lucky_zone(model.ranged_zone(behind, PlayerState.effective("accuracy"), _rng, has_sack), behind, has_sack, target)
-	var result := model.hit(float(weapon["damage"]), zone, _armor(target), float(weapon["penetration"]), _skill_mult(target))
+	var result := model.hit(float(weapon["damage"]), zone, _armor(target), PlayerState.weapons.penetration(PlayerState.weapons.equipped), _skill_mult(target))
 	result["attack"] = "ranged"
 	_apply_hit(target, result, PlayerState.weapons.equipped)
 
@@ -189,7 +190,7 @@ func _start_reload() -> bool:
 	var id := PlayerState.weapons.equipped
 	if PlayerState.weapons.in_magazine(id) >= int(weapon["magazine"]):
 		return false
-	if PlayerState.inventory.count_of(String(weapon["ammo"])) < 1:
+	if PlayerState.weapons.reserve(id, PlayerState.inventory) < 1:
 		return false
 	_charging = false
 	_reload_left = maxf(0.01, float(weapon["reload"]))
@@ -227,7 +228,10 @@ func _skill_mult(target: Node3D) -> float:
 	return mult
 
 
+## Броня цели сейчас: под ядом пластины слабее (задача 18).
 func _armor(target: Node3D) -> Dictionary:
+	if target.has_method("armor_now"):
+		return target.armor_now()
 	return Content.enemy_db().enemy(target.enemy_id).get("armor", {})
 
 

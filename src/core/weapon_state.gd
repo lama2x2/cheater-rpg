@@ -6,6 +6,8 @@ extends RefCounted
 var equipped: String = WeaponDB.FISTS
 ## Заряжено в магазине: {"pistol": 5, ...}.
 var loaded: Dictionary = {}
+## Какие патроны в магазине: {"pistol": "ammo_9mm_ap"} (бронебой, задача 18); нет — обычные.
+var loaded_ammo: Dictionary = {}
 
 var _db: WeaponDB
 
@@ -33,17 +35,55 @@ func fire(id: String) -> bool:
 
 ## Перезарядка из инвентаря. Возвращает, сколько патронов вошло (0 — нечем или полный).
 ## У лука магазин 1: «перезарядка» — наложить стрелу.
+## Бронебойные (ap_ammo) — первыми: если они есть, а в магазине обычные, обычные возвращаются
+## в инвентарь и магазин заполняется бронебоем.
 func reload(id: String, inventory: Inventory) -> int:
 	if not _db.is_ranged(id):
 		return 0
 	var weapon := _db.weapon(id)
+	var ap := String(weapon.get("ap_ammo", ""))
+	var ammo := String(weapon["ammo"])
+	if not ap.is_empty() and inventory.count_of(ap) > 0:
+		if loaded_type(id) != ap and in_magazine(id) > 0:
+			inventory.add(loaded_type(id), in_magazine(id))
+			loaded[id] = 0
+		ammo = ap
+	# Бронебой в запасе кончился: доливаем обычными, смешанный магазин считается обычным.
 	var need := int(weapon["magazine"]) - in_magazine(id)
-	var have := inventory.count_of(String(weapon["ammo"]))
-	var take := mini(need, have)
+	var take := mini(need, inventory.count_of(ammo))
 	if take > 0:
-		inventory.remove(String(weapon["ammo"]), take)
+		inventory.remove(ammo, take)
 		loaded[id] = in_magazine(id) + take
+		loaded_ammo[id] = ammo
 	return take
+
+
+## Тип патронов в магазине (обычные — ammo оружия).
+func loaded_type(id: String) -> String:
+	if not _db.is_ranged(id):
+		return ""
+	return String(loaded_ammo.get(id, _db.weapon(id)["ammo"]))
+
+
+## Пробой выстрела: у бронебоя — ap_penetration.
+func penetration(id: String) -> float:
+	var weapon := _db.weapon(id)
+	var ap := String(weapon.get("ap_ammo", ""))
+	if not ap.is_empty() and loaded_type(id) == ap and in_magazine(id) > 0:
+		return float(weapon.get("ap_penetration", weapon["penetration"]))
+	return float(weapon["penetration"])
+
+
+## Патронов в запасе для оружия (обычные + бронебой).
+func reserve(id: String, inventory: Inventory) -> int:
+	if not _db.is_ranged(id):
+		return 0
+	var weapon := _db.weapon(id)
+	var total := inventory.count_of(String(weapon["ammo"]))
+	var ap := String(weapon.get("ap_ammo", ""))
+	if not ap.is_empty():
+		total += inventory.count_of(ap)
+	return total
 
 
 ## Оружие пропало из инвентаря (смерть, выбросил): патроны из магазина остаются «в оружии»,
@@ -70,7 +110,7 @@ func cycle(inventory: Inventory) -> String:
 
 
 func to_dict() -> Dictionary:
-	return {"equipped": equipped, "loaded": loaded.duplicate()}
+	return {"equipped": equipped, "loaded": loaded.duplicate(), "loaded_ammo": loaded_ammo.duplicate()}
 
 
 func load_dict(data: Dictionary) -> void:
@@ -81,3 +121,4 @@ func load_dict(data: Dictionary) -> void:
 	var saved: Dictionary = data.get("loaded", {})
 	for id: String in saved:
 		loaded[id] = int(saved[id])
+	loaded_ammo = (data.get("loaded_ammo", {}) as Dictionary).duplicate()

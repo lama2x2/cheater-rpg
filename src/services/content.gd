@@ -33,6 +33,7 @@ const UI_PATH := "res://data/ui.json"
 const ORIGINS_PATH := "res://data/origins.json"
 const LOG_PATH := "res://data/log.json"
 const ONBOARDING_PATH := "res://data/onboarding.json"
+const ELITE_PATH := "res://data/elite.json"
 
 var _cache: Dictionary = {}
 
@@ -127,6 +128,12 @@ func luck_model() -> LuckModel:
 	if not _cache.has(LUCK_PATH):
 		_cache[LUCK_PATH] = LuckModel.new(JsonData.load_dict(LUCK_PATH, LuckModel.REQUIRED_KEYS))
 	return _cache[LUCK_PATH]
+
+
+func elite_rules() -> EliteRules:
+	if not _cache.has(ELITE_PATH):
+		_cache[ELITE_PATH] = EliteRules.new(JsonData.load_dict(ELITE_PATH, EliteRules.REQUIRED_KEYS))
+	return _cache[ELITE_PATH]
 
 
 func onboarding_rules() -> OnboardingRules:

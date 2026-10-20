@@ -4,7 +4,7 @@ extends "res://tests/test_case.gd"
 const JsonDataScript := preload("res://src/core/json_data.gd")
 const LogFilterScript := preload("res://src/core/log_filter.gd")
 ## Ключи, собираемые из частей в коде (consumed_ + глагол, risk_ + риск, spore_ + состояние).
-const DYNAMIC_PREFIXES: PackedStringArray = ["consumed_", "risk_", "spore_", "jackpot_"]
+const DYNAMIC_PREFIXES: PackedStringArray = ["consumed_", "risk_", "spore_", "jackpot_", "placed_"]
 
 
 func _texts() -> Dictionary:
@@ -44,6 +44,7 @@ func test_every_posted_key_has_text() -> void:
 	for v: Dictionary in JsonDataScript.load_dict("res://data/origins.json")["variants"]:
 		if bool(v.get("available", true)):
 			assert_true(texts.has("jackpot_" + String(v["id"])), "нет сообщения куша «jackpot_%s»" % v["id"])
+	assert_true(texts.has("placed_trap") and texts.has("placed_bait"), "сообщения капкана и приманки")
 	var total := 0
 	for key: String in texts:
 		total += (texts[key] as Array).size()

@@ -295,6 +295,8 @@ func _apply_consume(result: Dictionary) -> void:
 				if wounds.is_bleeding():
 					wounds.stop_bleeding()
 					SystemLog.post("bleeding_stopped")
+			"place":
+				EventBus.place_requested.emit(String(effect["what"]))
 			"map_reveal":
 				var cluster := WorldSim.reveal_random_map(_rng)
 				if cluster.is_empty():

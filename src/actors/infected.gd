@@ -43,6 +43,11 @@ var sack_loot: Dictionary = {}
 var sack_rolled := false
 var sniffed := false
 var _glow: Label3D
+## Капкан (задача 18): стоит на месте, пока не вырвется. Яд: урон мимо брони и слабые пластины.
+var _trapped_left := 0.0
+var _poison_left := 0.0
+var _poison_dps := 0.0
+var _weak_armor_left := 0.0
 
 
 func _ready() -> void:
@@ -51,7 +56,8 @@ func _ready() -> void:
 	if hp <= 0.0:
 		hp = Content.enemy_db().max_hp(enemy_id, level)
 	if brain == null:
-		brain = InfectedBrain.new(_data["ai"], float(_data["attack"]["range"]), _rng.randf_range(0.0, 0.4))
+		var hunger := float(_data["ai"].get("start_hunger", _rng.randf_range(0.0, 0.4)))
+		brain = InfectedBrain.new(_data["ai"], float(_data["attack"]["range"]), hunger)
 	_rng.randomize()
 	_attack_timer = _rng.randf_range(0.0, 0.5)
 	collision_layer = LAYER_INFECTED
@@ -72,6 +78,12 @@ func _physics_process(delta: float) -> void:
 	_stumble_left = maxf(0.0, _stumble_left - delta)
 	_unnoticed_left = maxf(0.0, _unnoticed_left - delta)
 	_unnoticed_retry = maxf(0.0, _unnoticed_retry - delta)
+	_trapped_left = maxf(0.0, _trapped_left - delta)
+	_weak_armor_left = maxf(0.0, _weak_armor_left - delta)
+	if _poison_left > 0.0:
+		_poison_left -= delta
+		if take_damage(_poison_dps * delta):
+			return
 	_sense_timer -= delta
 	if _sense_timer <= 0.0:
 		_sense_timer = SENSE_INTERVAL
@@ -99,6 +111,8 @@ func hear(position: Vector3, loudness: float) -> void:
 
 ## Урон от героя (задача 8 добавит зоны и броню). Возвращает true, если тварь умерла.
 func take_damage(amount: float, from: Vector3 = Vector3.INF) -> bool:
+	if is_queued_for_deletion():
+		return true
 	hp -= amount
 	if from != Vector3.INF and not brain.is_alert():
 		_pending_noise = {"position": from, "loudness": 1.0}
@@ -177,6 +191,35 @@ func gaze_info() -> Dictionary:
 func sense_info() -> Dictionary:
 	return {"stealth": float(_data["senses"].get("stealth", 0.0)), "level": level,
 		"alert": brain.is_alert(), "hush": float(_data["senses"].get("sense_hush", 0.0))}
+
+
+## Броня сейчас: под ядом пластины слабее (EliteRules.poisoned_armor).
+func armor_now() -> Dictionary:
+	return Content.elite_rules().poisoned_armor(_data.get("armor", {}), _weak_armor_left > 0.0)
+
+
+## Капкан: стоять seconds секунд, урон мимо брони. Возвращает true, если тварь умерла.
+func trap(seconds: float, damage: float) -> bool:
+	_trapped_left = maxf(_trapped_left, seconds)
+	_lunge_left = 0.0
+	_mark.text = "#"
+	_mark.modulate = Color(0.95, 0.6, 0.3)
+	return take_damage(damage)
+
+
+## Съела отравленную приманку: урон dps × seconds и пластины слабее на armor_s.
+func poison(seconds: float, dps: float, armor_s: float) -> void:
+	_poison_left = maxf(_poison_left, seconds)
+	_poison_dps = dps
+	_weak_armor_left = maxf(_weak_armor_left, armor_s)
+
+
+func is_trapped() -> bool:
+	return _trapped_left > 0.0
+
+
+func is_poisoned() -> bool:
+	return _poison_left > 0.0
 
 
 ## Тварь не гонится за героем и не атакует — для умения «Из тени».
@@ -288,6 +331,8 @@ func _act(delta: float) -> void:
 				speed = 0.0
 				if _food and is_instance_valid(_food):
 					_food.eat(float(_data["ai"]["eat_per_s"]) * delta * 100.0)
+					if _food.has_method("poison_for") and not is_poisoned():
+						_food.poison_for(self)
 
 	var direction := Vector3.ZERO
 	if _lunge_left > 0.0:
@@ -302,7 +347,7 @@ func _act(delta: float) -> void:
 			direction.y = 0.0
 			direction = direction.normalized()
 
-	if _stumble_left > 0.0:
+	if _stumble_left > 0.0 or _trapped_left > 0.0:
 		direction = Vector3.ZERO
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
@@ -326,6 +371,9 @@ func _reached_target() -> bool:
 
 
 func _wander(delta: float) -> void:
+	if bool(_data["ai"].get("lurk", false)):
+		brain.target_position = home  # засада: ждёт у своего места, не бродит
+		return
 	if not bool(_senses.get("at_target", false)):
 		return
 	_wander_wait -= delta
@@ -341,7 +389,7 @@ func _wander(delta: float) -> void:
 ## Рывок прыгунов и бегунов: прямо на героя, если он на дистанции рывка и виден.
 func _try_lunge() -> void:
 	var move: Dictionary = _data["move"]
-	if not move.has("lunge") or _lunge_cooldown > 0.0 or not bool(_senses.get("sees_player", false)):
+	if not move.has("lunge") or _lunge_cooldown > 0.0 or _trapped_left > 0.0 or not bool(_senses.get("sees_player", false)):
 		return
 	var lunge: Dictionary = move["lunge"]
 	var distance := float(_senses["player_distance"])

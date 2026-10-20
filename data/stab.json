@@ -19,7 +19,7 @@
     "saturation_min": 0.3,
     "recover_per_day": 0.5,
     "not_sold": ["sporan", "brick"],
-    "stock": { "zhivchik": 6, "vodka": 4, "vinegar": 3, "canned_food": 6, "water_bottle": 6, "bandage": 5, "knife": 1, "axe": 1, "bow": 1, "arrow": 30, "pistol": 1, "ammo_9mm": 60, "ammo_12g": 20 }
+    "stock": { "zhivchik": 6, "vodka": 4, "vinegar": 3, "canned_food": 6, "water_bottle": 6, "bandage": 5, "knife": 1, "axe": 1, "bow": 1, "arrow": 30, "pistol": 1, "ammo_9mm": 60, "ammo_12g": 20, "ammo_9mm_ap": 16, "bear_trap": 2, "poison_bait": 3 }
   },
   "healer": {
     "heal_per_spore": 8,

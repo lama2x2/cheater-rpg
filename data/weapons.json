@@ -1,5 +1,5 @@
 {
-  "_doc": "Оружие (docs/spec/08_combat.md; 06, 6.4). Предметы — в data/items/weapons.json (вес, цена). melee: light / heavy (charge — удержание для тяжёлого). ranged: hitscan с разбросом spread_deg, pellets — дробь. noise — ключ из data/noise.json. Время — реальные секунды.",
+  "_doc": "Оружие (docs/spec/08_combat.md; 06, 6.4). ap_ammo / ap_penetration — бронебойные патроны (задача 18): если они есть, перезарядка берёт их первыми (обычные из магазина возвращаются в инвентарь), пробой — ap_penetration. Предметы — в data/items/weapons.json (вес, цена). melee: light / heavy (charge — удержание для тяжёлого). ranged: hitscan с разбросом spread_deg, pellets — дробь. noise — ключ из data/noise.json. Время — реальные секунды.",
   "weapons": [
     {
       "id": "fists", "kind": "melee", "penetration": 0.0,
@@ -29,6 +29,7 @@
       "id": "pistol", "kind": "ranged", "penetration": 0.25,
       "damage": 30, "pellets": 1, "spread_deg": 3.0, "range": 50, "cooldown": 0.25, "charge": 0.0,
       "ammo": "ammo_9mm", "magazine": 8, "reload": 1.6,
+      "ap_ammo": "ammo_9mm_ap", "ap_penetration": 0.85,
       "noise": "pistol", "sack_open_mult": 0.0
     },
     {

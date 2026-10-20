@@ -1,5 +1,5 @@
 {
-  "_doc": "Заражённые, стадии 0–5 (docs/spec/07_enemies.md, 7.1; схема — 14.2). Скорости в м/с (герой: шаг 4, бег 7). Время — реальные секунды. senses.stealth — Скрытность твари против Наблюдательности героя (Пристальный взгляд 12.3, чуйка 17). ai — пороги мозга (src/core/infected_brain.gd). armor — броня по зонам (бронепластины топтуна), attack.bleed_chance — шанс кровотечения у героя. spore_sack — есть ли мешок, loot — таблица из data/loot, sack_open_s — базовое время вскрытия; делится на sack_open_mult лучшего клинка в инвентаре (нож ×2 → 2–6 с, топор ×1,5).",
+  "_doc": "Заражённые, стадии 0–5 (docs/spec/07_enemies.md, 7.1; схема — 14.2). Скорости в м/с (герой: шаг 4, бег 7). Время — реальные секунды. senses.stealth — Скрытность твари против Наблюдательности героя (Пристальный взгляд 12.3, чуйка 17). ai — пороги мозга (src/core/infected_brain.gd). armor — броня по зонам (бронепластины топтуна), attack.bleed_chance — шанс кровотечения у героя. spore_sack — есть ли мешок, loot — таблица из data/loot, sack_open_s — базовое время вскрытия; делится на sack_open_mult лучшего клинка в инвентаре (нож ×2 → 2–6 с, топор ×1,5). Стадия 8 — элита (задача 18): elite — флаг элиты (умения, события), ai.lurk — не бродит, ждёт в засаде у дома, ai.start_hunger — голод на старте (идёт на приманку), senses.sense_hush — гасит чуйку героя.",
   "enemies": [
     {
       "id": "crawler",
@@ -361,6 +361,75 @@
       },
       "loot": "loot_stomper",
       "sack_open_s": 12.0
+    },
+    {
+      "id": "elite",
+      "stage": 8,
+      "level": [
+        60,
+        70
+      ],
+      "threat": "epic",
+      "elite": true,
+      "body": {
+        "radius": 0.55,
+        "height": 2.4,
+        "color": [
+          0.32,
+          0.28,
+          0.3
+        ]
+      },
+      "hp": 400,
+      "hp_per_level": 5,
+      "move": {
+        "walk": 1.6,
+        "run": 7.6,
+        "lunge": {
+          "range": [
+            4,
+            14
+          ],
+          "speed": 19,
+          "duration": 0.55,
+          "cooldown": 3.0
+        }
+      },
+      "attack": {
+        "damage": 42,
+        "cooldown": 1.1,
+        "range": 1.6,
+        "bleed_chance": 0.6
+      },
+      "senses": {
+        "sight": 32,
+        "fov_deg": 170,
+        "hearing": 1.5,
+        "notice_close": 4.5,
+        "stealth": 7,
+        "sense_hush": 0.75
+      },
+      "can_open_doors": true,
+      "spore_sack": true,
+      "ai": {
+        "wander_radius": 0,
+        "lose_sight_s": 12,
+        "search_s": 20,
+        "hunger_per_s": 0.001,
+        "eat_per_s": 0.05,
+        "hungry_at": 0.5,
+        "smell_food": 32,
+        "lurk": true,
+        "start_hunger": 0.8
+      },
+      "armor": {
+        "head": 45,
+        "torso": 50,
+        "limbs": 35,
+        "spore_sack": 30
+      },
+      "loot": "loot_elite",
+      "sack_open_s": 10.0
     }
   ]
 }

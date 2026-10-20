@@ -97,6 +97,8 @@ static func _effect_text(effect: Dictionary) -> String:
 		params[key] = "%s–%s" % [_num(float(v[0])), _num(float(v[1]))] if v is Array and v.size() == 2 and (v[0] is float or v[0] is int) else str(v)
 	if effect.has("vital"):
 		params["vital"] = Content.ui("vital_" + String(effect["vital"]))
+	if effect.has("what"):
+		params["what"] = Content.ui("tip_place_" + String(effect["what"]))
 	if effect.has("pool"):
 		params["pool"] = Content.ui("tip_pool_" + String(effect["pool"]))
 	if effect.has("stat"):

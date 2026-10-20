@@ -1,0 +1,9 @@
+{
+  "_doc": "Элита-событие (docs/spec/07_enemies.md, 7.1, 7.4; задача 18). cluster — где элита живёт (одна, после каждой перезагрузки кластера снова); level — уровень. ambush: элита ждёт за домом — от дома distance_m к центру кластера лежит приманка-раненый. trap — капкан: срабатывает на тварь в radius_m, держит hold_s (у элиты — elite_hold_s), урон damage мимо брони. bait — отравленная приманка: еда food, съевшая тварь отравлена: poison_s секунд по dps урона мимо брони, броня × armor_mult на armor_s секунд (яд разъедает пластины). victim_reward — сколько споранов даст раненый, если элита мертва.",
+  "cluster": "c_town",
+  "level": [60, 66],
+  "ambush": { "distance_m": 9.0 },
+  "trap": { "radius_m": 0.9, "hold_s": 6.0, "elite_hold_s": 4.0, "damage": 40.0 },
+  "bait": { "food": 40.0, "poison_s": 25.0, "dps": 8.0, "armor_mult": 0.35, "armor_s": 90.0 },
+  "victim_reward": 15
+}

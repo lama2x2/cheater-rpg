@@ -8,6 +8,7 @@
     { "id": "shotgun", "category": "weapon", "icon": "gun", "weight_g": 3300, "primary_inventory": false, "base_price": 120 },
     { "id": "arrow", "category": "ammo", "icon": "arrow", "weight_g": 40, "primary_inventory": false, "base_price": 1 },
     { "id": "ammo_9mm", "category": "ammo", "icon": "ammo", "weight_g": 11, "primary_inventory": false, "base_price": 1 },
+    { "id": "ammo_9mm_ap", "category": "ammo", "icon": "ammo", "weight_g": 12, "primary_inventory": false, "base_price": 5 },
     { "id": "ammo_12g", "category": "ammo", "icon": "ammo", "weight_g": 45, "primary_inventory": false, "base_price": 2 }
   ]
 }

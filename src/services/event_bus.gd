@@ -46,3 +46,6 @@ signal map_changed
 ## Герой подобрал предметы (всплывающая строка «+ бинт ×2» у края экрана, 12.8).
 @warning_ignore("unused_signal")
 signal item_picked(item_id: String, count: int)
+## Герой поставил капкан или приманку (задача 18): сцена создаёт предмет у его ног.
+@warning_ignore("unused_signal")
+signal place_requested(what: String)

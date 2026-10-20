@@ -32,6 +32,7 @@ const CharacterWindowScript := preload("res://src/ui/character_window.gd")
 const LogPanelScript := preload("res://src/ui/log_panel.gd")
 const LogCardScript := preload("res://src/ui/log_card.gd")
 const OnboardingDirectorScript := preload("res://src/world/onboarding_director.gd")
+const EliteEventScript := preload("res://src/world/elite_event.gd")
 const TutorialHintScript := preload("res://src/ui/tutorial_hint.gd")
 const MentorWindowScript := preload("res://src/ui/mentor_window.gd")
 
@@ -117,6 +118,12 @@ func _ready() -> void:
 	onboarding.population = population
 	add_child(onboarding)
 
+	var elite: Node = EliteEventScript.new()
+	elite.area = area
+	elite.population = population
+	elite.hero = player
+	add_child(elite)
+
 	var director: Node = ClusterDirectorScript.new()
 	director.name = "ClusterDirector"
 	director.area = area
@@ -192,6 +199,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --onboarding=STEP  поставить шаг начала игры (mentor, sack, return…); с --talk=mentor — окно наставника
 ##   --log         открыть окно лога Системы
 ##   --char        открыть экран персонажа (с 3 свободными очками)
+##   --elite       (в Городке) встать в 8 м от раненого-приманки элиты
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
@@ -287,6 +295,12 @@ func _handle_debug_args() -> void:
 		elif arg == "--char":
 			PlayerState.free_points += 3
 			(func() -> void: get_tree().get_first_node_in_group("character_window").open()).call_deferred()
+		elif arg == "--elite":
+			(func() -> void:
+				await get_tree().create_timer(1.0).timeout
+				var victim := get_tree().get_first_node_in_group("elite_victims") as Node3D
+				if victim:
+					get_tree().get_first_node_in_group("hero").global_position = victim.global_position + Vector3(6.0, 0.1, 5.0)).call_deferred()
 		elif arg == "--inside":
 			_debug_inside()
 		elif arg == "--gaze":
