@@ -14,5 +14,6 @@
   "props": { "count": 45, "size": [[1, 6], [1, 4], [1, 3]] },
   "outdoor_loot": { "table": "spot_industrial", "count": 6 },
   "stashes": { "count": 2, "table": "stash_rich" },
-  "population": { "civilians": [80, 160], "immune_chance": 0.07, "infected_on_arrival": 0.05, "food_per_civilian": 1.0, "agents_per_unit": 0.2, "max_agents": 32 }
+  "population": { "civilians": [80, 160], "immune_chance": 0.07, "infected_on_arrival": 0.05, "food_per_civilian": 1.0, "agents_per_unit": 0.2, "max_agents": 32 },
+  "terrain": {"amplitude_m": 1.5, "frequency": 0.035, "flat_margin_m": 4, "stream": {"inset_m": 9, "width_m": 6, "depth_m": 1.6, "ford_m": 6}, "trees": {"count": 12, "models": ["nature/tree_simple", "nature/tree_small", "nature/tree_pineTallA"], "scale": [0.8, 1.2], "gap_m": 5}, "rocks": {"count": 10, "models": ["nature/rock_largeA", "nature/rock_smallC", "nature/log"], "scale": [0.8, 1.3], "gap_m": 4}, "bushes": {"count": 20, "models": ["nature/plant_bushSmall"], "scale": [0.8, 1.1], "gap_m": 2}, "grass": {"count": 100, "models": ["nature/grass"], "scale": [0.8, 1.2], "gap_m": 0.8, "patchiness": 0.2}}
 }

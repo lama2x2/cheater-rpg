@@ -19,6 +19,8 @@ const EXIT_INSET := 2.5
 const ENTRY_INSET := 6.0
 const EXIT_CLEAR_RADIUS := 7.0
 const EDGE_WALL_HEIGHT := 4.0
+## «Трещина» за краем соты и юбка края рельефа уходят на эту глубину.
+const RIM_DEPTH := -2.4
 
 var cluster_id: String
 var template: Dictionary
@@ -29,6 +31,9 @@ var _doors: Array[StaticBody3D] = []
 ## Стены зданий для среза (D-102): [{"rect": Rect2, "walls": [{"side", "body", "height"}]}].
 var building_walls: Array = []
 var _stashes: Array[Node3D] = []
+## Ландшафт (задача 19a): рельеф, ручей, растительность и запросы (кусты, вода, скорость, шум).
+var terrain: TerrainRules
+static var _plant_scenes: Dictionary = {}
 
 
 func _ready() -> void:
@@ -42,9 +47,23 @@ func _ready() -> void:
 			clear.append({"at": _v2(template[key]), "r": float(template["clear_radius"])})
 	for neighbor in WorldSim.region.neighbors(cluster_id):
 		clear.append({"at": WorldSim.region.exit_point(cluster_id, neighbor, size, EXIT_INSET), "r": EXIT_CLEAR_RADIUS})
+	# Ручей ложится на сторону без соседа; раскладка обходит русло.
+	var free_sides: Array = []
+	for side in 6:
+		var free := true
+		for neighbor in WorldSim.region.neighbors(cluster_id):
+			if WorldSim.region.side(cluster_id, neighbor) == side:
+				free = false
+		if free:
+			free_sides.append(side)
+	terrain = TerrainRules.new(Content.terrain_config(), template.get("terrain", {}), size, int(template["layout_seed"]), free_sides)
+	clear.append_array(terrain.stream_clear_zones())
 	layout = ClusterLayout.generate(template, clear)
+	terrain.set_features(_flat_features(size))
+	terrain.scatter()
 
 	_build_ground(size)
+	_build_terrain(size)
 	for building: Dictionary in layout["buildings"]:
 		_build_building(building)
 	for prop: Dictionary in layout["props"]:
@@ -154,15 +173,6 @@ func _on_baked() -> void:
 ## стены по шести сторонам: уйти можно только через выход к соседу.
 func _build_ground(size: float) -> void:
 	var apothem := size / 2.0
-	var box := BoxShape3D.new()
-	box.size = Vector3(size * 1.2 + 20.0, 1, size * 1.2 + 20.0)
-	var hex := CylinderMesh.new()  # 6 граней: вершины на севере и юге, как HexGrid
-	hex.radial_segments = 6
-	hex.rings = 1
-	hex.top_radius = apothem * 2.0 / HexGrid.SQRT3
-	hex.bottom_radius = hex.top_radius
-	hex.height = 0.1
-	add_child(_static_body(box, Vector3(0, -0.5, 0), hex, Vector3(0, -0.05, 0), _color(template["ground_color"])))
 	var side_length := apothem * 2.0 / HexGrid.SQRT3
 	for side in 6:
 		var normal := HexGrid.side_normal(side)
@@ -180,7 +190,7 @@ func _build_ground(size: float) -> void:
 	rim.size = Vector2(size * 1.2 + 60.0, size * 1.2 + 60.0)
 	var rim_instance := MeshInstance3D.new()
 	rim_instance.mesh = rim
-	rim_instance.position.y = -0.02
+	rim_instance.position.y = RIM_DEPTH  # ниже самого глубокого русла (задача 19a)
 	var rim_material := StandardMaterial3D.new()
 	rim_material.albedo_color = _color(template["ground_color"]).darkened(0.45)
 	rim_instance.material_override = rim_material
@@ -231,6 +241,169 @@ func _build_building(b: Dictionary) -> void:
 			add_child(door)
 			_doors.append(door)
 			record["walls"].append({"side": side, "body": door})
+
+
+## Где рельеф ровный (TerrainRules.set_features): постройки, препятствия, лут, тайники, выходы,
+## места входа, респ и площадь стаба.
+func _flat_features(size: float) -> Array:
+	var features: Array = []
+	for b: Dictionary in layout["buildings"]:
+		features.append(Rect2(b["center"] - b["size"] / 2.0, b["size"]).grow(1.5))
+	for prop: Dictionary in layout["props"]:
+		var s: Vector3 = prop["size"]
+		features.append(Rect2(prop["center"] - Vector2(s.x, s.z) / 2.0, Vector2(s.x, s.z)).grow(0.5))
+	for point: Dictionary in layout["loot"] + layout["stashes"]:
+		features.append(point["at"])
+	for neighbor in WorldSim.region.neighbors(cluster_id):
+		features.append(WorldSim.region.exit_point(cluster_id, neighbor, size, EXIT_INSET))
+		features.append(WorldSim.region.exit_point(cluster_id, neighbor, size, ENTRY_INSET))
+	for key in ["respawn", "plaza"]:
+		if template.has(key):
+			var at := _v2(template[key])
+			var r := float(template["clear_radius"]) + 4.0
+			features.append(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0))
+	return features
+
+
+## Рельеф (задача 19a): меш по сетке 2 м внутри соты, коллизия — карта высот 1 м; вода в русле;
+## деревья и камни — с коллизией ствола (закрывают обзор и путь), кусты и трава — без.
+func _build_terrain(size: float) -> void:
+	var apothem := size / 2.0
+	var reach := apothem * 2.0 / HexGrid.SQRT3 + 2.0
+	var cells := int(ceil(reach)) * 2
+	var heights := PackedFloat32Array()
+	heights.resize((cells + 1) * (cells + 1))
+	for z in cells + 1:
+		for x in cells + 1:
+			var p := Vector2(x - cells / 2.0, z - cells / 2.0)
+			heights[z * (cells + 1) + x] = terrain.height_at(p) if HexGrid.inside(p, apothem + 1.0) else 0.0
+	var shape := HeightMapShape3D.new()
+	shape.map_width = cells + 1
+	shape.map_depth = cells + 1
+	shape.map_data = heights
+	var body := StaticBody3D.new()
+	var collision := CollisionShape3D.new()
+	collision.shape = shape
+	body.add_child(collision)
+	add_child(body)
+	# Меш: шаг 2 м, только треугольники внутри соты.
+	var step := 2.0
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var ground := _color(template["ground_color"])
+	var n := int(ceil(reach / step))
+	# Вершины за краем соты притягиваются к её границе — край ровный, без ступенек.
+	var vertex := func(x: float, z: float) -> void:
+		var p := Vector2(x, z)
+		var k := 1.0
+		for side in 3:
+			var d := absf(p.dot(HexGrid.side_normal(side)))
+			if d > apothem:
+				k = minf(k, apothem / d)
+		p *= k
+		var h := terrain.height_at(p)
+		st.set_color(ground.darkened(clampf(-h * 0.25, 0.0, 0.4)).lightened(clampf(h * 0.04, 0.0, 0.15)))
+		st.add_vertex(Vector3(p.x, h, p.y))
+	for iz in range(-n, n):
+		for ix in range(-n, n):
+			var x0 := ix * step
+			var z0 := iz * step
+			var corners_in := 0
+			for c in [Vector2(x0, z0), Vector2(x0 + step, z0), Vector2(x0, z0 + step), Vector2(x0 + step, z0 + step)]:
+				if HexGrid.inside(c, apothem):
+					corners_in += 1
+			if corners_in == 0 and not HexGrid.inside(Vector2(x0 + step / 2.0, z0 + step / 2.0), apothem):
+				continue
+			vertex.call(x0, z0)
+			vertex.call(x0 + step, z0)
+			vertex.call(x0 + step, z0 + step)
+			vertex.call(x0, z0)
+			vertex.call(x0 + step, z0 + step)
+			vertex.call(x0, z0 + step)
+	# Юбка: от края рельефа вниз до «трещины» — у соты есть толщина, а не щель.
+	var corners := HexGrid.corners(apothem)
+	var dark := ground.darkened(0.5)
+	for side in 6:
+		var a: Vector2 = corners[(side + 5) % 6]
+		var b: Vector2 = corners[side]
+		for i in 24:
+			var p0 := a.lerp(b, i / 24.0)
+			var p1 := a.lerp(b, (i + 1) / 24.0)
+			var t0 := Vector3(p0.x, terrain.height_at(p0), p0.y)
+			var t1 := Vector3(p1.x, terrain.height_at(p1), p1.y)
+			var b0 := Vector3(p0.x, RIM_DEPTH, p0.y)
+			var b1 := Vector3(p1.x, RIM_DEPTH, p1.y)
+			for v: Vector3 in [t0, b0, t1, t1, b0, b1]:
+				st.set_color(dark)
+				st.add_vertex(v)
+	st.generate_normals()
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = st.commit()
+	var material := StandardMaterial3D.new()
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.vertex_color_use_as_albedo = true
+	material.vertex_color_is_srgb = true
+	material.roughness = 1.0
+	mesh.material_override = material
+	add_child(mesh)
+	if not terrain.stream.is_empty():
+		_build_water(apothem)
+	_build_plants()
+
+
+## Вода — полоса вдоль русла на уровне воды, полупрозрачная.
+func _build_water(apothem: float) -> void:
+	var s := terrain.stream
+	var normal: Vector2 = s["normal"]
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(float(s["half"]) * 2.0, apothem * 2.4)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.35, 0.58, 0.75, 0.85)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.roughness = 0.6
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # вода читается и в тени, и ночью
+	var water := MeshInstance3D.new()
+	water.mesh = plane
+	water.material_override = material
+	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var center := normal * float(s["offset"])
+	water.position = Vector3(center.x, float(terrain.config["water_level"]), center.y)
+	water.rotation.y = -normal.angle()
+	add_child(water)
+
+
+func _build_plants() -> void:
+	var kinds: Dictionary = terrain.config["kinds"]
+	for plant: Dictionary in terrain.plants:
+		var model := String(plant["model"])
+		if not _plant_scenes.has(model):
+			var path := "res://assets/third_party/kenney/%s.glb" % model
+			_plant_scenes[model] = load(path) if ResourceLoader.exists(path) else null
+		var scene: PackedScene = _plant_scenes[model]
+		if scene == null:
+			continue
+		var kind: Dictionary = kinds[String(plant["kind"])]
+		var at: Vector2 = plant["at"]
+		var node: Node3D = scene.instantiate()
+		var k := float(kind["model_scale"]) * float(plant["scale"])
+		node.scale = Vector3(k, k, k)
+		node.rotation.y = float(plant["rot"])
+		var holder := StaticBody3D.new() if float(kind["collision_r"]) > 0.0 else Node3D.new()
+		holder.position = Vector3(at.x, terrain.height_at(at), at.y)
+		holder.add_child(node)
+		if holder is StaticBody3D:
+			var trunk := CylinderShape3D.new()
+			trunk.radius = float(kind["collision_r"]) * float(plant["scale"])
+			trunk.height = 3.0
+			var cs := CollisionShape3D.new()
+			cs.shape = trunk
+			cs.position.y = 1.5
+			holder.add_child(cs)
+		if String(plant["kind"]) == "grass":
+			for m in node.find_children("*", "MeshInstance3D", true, false):
+				(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		holder.add_to_group("plants")
+		add_child(holder)
 
 
 ## Двускатная крыша над прямоугольником: конёк вдоль длинной стороны, свес 0,3 м.

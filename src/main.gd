@@ -206,6 +206,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --char        открыть экран персонажа (с 3 свободными очками)
 ##   --elite       (в Городке) встать в 8 м от раненого-приманки элиты
 ##   --outside     встать в 1,5 м к востоку от ближайшего к центру здания (тень за стеной, D-102)
+##   --stream      встать у брода ручья (если на кластере есть ручей)
 ##   --lineup      ряд моделей всех видов (data/looks.json) перед героем — посмотреть внешность
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
@@ -308,6 +309,12 @@ func _handle_debug_args() -> void:
 				var victim := get_tree().get_first_node_in_group("elite_victims") as Node3D
 				if victim:
 					get_tree().get_first_node_in_group("hero").global_position = victim.global_position + Vector3(6.0, 0.1, 5.0)).call_deferred()
+		elif arg == "--stream":
+			var t: TerrainRules = get_node("Area").terrain
+			if not t.stream.is_empty():
+				var n: Vector2 = t.stream["normal"]
+				var at: Vector2 = n * (float(t.stream["offset"]) - float(t.stream["half"]) - 2.0)
+				get_tree().get_first_node_in_group("hero").position = Vector3(at.x, t.height_at(at) + 0.2, at.y)
 		elif arg == "--lineup":
 			_debug_lineup.call_deferred()
 		elif arg == "--inside":

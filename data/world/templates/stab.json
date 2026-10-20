@@ -11,5 +11,6 @@
   "buildings": [
     { "kind": "house", "count": 6, "size": [[7, 10], [6, 9]] }
   ],
-  "props": { "count": 12, "size": [[1, 3], [1, 2], [1, 3]] }
+  "props": { "count": 12, "size": [[1, 3], [1, 2], [1, 3]] },
+  "terrain": {"amplitude_m": 0.6, "frequency": 0.03, "flat_margin_m": 6, "trees": {"count": 10, "models": ["suburban/tree-large", "nature/tree_oak"], "scale": [0.9, 1.2], "gap_m": 6}, "bushes": {"count": 14, "models": ["nature/plant_bush"], "scale": [0.8, 1.1], "gap_m": 3}, "grass": {"count": 80, "models": ["nature/grass", "nature/grass_leafs"], "scale": [0.8, 1.2], "gap_m": 0.8, "patchiness": 0.0}}
 }

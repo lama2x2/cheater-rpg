@@ -1,0 +1,18 @@
+{
+  "_doc": "Ландшафт (docs/spec/02_world.md «Соты и ландшафт», 17.4, D-71; задача 19a). Общие числа; рельеф и растительность кластера — раздел terrain шаблона (data/world/templates): amplitude_m — высота холмов, frequency — частота шума, flat_margin_m — за сколько метров от построек, выходов и точек лута рельеф выходит на полную высоту; stream — ручей вдоль стороны соты без соседа: inset_m от края, width_m, depth_m, ford_m — длина брода; trees, rocks, bushes, grass — count, models (pack/имя из assets/third_party/kenney), scale, gap_m, patchiness (трава пятнами). speed — множители скорости (вода вплавь, брод, куст), slope_penalty — замедление на единицу уклона в гору (не ниже slope_min_mult); noise — громкость шагов (куст и трава глушат, вода плещет); visibility.bush — насколько хуже видно того, кто в кусте; bush_radius_m — радиус куста; bush_reveal_m — ближе этого видно и в кусте; height_view_per_m — прибавка дальности зрения за метр высоты; water_level — уровень воды. kinds — как ставить модели: collision (ствол, камень) и радиус.",
+  "speed": { "water": 0.5, "ford": 0.75, "bush": 0.8 },
+  "slope_penalty": 0.8,
+  "slope_min_mult": 0.6,
+  "noise": { "bush": 0.7, "grass": 0.8, "water": 1.3 },
+  "visibility": { "bush": 0.6 },
+  "bush_radius_m": 1.2,
+  "bush_reveal_m": 4.0,
+  "height_view_per_m": 3.0,
+  "water_level": -0.4,
+  "kinds": {
+    "tree": { "collision_r": 0.3, "model_scale": 5.0 },
+    "rock": { "collision_r": 0.8, "model_scale": 2.5 },
+    "bush": { "collision_r": 0.0, "model_scale": 2.2 },
+    "grass": { "collision_r": 0.0, "model_scale": 2.0 }
+  }
+}

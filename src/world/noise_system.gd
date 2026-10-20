@@ -31,7 +31,7 @@ func _on_noise(source: String, at: Vector3, options: Dictionary) -> void:
 		var adjust := PlayerState.skills.noise_adjust(source, GameClock.minutes, PlayerState.skill_levels())
 		source = String(adjust["source"])
 		skill_mult = float(adjust["mult"])
-	var r := model.radius(source, opts) * skill_mult * _zone_mult(at)
+	var r := model.radius(source, opts) * skill_mult * _zone_mult(at) * float(options.get("terrain", 1.0))
 	if from_hero and _luck_quiet(source):
 		r *= float(Content.luck_model().config()["quiet_mult"])
 	model.register(r)

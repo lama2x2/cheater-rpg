@@ -16,5 +16,6 @@
   "outdoor_loot": { "table": "spot_street", "count": 5 },
   "stashes": { "count": 2, "table": "stash_common" },
   "fixed_items": [["knife", 1, 0.0, -2.5], ["sporan", 3, 2.5, 1.5], ["canned_food", 1, -2.0, 2.0]],
-  "population": { "civilians": [20, 40], "immune_chance": 0.07, "infected_on_arrival": 0.1, "food_per_civilian": 1.0, "agents_per_unit": 0.5, "max_agents": 18 }
+  "population": { "civilians": [20, 40], "immune_chance": 0.07, "infected_on_arrival": 0.1, "food_per_civilian": 1.0, "agents_per_unit": 0.5, "max_agents": 18 },
+  "terrain": {"amplitude_m": 2.0, "frequency": 0.025, "flat_margin_m": 5, "stream": {"inset_m": 9, "width_m": 6, "depth_m": 1.6, "ford_m": 8}, "trees": {"count": 28, "models": ["nature/tree_oak", "nature/tree_default", "nature/tree_fat", "suburban/tree-large"], "scale": [0.8, 1.3], "gap_m": 4}, "rocks": {"count": 6, "models": ["nature/rock_largeA", "nature/rock_largeB", "nature/rock_tallA"], "scale": [0.7, 1.2], "gap_m": 5}, "bushes": {"count": 40, "models": ["nature/plant_bush", "nature/plant_bushLarge", "nature/plant_bushDetailed"], "scale": [0.8, 1.2], "gap_m": 2}, "grass": {"count": 260, "models": ["nature/grass", "nature/grass_large", "nature/grass_leafs"], "scale": [0.8, 1.4], "gap_m": 0.8, "patchiness": -0.1}}
 }

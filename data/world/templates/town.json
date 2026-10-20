@@ -15,5 +15,6 @@
   "props": { "count": 40, "size": [[1.5, 4.5], [1, 2], [1.5, 2.5]] },
   "outdoor_loot": { "table": "spot_street", "count": 8 },
   "stashes": { "count": 3, "table": "stash_common" },
-  "population": { "civilians": [150, 300], "immune_chance": 0.07, "infected_on_arrival": 0.05, "food_per_civilian": 1.5, "agents_per_unit": 0.15, "max_agents": 40 }
+  "population": { "civilians": [150, 300], "immune_chance": 0.07, "infected_on_arrival": 0.05, "food_per_civilian": 1.5, "agents_per_unit": 0.15, "max_agents": 40 },
+  "terrain": {"amplitude_m": 1.2, "frequency": 0.03, "flat_margin_m": 4, "trees": {"count": 18, "models": ["suburban/tree-large", "suburban/tree-small", "nature/tree_default"], "scale": [0.8, 1.2], "gap_m": 5}, "bushes": {"count": 25, "models": ["nature/plant_bushSmall", "nature/plant_bush"], "scale": [0.8, 1.1], "gap_m": 2}, "grass": {"count": 120, "models": ["nature/grass", "nature/grass_leafs"], "scale": [0.8, 1.2], "gap_m": 0.8, "patchiness": 0.1}}
 }

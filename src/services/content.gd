@@ -35,6 +35,7 @@ const LOG_PATH := "res://data/log.json"
 const ONBOARDING_PATH := "res://data/onboarding.json"
 const ELITE_PATH := "res://data/elite.json"
 const CAMPAIGNS_DIR := "res://data/campaigns"
+const TERRAIN_PATH := "res://data/terrain.json"
 
 var _cache: Dictionary = {}
 
@@ -129,6 +130,10 @@ func luck_model() -> LuckModel:
 	if not _cache.has(LUCK_PATH):
 		_cache[LUCK_PATH] = LuckModel.new(JsonData.load_dict(LUCK_PATH, LuckModel.REQUIRED_KEYS))
 	return _cache[LUCK_PATH]
+
+
+func terrain_config() -> Dictionary:
+	return _cached(TERRAIN_PATH, TerrainRules.REQUIRED_KEYS)
 
 
 ## Кампании (11.4a): {id: карточка campaign.json}, по полю order.

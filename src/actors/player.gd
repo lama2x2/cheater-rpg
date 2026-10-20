@@ -78,6 +78,9 @@ func _physics_process(delta: float) -> void:
 	speed *= 1.0 + float(_tuning["speed_bonus_per_level"]) * (PlayerState.stats.get_level("speed") - 1)
 	speed *= vitals.speed_multiplier() * inventory.speed_multiplier()
 	speed *= PlayerState.buffs.multiplier("speed", GameClock.minutes)  # Споровый форсаж
+	var terrain := TerrainRules.of(get_tree())
+	if terrain:  # вода, брод, куст, склон в гору (19a)
+		speed *= terrain.speed_mult(Vector2(global_position.x, global_position.z), Vector2(direction.x, direction.z))
 
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
@@ -102,7 +105,11 @@ func _physics_process(delta: float) -> void:
 
 ## Во сколько раз хуже героя видно (крадётся — дальность зрения тварей меньше).
 func visibility_multiplier() -> float:
-	return float(_tuning["sneak_visibility"]) if sneaking else 1.0
+	var mult := float(_tuning["sneak_visibility"]) if sneaking else 1.0
+	var terrain := TerrainRules.of(get_tree())
+	if terrain:  # в кусте — как «красться» (17.4)
+		mult *= terrain.visibility_mult(Vector2(global_position.x, global_position.z))
+	return mult
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -156,8 +163,14 @@ func _count_steps(meters: float, mode: String) -> void:
 	_step_meters = 0.0
 	EventBus.noise_made.emit(mode + "_step", global_position, {
 		"stealth_level": PlayerState.stats.get_level("stealth"),
-		"load_ratio": PlayerState.inventory.load_ratio(), "from_hero": true,
+		"load_ratio": PlayerState.inventory.load_ratio(), "from_hero": true, "terrain": _terrain_noise(),
 	})
+
+
+## Шаги по траве и кустам тише, по воде — громче (19a).
+func _terrain_noise() -> float:
+	var terrain := TerrainRules.of(get_tree())
+	return terrain.noise_mult(Vector2(global_position.x, global_position.z)) if terrain else 1.0
 
 
 func _noise_model() -> NoiseModel:

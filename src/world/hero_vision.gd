@@ -117,6 +117,9 @@ func _process(delta: float) -> void:
 	view_dir = VisionRules.turn_towards(view_dir, forward, _rules.turn_speed(PlayerState.stats.get_level("reaction")) * delta)
 	var perception := PlayerState.stats.get_level("perception")
 	_reach = _rules.view_range(int(GameClock.minutes / 60.0) % 24, WorldSim.is_kislyak(), perception)
+	var terrain := TerrainRules.of(get_tree())
+	if terrain:  # с холма видно дальше, из оврага — хуже (17.4)
+		_reach = maxf(_reach + terrain.height_view_bonus(hero.global_position.y), 6.0)
 	_cone = _rules.cone_deg(bool(hero.get("is_sprinting")), perception)
 	_update_shade(alive)
 	_check_left -= delta
@@ -182,6 +185,9 @@ func _check_all(alive: bool) -> void:
 
 
 func _clear_line(space: PhysicsDirectSpaceState3D, node: Node3D) -> bool:
+	var terrain := TerrainRules.of(get_tree())
+	if terrain and node.is_in_group("infected") and not terrain.bush_visible(Vector2(hero.global_position.x, hero.global_position.z), Vector2(node.global_position.x, node.global_position.z)):
+		return false  # тварь в кустах или за кустом (17.4)
 	var height := 1.1 if node.is_in_group("infected") else 0.25
 	var query := PhysicsRayQueryParameters3D.create(hero.global_position + EYE, node.global_position + Vector3.UP * height, LAYER_WORLD)
 	return space.intersect_ray(query).is_empty()

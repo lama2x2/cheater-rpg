@@ -276,6 +276,9 @@ func _can_see(hero: Node3D, distance: float) -> bool:
 		to_hero.y = 0.0
 		if rad_to_deg(forward.angle_to(to_hero.normalized())) > float(s["fov_deg"]) / 2.0:
 			return false
+	var terrain := TerrainRules.of(get_tree())
+	if terrain and not terrain.bush_visible(Vector2(global_position.x, global_position.z), Vector2(hero.global_position.x, hero.global_position.z)):
+		return false  # кусты закрывают (17.4)
 	var query := PhysicsRayQueryParameters3D.create(
 		global_position + Vector3.UP * minf(EYE_HEIGHT, float(_data["body"]["height"]) * 0.8),
 		hero.global_position + Vector3.UP * 1.2, LAYER_WORLD)
@@ -350,6 +353,9 @@ func _act(delta: float) -> void:
 
 	if _stumble_left > 0.0 or _trapped_left > 0.0:
 		direction = Vector3.ZERO
+	var terrain := TerrainRules.of(get_tree())
+	if terrain and direction != Vector3.ZERO:  # вода и кусты держат и тварей (19a)
+		speed *= terrain.speed_mult(Vector2(global_position.x, global_position.z))
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
 	velocity.y = 0.0 if is_on_floor() else velocity.y - GRAVITY * delta
