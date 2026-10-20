@@ -10,7 +10,8 @@ from . import expr
 from .model import Campaign, Goto, compile_effects, load_campaign, parse_expr
 
 LOCK = "scene_ids.lock"  # id сцен прошлой версии: python -m textbot.lint <папка> --lock
-TEXT_LIMIT = 3500  # запас под шапку и строки Системы до лимита Telegram 4096
+TEXT_LIMIT = 3500
+DEATH_MARK = "☠"  # запас под шапку и строки Системы до лимита Telegram 4096
 
 
 @dataclass
@@ -93,12 +94,14 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
             if ch.if_:
                 reads |= expr.names_in(parse_expr(ch.if_))
             branches = [(ch.effects, ch.goto)]
+            lethal = False
             if ch.roll:
                 reads |= expr.names_in(parse_expr(ch.roll.chance))
                 branches += [(ch.roll.success.effects, ch.roll.success.goto), (ch.roll.fail.effects, ch.roll.fail.goto)]
             for effs, goto in branches:
                 if _walk(compile_effects(effs, where), reads, writes, gotos, flags):
                     dying.add(sid)
+                    lethal = True
                 gotos += _targets(goto)
                 if isinstance(goto, list):
                     for g in goto:
@@ -106,6 +109,9 @@ def lint(c: Campaign, mode: str | None = None) -> Report:
                             reads |= expr.names_in(parse_expr(g.if_))
                     if goto and goto[-1].if_:
                         r.warnings.append(f"{where}: у условного goto нет варианта по умолчанию")
+            if lethal and DEATH_MARK not in ch.label:
+                r.warnings.append(f"{where}: выбор может убить, но в подписи нет {DEATH_MARK} — "
+                                  f"смертельный риск должен быть виден заранее")
         for g in gotos:
             need(g, sid)
             if g in scenes:

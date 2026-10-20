@@ -126,6 +126,8 @@ def check(src: str | int | None, st: RunState, meta: Meta) -> bool:
 
 
 def fill(text: str, st: RunState, meta: Meta, extra: dict | None = None) -> str:
+    """Подстановки {name}, {var.x}… и склейка строк: одиночный перенос — пробел, пустая строка — абзац."""
+    text = re.sub(r"[ \t]*(?<!\n)\n(?!\n)[ \t]*", " ", text.strip())
     get = getter(st, meta)
 
     def sub(m: re.Match) -> str:

@@ -1,0 +1,32 @@
+# «Пять жизней: что если» — первые сутки Рока по книге 1 «Читера», с выборами, которых в книге не было.
+# Сюжет книги — основа; все тексты написаны своими словами (закрытый семейный бот).
+id: five_lives
+title: "Пять жизней: что если"
+version: 1
+mode: system
+order: 1
+length: "30–40 минут"
+about: "Первые сутки нулёвки по книге «Пять жизней читера» — и развилки, которых там не было."
+teaser: >
+  Вы просыпаетесь в чужой комнате общежития. Имени нет, памяти нет, зато перед глазами висит
+  строка, которой не может быть: «Жизней: 5». Город за окном доживает последний нормальный вечер.
+start: wake
+
+vars:
+  luck:     { start: 0, label: "Удача", show: true }
+  humanity: { start: 0, label: "Гуманность", show: true }
+
+items:
+  flask:  { name: "Фляжка с кислым пойлом", keep_on_death: false }
+  water:  { name: "Бутылка воды", keep_on_death: false }
+  bandage: { name: "Эластичный бинт", keep_on_death: false }
+  knife:  { name: "Нож Слепня", keep_on_death: false }
+  pearls: { name: "Жемчужина", keep_on_death: false }
+  spores: { name: "Споран", keep_on_death: false }
+
+death:
+  lives: 5
+  respawn: respawn
+  final: final_death
+  time_cost: 0
+  message: "Жизнь {deaths} закончилась. Причина: {cause}. Осталось жизней: {lives}. До возрождения: сто с чем-то секунд."
