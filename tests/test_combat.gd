@@ -139,15 +139,27 @@ func test_equip_cycle_and_loss() -> void:
 
 
 func test_bleeding_stacks_clot_and_bandage() -> void:
-	var w := WoundsScript.new(JsonDataScript.load_dict("res://data/combat.json")["bleeding"])
+	var config: Dictionary = JsonDataScript.load_dict("res://data/combat.json")["bleeding"]
+	var per := float(config["hp_per_second_per_stack"])
+	var clot := float(config["clot_seconds"])
+	var w := WoundsScript.new(config)
 	w.add_bleeding()
 	w.add_bleeding()
-	assert_almost(w.tick(10.0), 10.0, "две стопки × 0.5 × 10 с")
+	assert_almost(w.tick(10.0), 2.0 * per * 10.0, "две стопки × 10 с")
 	for i in 5:
 		w.add_bleeding()
-	assert_eq(w.bleeding.size(), 3, "не больше трёх")
+	assert_eq(w.bleeding.size(), int(config["max_stacks"]), "стопок не больше предела")
 	w.stop_bleeding()
 	assert_true(not w.is_bleeding(), "бинт останавливает")
 	w.add_bleeding()
-	assert_almost(w.tick(100.0), 45.0, "свернулась через 90 с")
+	assert_almost(w.tick(clot + 10.0), per * clot, "свернулась через clot_seconds")
 	assert_true(not w.is_bleeding(), "сама прошла")
+
+
+## Плейтест (задача 20, D-105): само кровотечение, даже в полную силу, не добивает здорового героя —
+## убивает рана плюс бой, а не «победил и истёк».
+func test_full_bleeding_does_not_kill_healthy_hero() -> void:
+	var config: Dictionary = JsonDataScript.load_dict("res://data/combat.json")["bleeding"]
+	var worst := float(config["hp_per_second_per_stack"]) * float(config["clot_seconds"]) * int(config["max_stacks"])
+	var health := float(JsonDataScript.load_dict("res://data/vitals.json")["health"]["max_base"])
+	assert_true(worst < health, "три стопки — %.0f из %.0f здоровья" % [worst, health])

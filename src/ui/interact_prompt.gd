@@ -20,4 +20,6 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	var target: Node3D = hero.current_interactable if hero and hero.visible else null
+	if target and (not is_instance_valid(target) or not target.is_inside_tree()):
+		target = null  # убран перезагрузкой кластера, герой ещё не пересчитал ближайшее
 	_label.text = target.interact_text() if target else ""

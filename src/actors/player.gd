@@ -15,6 +15,11 @@ var current_interactable: Node3D
 var sneaking := false
 ## Бежит в этом кадре (зрение: в беге конус уже, 17.1).
 var is_sprinting := false
+## Автопилот плейтеста (tests/scenarios/autoplay.gd): куда идти (вектор в мире), бежать ли, куда
+## смотреть (INF — к курсору). В игре не используется.
+var autopilot_move := Vector3.ZERO
+var autopilot_sprint := false
+var autopilot_look := Vector3.INF
 
 var _tuning: Dictionary
 var _sprint_meters: float = 0.0
@@ -63,8 +68,10 @@ func _physics_process(delta: float) -> void:
 	var direction := Vector3.ZERO
 	if camera:
 		direction = Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera.global_rotation.y)
+	if autopilot_move != Vector3.ZERO:
+		direction = Vector3(autopilot_move.x, 0.0, autopilot_move.z).normalized()
 	var vitals := PlayerState.vitals
-	var sprinting := Input.is_action_pressed("sprint") and direction.length() > 0.1 and vitals.can_sprint()
+	var sprinting := (Input.is_action_pressed("sprint") or autopilot_sprint) and direction.length() > 0.1 and vitals.can_sprint()
 	is_sprinting = sprinting
 	if sprinting and sneaking:
 		_set_sneaking(false)
@@ -89,6 +96,8 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y -= float(_tuning["gravity"]) * delta
 
+	if PlayerState.awaiting_respawn:
+		return  # умер в этом же шаге (кровотечение, голод) — тело уже вне физики
 	var before := global_position
 	move_and_slide()
 	if model:
@@ -116,7 +125,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("sneak"):
 		_set_sneaking(not sneaking)
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("interact") and current_interactable:
+	elif event.is_action_pressed("interact") and is_instance_valid(current_interactable) and current_interactable.is_inside_tree():
 		current_interactable.interact(self)
 		get_viewport().set_input_as_handled()
 
@@ -185,6 +194,11 @@ func _set_sneaking(value: bool) -> void:
 
 
 func _face_cursor() -> void:
+	if autopilot_look != Vector3.INF:
+		var look := Vector3(autopilot_look.x, global_position.y, autopilot_look.z)
+		if look.distance_to(global_position) > 0.3:
+			look_at(look, Vector3.UP)
+		return
 	if camera == null:
 		return
 	var mouse := get_viewport().get_mouse_position()

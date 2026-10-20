@@ -54,6 +54,9 @@ func cancel() -> void:
 func _process(delta: float) -> void:
 	if not is_active():
 		return
+	if not _on_done.is_valid():
+		_duration = 0.0  # цель исчезла (кластер перезагрузился) — молча бросить
+		return
 	if hero.global_position.distance_to(_start_position) > _move_tolerance:
 		cancel()
 		return

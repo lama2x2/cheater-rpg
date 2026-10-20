@@ -23,8 +23,8 @@
     "sneaking_mult": 0.8
   },
   "bleeding": {
-    "hp_per_second_per_stack": 0.5,
+    "hp_per_second_per_stack": 0.4,
     "max_stacks": 3,
-    "clot_seconds": 90
+    "clot_seconds": 75
   }
 }
