@@ -39,12 +39,38 @@ func _process(delta: float) -> void:
 			if rect.grow(-INSIDE_MARGIN).has_point(at):
 				found = i
 				break
+	_roofs(found)
 	if found == _current:
 		return
 	_restore()
 	_current = found
 	if found >= 0:
 		_apply(area.building_walls[found])
+
+
+## Крыши (задача 19, 17.3): над героем внутри здания — скрыта; крыша между камерой и героем
+## (луч от героя к камере проходит под ней) — почти прозрачная.
+func _roofs(inside: int) -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var back := camera.global_transform.basis.z  # от героя к камере
+	for i in area.building_walls.size():
+		var record: Dictionary = area.building_walls[i]
+		if not record.has("roof"):
+			continue
+		var roof := record["roof"] as MeshInstance3D
+		if not is_instance_valid(roof):
+			continue
+		roof.visible = i != inside
+		var covers := false
+		if hero.visible and back.y > 0.01:
+			for height: float in [float(record["height"]), float(record["height"]) + 1.0]:
+				var t := (height - (hero.global_position.y + 1.0)) / back.y
+				var at := hero.global_position + Vector3.UP + back * t
+				if (record["rect"] as Rect2).grow(0.6).has_point(Vector2(at.x, at.z)):
+					covers = true
+		roof.transparency = 0.8 if covers else 0.0
 
 
 func _apply(record: Dictionary) -> void:

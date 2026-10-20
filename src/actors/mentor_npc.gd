@@ -9,16 +9,9 @@ var npc_id := "mentor"
 func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("mentor")
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.36
-	capsule.height = 1.8
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.42, 0.4, 0.33)
-	var body := MeshInstance3D.new()
-	body.mesh = capsule
-	body.material_override = material
-	body.position.y = 0.9
-	add_child(body)
+	var model := CharacterModel.make("npc_male")  # задача 19
+	model.set_tint_mult(Color(0.85, 0.82, 0.7))
+	add_child(model)
 	var label := Label3D.new()
 	label.text = "%s\n%s" % [Content.ui("mentor_name"), Content.ui("mentor_role")]
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

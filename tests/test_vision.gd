@@ -71,3 +71,12 @@ func test_camera_sides() -> void:
 	var sides := VisionRules.camera_sides(Vector3(-0.707, -0.5, -0.707))
 	assert_eq(sides.size(), 2, "к камере — две стороны")
 	assert_true(sides.has("n") and sides.has("e"), "смотрит на −x −z — к камере стороны +z и +x: %s" % [sides])
+
+
+func test_day_night() -> void:
+	var dn := preload("res://src/core/day_night.gd").new(JsonDataScript.load_dict("res://data/daynight.json"))
+	assert_true(float(dn.at(12.0)["sun"]) > float(dn.at(2.0)["sun"]) * 4.0, "днём солнце ярче ночного в разы")
+	assert_true(float(dn.at(2.0)["ambient"]) > 0.2, "ночью не в черноту")
+	var dusk: float = dn.at(19.5)["sun"]
+	assert_true(dusk < float(dn.at(18.0)["sun"]) and dusk > float(dn.at(21.0)["sun"]), "закат — между")
+	assert_almost(float(dn.at(24.0)["sun"]), float(dn.at(0.0)["sun"]), "сутки замкнуты")

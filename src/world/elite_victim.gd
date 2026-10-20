@@ -9,17 +9,9 @@ var _helped := false
 func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("elite_victims")
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.33
-	capsule.height = 1.7
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.7, 0.55, 0.45)
-	var body := MeshInstance3D.new()
-	body.mesh = capsule
-	body.material_override = material
-	body.rotation_degrees = Vector3(0, 0, 90)
-	body.position.y = 0.33
-	add_child(body)
+	var model := CharacterModel.make("npc_female")  # раненый лежит (задача 19)
+	model.lie_down()
+	add_child(model)
 	var label := Label3D.new()
 	label.text = Content.ui("victim_label")
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

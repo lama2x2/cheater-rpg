@@ -190,7 +190,7 @@ func _clear_line(space: PhysicsDirectSpaceState3D, node: Node3D) -> bool:
 ## Показать или спрятать меши и подписи цели (кроме меток умений).
 static func _apply(node: Node, seen: bool) -> void:
 	for child in node.get_children():
-		if child is GeometryInstance3D and not child.is_in_group("skill_marks"):
+		if (child is GeometryInstance3D or child.is_in_group("vision_body")) and not child.is_in_group("skill_marks"):
 			child.visible = seen
 
 

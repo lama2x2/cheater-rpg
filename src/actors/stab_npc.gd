@@ -57,10 +57,10 @@ func interact(_hero: Node3D) -> void:
 
 
 func _build_body() -> void:
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.35
-	capsule.height = 1.75
-	add_child(_mesh(capsule, Vector3(0, 0.875, 0), color))
+	# Модель непися (задача 19): знахарка — женская, остальные — мужская, оттенок — цвет из стаба.
+	var model := CharacterModel.make("npc_female" if npc_id == "healer" else "npc_male")
+	model.set_tint_mult(color.lightened(0.45))
+	add_child(model)
 	# Прилавок перед неписем.
 	var counter := BoxMesh.new()
 	counter.size = Vector3(2.2, 1.0, 0.5)

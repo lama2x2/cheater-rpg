@@ -1,0 +1,20 @@
+{
+  "_doc": "Внешность персонажей (задача 19): модель Kenney «Animated Characters Survivors» (CC0, assets/third_party/kenney/characters) — один скелет, скины-текстуры, анимации idle и run. Для каждого вида: skins — варианты скина (берётся случайный), height_m — рост, width — ширина (худой < 1 < массивный), tint — оттенок поверх скина, tint_spread — разброс оттенка у разных особей, level_tint — к какому цвету тянется оттенок с ростом уровня внутри стадии, plates — бронепластины на костях (head, chest, back, arms, legs), posture — upright или crawl (ползёт), run_speed — при какой скорости (м/с) анимация бега идёт в 1×. hero и npc — для героя и неписей.",
+  "model": "res://assets/third_party/kenney/characters/characterMedium.fbx",
+  "animations": { "idle": "res://assets/third_party/kenney/characters/idle.fbx", "run": "res://assets/third_party/kenney/characters/run.fbx" },
+  "skin_dir": "res://assets/third_party/kenney/characters/",
+  "model_height": 3.75,
+  "plate_color": [0.28, 0.27, 0.3],
+  "looks": {
+    "hero": { "skins": ["survivorMaleB"], "height_m": 1.8, "width": 1.0, "tint": [1.0, 1.0, 1.0], "tint_spread": 0.0 },
+    "npc_male": { "skins": ["survivorMaleB"], "height_m": 1.78, "width": 1.0, "tint": [0.9, 0.88, 0.85], "tint_spread": 0.08 },
+    "npc_female": { "skins": ["survivorFemaleA"], "height_m": 1.7, "width": 0.95, "tint": [0.95, 0.92, 0.9], "tint_spread": 0.08 },
+    "crawler": { "skins": ["zombieA", "zombieC"], "height_m": 1.6, "width": 0.8, "tint": [0.6, 0.62, 0.55], "tint_spread": 0.1, "level_tint": [0.5, 0.5, 0.45], "posture": "crawl", "run_speed": 1.5 },
+    "slowpoke": { "skins": ["survivorMaleB", "survivorFemaleA", "zombieA"], "height_m": 1.75, "width": 1.0, "tint": [0.78, 0.88, 0.72], "tint_spread": 0.1, "level_tint": [0.65, 0.75, 0.6], "run_speed": 4.0 },
+    "jumper": { "skins": ["zombieA", "zombieC"], "height_m": 1.78, "width": 0.95, "tint": [0.85, 0.8, 0.62], "tint_spread": 0.1, "level_tint": [0.75, 0.62, 0.45], "run_speed": 5.0 },
+    "runner": { "skins": ["zombieC", "zombieA"], "height_m": 1.82, "width": 0.82, "tint": [0.72, 0.7, 0.68], "tint_spread": 0.08, "level_tint": [0.6, 0.5, 0.48], "run_speed": 7.0 },
+    "lottery": { "skins": ["zombieA", "zombieC"], "height_m": 1.95, "width": 1.0, "tint": [0.7, 0.55, 0.5], "tint_spread": 0.08, "level_tint": [0.6, 0.4, 0.38], "plates": ["arms"], "run_speed": 7.0 },
+    "stomper": { "skins": ["zombieC", "zombieA"], "height_m": 2.1, "width": 1.3, "tint": [0.6, 0.58, 0.55], "tint_spread": 0.06, "level_tint": [0.48, 0.45, 0.42], "plates": ["head", "chest", "back"], "run_speed": 5.0 },
+    "elite": { "skins": ["zombieA"], "height_m": 2.5, "width": 1.35, "tint": [0.4, 0.36, 0.4], "tint_spread": 0.04, "level_tint": [0.3, 0.26, 0.3], "plates": ["head", "chest", "back", "arms", "legs"], "run_speed": 7.5 }
+  }
+}

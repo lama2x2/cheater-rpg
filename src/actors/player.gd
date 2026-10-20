@@ -20,7 +20,7 @@ var _tuning: Dictionary
 var _sprint_meters: float = 0.0
 var _step_meters: float = 0.0
 var _carry_meters: float = 0.0
-var _body_meshes: Array[MeshInstance3D] = []
+var model: CharacterModel
 
 
 func _ready() -> void:
@@ -88,6 +88,8 @@ func _physics_process(delta: float) -> void:
 
 	var before := global_position
 	move_and_slide()
+	if model:
+		model.set_speed(Vector2(velocity.x, velocity.z).length())
 	var moved := Vector2(global_position.x - before.x, global_position.z - before.z).length()
 	if sprinting:
 		_count_sprint(moved)
@@ -165,8 +167,8 @@ func _noise_model() -> NoiseModel:
 
 func _set_sneaking(value: bool) -> void:
 	sneaking = value
-	for mesh in _body_meshes:
-		mesh.scale.y = 0.75 if sneaking else 1.0
+	if model:
+		model.scale.y = 0.8 if sneaking else 1.0  # пригнулся
 
 
 func _face_cursor() -> void:
@@ -192,18 +194,9 @@ func _build_body() -> void:
 	shape.position.y = 0.9
 	add_child(shape)
 
-	var body_mesh := CapsuleMesh.new()
-	body_mesh.radius = 0.35
-	body_mesh.height = 1.8
-	var body := _mesh(body_mesh, Vector3(0, 0.9, 0), Color(0.85, 0.75, 0.55))
-	add_child(body)
-	_body_meshes.append(body)
-
-	# «Нос» показывает, куда смотрит герой (вперёд в Godot — это −Z).
-	var nose_mesh := BoxMesh.new()
-	nose_mesh.size = Vector3(0.15, 0.15, 0.4)
-	var nose := _mesh(nose_mesh, Vector3(0, 1.5, -0.4), Color(0.2, 0.2, 0.2))
-	add_child(nose)
+	# Модель героя (задача 19, data/looks.json → hero); лицо смотрит на −Z, как герой.
+	model = CharacterModel.make("hero")
+	add_child(model)
 
 
 func _mesh(mesh: Mesh, at: Vector3, color: Color) -> MeshInstance3D:

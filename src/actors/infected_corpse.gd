@@ -21,19 +21,12 @@ func _ready() -> void:
 	var body: Dictionary = data["body"]
 	var radius := float(body["radius"])
 	var height := maxf(float(body["height"]), radius * 2.0)
-	var mesh := CapsuleMesh.new()
-	mesh.radius = radius
-	mesh.height = height
-	var c: Array = body["color"]
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(float(c[0]), float(c[1]), float(c[2])).darkened(0.35)
-	material.roughness = 1.0
-	var instance := MeshInstance3D.new()
-	instance.mesh = mesh
-	instance.material_override = material
-	instance.rotation_degrees = Vector3(90, 0, 0)
-	instance.position = Vector3(0, radius, 0)
-	add_child(instance)
+	# Модель твари лежит (задача 19), темнее живой.
+	var looks: Dictionary = CharacterModel.config()["looks"]
+	var model := CharacterModel.make(enemy_id if looks.has(enemy_id) else "slowpoke", LootTable.level_fraction(level, data["level"]))
+	model.lie_down()
+	model.set_tint_mult(Color(0.65, 0.6, 0.6))
+	add_child(model)
 
 
 ## Пристальный взгляд (12.3): труп — предмет, видно всё.

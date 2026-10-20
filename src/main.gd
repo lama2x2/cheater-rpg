@@ -31,6 +31,7 @@ const ContainerWindowScript := preload("res://src/ui/container_window.gd")
 const CharacterWindowScript := preload("res://src/ui/character_window.gd")
 const LogPanelScript := preload("res://src/ui/log_panel.gd")
 const LogCardScript := preload("res://src/ui/log_card.gd")
+const DayNightLightScript := preload("res://src/world/day_night_light.gd")
 const OnboardingDirectorScript := preload("res://src/world/onboarding_director.gd")
 const EliteEventScript := preload("res://src/world/elite_event.gd")
 const TutorialHintScript := preload("res://src/ui/tutorial_hint.gd")
@@ -205,6 +206,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ##   --char        открыть экран персонажа (с 3 свободными очками)
 ##   --elite       (в Городке) встать в 8 м от раненого-приманки элиты
 ##   --outside     встать в 1,5 м к востоку от ближайшего к центру здания (тень за стеной, D-102)
+##   --lineup      ряд моделей всех видов (data/looks.json) перед героем — посмотреть внешность
 ##   --inside      поставить героя в ближайшее к центру здание (прозрачные стены, позже крыши)
 ##   --gift        вскрыть дар 10 уровня даром (pending_skill_choices) — для окна знахарки
 ##   --pearl       висящее умение чёрной жемчужины (pending_pearl_skills) — окно умений и знахарки
@@ -306,6 +308,8 @@ func _handle_debug_args() -> void:
 				var victim := get_tree().get_first_node_in_group("elite_victims") as Node3D
 				if victim:
 					get_tree().get_first_node_in_group("hero").global_position = victim.global_position + Vector3(6.0, 0.1, 5.0)).call_deferred()
+		elif arg == "--lineup":
+			_debug_lineup.call_deferred()
 		elif arg == "--inside":
 			_debug_inside()
 		elif arg == "--outside":
@@ -389,6 +393,24 @@ func _debug_container(after: float) -> void:
 	if best:
 		hero.global_position = best.global_position + Vector3(1.0, 0.1, 0.0)
 		get_tree().get_first_node_in_group("container_window").open_or_take(best)
+
+
+func _debug_lineup() -> void:
+	var hero := get_tree().get_first_node_in_group("hero") as Node3D
+	var ids := ["crawler", "slowpoke", "jumper", "runner", "lottery", "stomper", "elite", "npc_male", "npc_female"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	for i in ids.size():
+		var m := CharacterModel.make(ids[i], 0.5, rng)
+		add_child(m)
+		m.global_position = hero.global_position + Vector3(-6.0 + i * 1.6, 0.0, 4.0 - i * 1.6)
+		m.rotation.y = deg_to_rad(45.0 + 180.0)
+		var label := Label3D.new()
+		label.text = ids[i]
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.pixel_size = 0.01
+		label.position.y = 2.9
+		m.add_child(label)
 
 
 func _debug_inside(outside: bool = false) -> void:
@@ -475,3 +497,7 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-50, -30, 0)
 	sun.shadow_enabled = true
 	add_child(sun)
+	var day_night: Node = DayNightLightScript.new()  # задача 19
+	day_night.sun = sun
+	day_night.environment = env
+	add_child(day_night)

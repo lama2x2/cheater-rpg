@@ -43,6 +43,7 @@ var sack_loot: Dictionary = {}
 var sack_rolled := false
 var sniffed := false
 var _glow: Label3D
+var model: CharacterModel
 ## Капкан (задача 18): стоит на месте, пока не вырвется. Яд: урон мимо брони и слабые пластины.
 var _trapped_left := 0.0
 var _poison_left := 0.0
@@ -353,6 +354,8 @@ func _act(delta: float) -> void:
 	velocity.z = direction.z * speed
 	velocity.y = 0.0 if is_on_floor() else velocity.y - GRAVITY * delta
 	move_and_slide()
+	if model:
+		model.set_speed(Vector2(velocity.x, velocity.z).length())
 
 	var face := direction
 	if brain.state == InfectedBrain.ATTACK:
@@ -458,15 +461,11 @@ func _build_body() -> void:
 	shape.shape = capsule
 	shape.position.y = height / 2.0
 	add_child(shape)
-
-	var mesh := CapsuleMesh.new()
-	mesh.radius = radius
-	mesh.height = height
-	var c: Array = body["color"]
-	add_child(_mesh(mesh, Vector3(0, height / 2.0, 0), Color(float(c[0]), float(c[1]), float(c[2]))))
-	var eyes := BoxMesh.new()
-	eyes.size = Vector3(radius * 0.9, 0.08, 0.1)
-	add_child(_mesh(eyes, Vector3(0, height * 0.82, -radius * 0.95), Color(0.75, 0.1, 0.08)))
+	# Модель по стадии (задача 19): скин, рост, оттенок по уровню, пластины — data/looks.json.
+	var looks: Dictionary = CharacterModel.config()["looks"]
+	var look := enemy_id if looks.has(enemy_id) else "slowpoke"
+	model = CharacterModel.make(look, LootTable.level_fraction(level, _data["level"]), _rng)
+	add_child(model)
 
 	_mark = Label3D.new()
 	_mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED

@@ -195,8 +195,11 @@ func _build_building(b: Dictionary) -> void:
 	var h := float(b["height"])
 	var color := _color(template["wall_color"])
 	var t := WALL_THICKNESS
-	var record := {"rect": Rect2(b["center"] - b["size"] / 2.0, b["size"]), "walls": []}
+	var record := {"rect": Rect2(b["center"] - b["size"] / 2.0, b["size"]), "walls": [], "height": h}
 	building_walls.append(record)
+	# Крыша (задача 19, 17.3): двускатная, без коллизий; у руин крыши нет.
+	if String(b["kind"]) != "ruin":
+		record["roof"] = _roof(record["rect"], h, String(b["kind"]))
 	var walls := {
 		"n": {"at": center + Vector3(0, 0, sz / 2.0), "length": sx, "along_x": true},
 		"s": {"at": center + Vector3(0, 0, -sz / 2.0), "length": sx, "along_x": true},
@@ -228,6 +231,48 @@ func _build_building(b: Dictionary) -> void:
 			add_child(door)
 			_doors.append(door)
 			record["walls"].append({"side": side, "body": door})
+
+
+## Двускатная крыша над прямоугольником: конёк вдоль длинной стороны, свес 0,3 м.
+func _roof(rect: Rect2, wall_h: float, kind: String) -> MeshInstance3D:
+	var r := rect.grow(0.3)
+	var along_x := r.size.x >= r.size.y
+	var rise := clampf(minf(r.size.x, r.size.y) * 0.35, 0.8, 2.2)
+	var y0 := wall_h
+	var y1 := wall_h + rise
+	var a := Vector3(r.position.x, y0, r.position.y)
+	var b := Vector3(r.end.x, y0, r.position.y)
+	var c := Vector3(r.end.x, y0, r.end.y)
+	var d := Vector3(r.position.x, y0, r.end.y)
+	var mid := r.get_center()
+	var p: Vector3
+	var q: Vector3
+	if along_x:
+		p = Vector3(r.position.x, y1, mid.y)
+		q = Vector3(r.end.x, y1, mid.y)
+	else:
+		p = Vector3(mid.x, y1, r.position.y)
+		q = Vector3(mid.x, y1, r.end.y)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var tris: Array = [[a, p, q], [a, q, b], [c, q, p], [c, p, d], [d, p, a], [b, q, c]] if along_x \
+		else [[a, b, p], [b, q, p], [b, c, q], [c, d, q], [d, p, q], [d, a, p]]
+	for t: Array in tris:
+		for v: Vector3 in t:
+			st.add_vertex(v)
+	st.generate_normals()
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = st.commit()
+	var material := StandardMaterial3D.new()
+	var palette := {"house": Color(0.55, 0.28, 0.22), "shop": Color(0.35, 0.38, 0.42), "garage": Color(0.4, 0.4, 0.38),
+		"police": Color(0.3, 0.33, 0.4), "hunter": Color(0.42, 0.32, 0.22), "workshop": Color(0.38, 0.36, 0.33)}
+	material.albedo_color = palette.get(kind, Color(0.45, 0.35, 0.3))
+	material.roughness = 1.0
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.material_override = material
+	mesh.add_to_group("roofs")
+	add_child(mesh)
+	return mesh
 
 
 func _wall(base: Vector3, size: Vector3, color: Color) -> StaticBody3D:

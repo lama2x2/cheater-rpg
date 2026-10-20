@@ -14,13 +14,10 @@ func _ready() -> void:
 	add_to_group("corpses")
 	add_to_group("interactable")
 	add_to_group("edible")
-	var body := CapsuleMesh.new()
-	body.radius = 0.35
-	body.height = 1.8
-	var body_mesh := _mesh(body, Color(0.45, 0.4, 0.35))
-	body_mesh.rotation_degrees = Vector3(0, 0, 90)
-	body_mesh.position = Vector3(0, 0.35, 0)
-	add_child(body_mesh)
+	var model := CharacterModel.make("hero")  # свой труп — своя внешность (задача 19)
+	model.lie_down()
+	model.set_tint_mult(Color(0.7, 0.68, 0.66))
+	add_child(model)
 
 	var pack := BoxMesh.new()
 	pack.size = Vector3(0.5, 0.35, 0.6)
