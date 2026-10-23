@@ -226,7 +226,7 @@ def view(c: Campaign, st: RunState, meta: Meta, full: bool = False) -> Screen:
 
 def status_line(c: Campaign, st: RunState, meta: Meta) -> str | None:
     parts = []
-    if st.mode == "system":
+    if st.mode == "system" and c.death.lives:
         parts.append(f"☥ жизней: {st.lives}")
     if c.time:
         parts.append(fill(c.time.label, st, meta, {"limit": c.time.limit or "∞"}))
@@ -372,8 +372,8 @@ def _stmt(c: Campaign, st: RunState, meta: Meta, stmt: tuple, ctx: _Ctx) -> None
             new = max(0, new)
         if cur is not None:
             cur[key] = new
-        elif root == "lives" and st.mode != "system":
-            return  # в реал-режиме жизнь одна
+        elif root == "lives" and (st.mode != "system" or not c.death.lives):
+            return  # в реал-режиме жизнь одна, при lives: 0 — бесконечны
         else:
             setattr(st, root, new)
         if root == "lives" and st.lives <= 0:
@@ -410,13 +410,14 @@ def _die(c: Campaign, st: RunState, meta: Meta, cause: str, res: Result) -> str:
             st.__dict__.update(snap.__dict__)
             return REWIND
         return d.real_final or c.start
-    st.lives -= 1 if st.lives > 0 else 0
+    if d.lives:
+        st.lives -= 1 if st.lives > 0 else 0
     st.time += d.time_cost
     for item_id, item in c.items.items():
         if not item.keep_on_death:
             st.items.pop(item_id, None)
     st.shown.append(["system", fill(d.message, st, Meta(), {"cause": cause})])
-    if st.lives <= 0:
+    if d.lives and st.lives <= 0:
         return d.final or c.start
     return d.respawn or c.start
 

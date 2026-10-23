@@ -49,7 +49,7 @@ def status(c: Campaign, st: RunState, meta: Meta) -> str:
     get = getter(st, meta)
     items = [f"{c.items[k].name}{' ×' + str(n) if n > 1 else ''}" for k, n in st.items.items() if n > 0 and k in c.items]
     if st.mode == "system":
-        lines = [f"▌ ИНТЕРФЕЙС · {st.name or 'Объект'}", f"▌ Жизней: {st.lives} · смертей: {st.deaths}"]
+        lines = [f"▌ ИНТЕРФЕЙС · {st.name or 'Объект'}", f"▌ Жизней: {st.lives if c.death.lives else '∞'} · смертей: {st.deaths}"]
         lines += [f"▌ {v.label}: {get('var.' + k)}" for k, v in c.vars.items() if v.show and v.label]
     else:
         lines = [st.name or ""]

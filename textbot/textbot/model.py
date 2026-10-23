@@ -89,7 +89,7 @@ class TimeCfg(_M):
 
 
 class DeathCfg(_M):
-    lives: int = 3
+    lives: int = 3              # 0 — перерождений без счёта: жизней в шапке нет, final не нужен
     respawn: str | None = None
     final: str | None = None
     time_cost: int = 0

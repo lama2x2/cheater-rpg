@@ -1,4 +1,4 @@
-from textbot import engine
+from textbot import engine, render
 from textbot.engine import Meta
 
 SCENES = [
@@ -86,6 +86,18 @@ def test_system_death_lives_and_final(make_campaign):
     pick(c, st, "В начало")
     pick(c, st, "Прыгнуть ☠")
     assert st.ended == "final" and st.lives == 0
+
+
+def test_system_endless_lives(make_campaign):
+    """death.lives: 0 — перерождения без счёта: в шапке жизней нет, final не наступает."""
+    c = make_campaign({**CFG, "death": {**CFG["death"], "lives": 0}}, SCENES)
+    st = engine.new_run(c, seed=1)
+    for _ in range(3):
+        pick(c, st, "Прыгнуть ☠")
+        assert st.scene == "respawn" and not st.ended
+        pick(c, st, "В начало")
+    assert st.deaths == 3 and "жизней" not in (engine.status_line(c, st, Meta()) or "")
+    assert "Жизней: ∞" in render.status(c, st, Meta())
 
 
 def test_real_death_is_ending(make_campaign):
